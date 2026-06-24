@@ -9,16 +9,14 @@ pragma solidity 0.8.30;
 import "forge-std/Test.sol";
 
 import { xMETRO } from "../../src/xMETRO.sol";
-import { MetroTokenOFT } from "../../src/metro.sol";
+import { MetroToken } from "../../src/metro.sol";
 
 import { ERC20Mintable } from "../mocks/ERC20Mintable.sol";
 import { MockSwapAdapter } from "../mocks/MockSwapAdapter.sol";
-import { MockEndpointV2 } from "../mocks/MockEndpointV2.sol";
 
 contract xMETROUnitTest is Test {
-    MockEndpointV2 internal endpoint;
     ERC20Mintable internal usdc; // rewardToken
-    MetroTokenOFT internal metro; // METRO (mintable ERC20 in tests)
+    MetroToken internal metro; // METRO (mintable ERC20 in tests)
     xMETRO internal xmetro;
 
     address internal owner = address(this);
@@ -31,9 +29,8 @@ contract xMETROUnitTest is Test {
         vm.deal(userA, 100 ether);
         vm.deal(userB, 100 ether);
 
-        endpoint = new MockEndpointV2();
         usdc = new ERC20Mintable("USDC", "USDC", 6);
-        metro = new MetroTokenOFT("METRO", "METRO", address(endpoint), owner);
+        metro = new MetroToken("METRO", "METRO", owner);
         metro.setMinter(owner, true);
 
         xmetro = new xMETRO(owner, address(metro), address(usdc), address(0));

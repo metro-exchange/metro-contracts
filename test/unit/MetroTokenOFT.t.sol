@@ -2,18 +2,16 @@
 pragma solidity 0.8.30;
 
 /**
- * @title MetroTokenOFT.t.sol
- * @notice Unit tests for `MetroTokenOFT` (excluding OFT send/quoteSend).
+ * @title MetroToken.t.sol
+ * @notice Unit tests for `MetroToken`.
  */
 
 import "forge-std/Test.sol";
 
-import { MetroTokenOFT } from "../../src/metro.sol";
-import { MockEndpointV2 } from "../mocks/MockEndpointV2.sol";
+import { MetroToken } from "../../src/metro.sol";
 
-contract MetroTokenOFTTest is Test {
-    MetroTokenOFT internal metro;
-    MockEndpointV2 internal endpoint;
+contract MetroTokenTest is Test {
+    MetroToken internal metro;
 
     // Test addresses.
     address internal owner = address(this);
@@ -24,8 +22,7 @@ contract MetroTokenOFTTest is Test {
     address internal alice;
 
     function setUp() public {
-        endpoint = new MockEndpointV2();
-        metro = new MetroTokenOFT("METRO", "METRO", address(endpoint), owner);
+        metro = new MetroToken("METRO", "METRO", owner);
         alice = vm.addr(alicePk);
     }
 
@@ -57,10 +54,8 @@ contract MetroTokenOFTTest is Test {
         assertEq(metro.balanceOf(user), 3 ether);
     }
 
-    function test_Constructor_SetsOwnerDelegateAndDefaultMinter() public {
+    function test_Constructor_SetsOwnerAndDefaultMinter() public {
         assertEq(metro.owner(), owner);
-
-        assertEq(endpoint.delegate(), owner);
 
         assertTrue(!metro.isMinter(owner));
 
@@ -71,12 +66,12 @@ contract MetroTokenOFTTest is Test {
 
     function test_SetMinter_EmitsEvent_AndToggle() public {
         vm.expectEmit(true, false, false, true);
-        emit MetroTokenOFT.MinterStatusUpdated(minter, true);
+        emit MetroToken.MinterStatusUpdated(minter, true);
         metro.setMinter(minter, true);
         assertTrue(metro.isMinter(minter));
 
         vm.expectEmit(true, false, false, true);
-        emit MetroTokenOFT.MinterStatusUpdated(minter, false);
+        emit MetroToken.MinterStatusUpdated(minter, false);
         metro.setMinter(minter, false);
         assertTrue(!metro.isMinter(minter));
     }
@@ -108,29 +103,6 @@ contract MetroTokenOFTTest is Test {
         assertEq(metro.balanceOf(user), 1 ether);
     }
 
-    function test_SetDelegate_OnlyOwner() public {
-        address delegate2 = makeAddr("delegate2");
-
-        vm.prank(user);
-        vm.expectRevert();
-        metro.setDelegate(delegate2);
-
-        metro.setDelegate(delegate2);
-        assertEq(endpoint.delegate(), delegate2);
-    }
-
-    function test_SetPeer_OnlyOwner() public {
-        uint32 dstEid = 30184;
-        bytes32 peer = bytes32(uint256(uint160(makeAddr("peer"))));
-
-        vm.prank(user);
-        vm.expectRevert();
-        metro.setPeer(dstEid, peer);
-
-        metro.setPeer(dstEid, peer);
-        assertEq(metro.peers(dstEid), peer);
-    }
-
     function test_RenounceOwnership_DisablesOnlyOwner_ButDoesNotRevokeMinter() public {
         metro.setMinter(owner, true);
         assertTrue(metro.isMinter(owner));
@@ -140,12 +112,6 @@ contract MetroTokenOFTTest is Test {
 
         vm.expectRevert();
         metro.setMinter(minter, true);
-
-        vm.expectRevert();
-        metro.setDelegate(makeAddr("delegate3"));
-
-        vm.expectRevert();
-        metro.setPeer(30184, bytes32(uint256(123)));
 
         assertTrue(metro.isMinter(owner));
         metro.mint(user, 1 ether);

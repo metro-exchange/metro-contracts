@@ -10,15 +10,13 @@ import "forge-std/Test.sol";
 
 import { RewardDistributor } from "../../src/RewardDistributor.sol";
 import { xMETRO } from "../../src/xMETRO.sol";
-import { MetroTokenOFT } from "../../src/metro.sol";
+import { MetroToken } from "../../src/metro.sol";
 
 import { ERC20Mintable } from "../mocks/ERC20Mintable.sol";
-import { MockEndpointV2 } from "../mocks/MockEndpointV2.sol";
 
 contract RewardDistributorTest is Test {
-    MockEndpointV2 internal endpoint;
     ERC20Mintable internal usdc;
-    MetroTokenOFT internal metro;
+    MetroToken internal metro;
     xMETRO internal xmetro;
     RewardDistributor internal distributor;
 
@@ -26,9 +24,8 @@ contract RewardDistributorTest is Test {
     address internal user = address(0xBEEF);
 
     function setUp() public {
-        endpoint = new MockEndpointV2();
         usdc = new ERC20Mintable("USDC", "USDC", 6);
-        metro = new MetroTokenOFT("METRO", "METRO", address(endpoint), owner);
+        metro = new MetroToken("METRO", "METRO", owner);
         metro.setMinter(owner, true);
 
         xmetro = new xMETRO(owner, address(metro), address(usdc), address(0));
