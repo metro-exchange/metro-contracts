@@ -4,16 +4,14 @@ pragma solidity 0.8.30;
 import "forge-std/Test.sol";
 import "forge-std/StdInvariant.sol";
 
-import { MetroTokenOFT } from "../../src/metro.sol";
-import { MockEndpointV2 } from "../mocks/MockEndpointV2.sol";
+import { MetroToken } from "../../src/metro.sol";
 
-contract MetroTokenOFTInvariantTest is StdInvariant, Test {
-    MetroTokenOFT internal metro;
-    MetroTokenOFTHandler internal handler;
+contract MetroTokenInvariantTest is StdInvariant, Test {
+    MetroToken internal metro;
+    MetroTokenHandler internal handler;
 
     function setUp() public {
-        MockEndpointV2 endpoint = new MockEndpointV2();
-        metro = new MetroTokenOFT("METRO", "METRO", address(endpoint), address(this));
+        metro = new MetroToken("METRO", "METRO", address(this));
 
         address[] memory actors = new address[](4);
         actors[0] = makeAddr("actor0");
@@ -21,7 +19,7 @@ contract MetroTokenOFTInvariantTest is StdInvariant, Test {
         actors[2] = makeAddr("actor2");
         actors[3] = makeAddr("actor3");
 
-        handler = new MetroTokenOFTHandler(metro, actors);
+        handler = new MetroTokenHandler(metro, actors);
         metro.transferOwnership(address(handler));
 
         targetContract(address(handler));
@@ -43,13 +41,13 @@ contract MetroTokenOFTInvariantTest is StdInvariant, Test {
     }
 }
 
-contract MetroTokenOFTHandler is Test {
-    MetroTokenOFT internal metro;
+contract MetroTokenHandler is Test {
+    MetroToken internal metro;
     address[] internal actors;
 
     mapping(address => bool) internal isMinter;
 
-    constructor(MetroTokenOFT metro_, address[] memory actors_) {
+    constructor(MetroToken metro_, address[] memory actors_) {
         metro = metro_;
         actors = actors_;
     }

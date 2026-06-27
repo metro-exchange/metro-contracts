@@ -3,18 +3,15 @@ pragma solidity 0.8.30;
 
 import "forge-std/Test.sol";
 
-import { MetroTokenOFT } from "../../src/metro.sol";
-import { MockEndpointV2 } from "../mocks/MockEndpointV2.sol";
+import { MetroToken } from "../../src/metro.sol";
 
-contract MetroTokenOFTFuzzTest is Test {
-    MockEndpointV2 internal endpoint;
-    MetroTokenOFT internal metro;
+contract MetroTokenFuzzTest is Test {
+    MetroToken internal metro;
 
     address internal owner = address(this);
 
     function setUp() public {
-        endpoint = new MockEndpointV2();
-        metro = new MetroTokenOFT("METRO", "METRO", address(endpoint), owner);
+        metro = new MetroToken("METRO", "METRO", owner);
     }
 
     function testFuzz_Mint_RespectsMinterAllowlist(address minter, address to, uint256 amount, bool allowed) public {

@@ -12,10 +12,9 @@ import "forge-std/Test.sol";
 import { xMETRO } from "../../src/xMETRO.sol";
 import { ThorMigrationEscrow } from "../../src/ThorMigrationEscrow.sol";
 import { RewardDistributor } from "../../src/RewardDistributor.sol";
-import { MetroTokenOFT } from "../../src/metro.sol";
+import { MetroToken } from "../../src/metro.sol";
 
 import { ERC20Mintable } from "../mocks/ERC20Mintable.sol";
-import { MockEndpointV2 } from "../mocks/MockEndpointV2.sol";
 import { MockSwapAdapter } from "../mocks/MockSwapAdapter.sol";
 
 contract XChainAndCoreTest is Test {
@@ -24,7 +23,7 @@ contract XChainAndCoreTest is Test {
     ThorMigrationEscrow internal escrow;
     RewardDistributor internal distributor;
     MockSwapAdapter internal mockAdapter;
-    MetroTokenOFT internal metro;
+    MetroToken internal metro;
 
     // Tokens (test)
     ERC20Mintable internal usdc; // 6 decimals
@@ -43,9 +42,7 @@ contract XChainAndCoreTest is Test {
         thor = new ERC20Mintable("THOR", "THOR", 18);
         ythor = new ERC20Mintable("yTHOR", "yTHOR", 18);
 
-        MockEndpointV2 endpoint = new MockEndpointV2();
-
-        metro = new MetroTokenOFT("METRO", "METRO", address(endpoint), address(this));
+        metro = new MetroToken("METRO", "METRO", address(this));
         metro.setMinter(address(this), true);
 
         xmetro = new xMETRO(address(this), address(metro), address(usdc), address(0));

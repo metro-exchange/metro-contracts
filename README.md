@@ -4,7 +4,7 @@ This folder is the Foundry workspace for the Thor Migration project, including 5
 
 ## Contracts
 
-- `src/metro.sol`: `MetroTokenOFT` (OFT + ERC20Permit, mintable by `xMETRO`)
+- `src/metro.sol`: `MetroToken` (ERC20 + ERC20Permit, mintable by `xMETRO`)
 - `src/xMETRO.sol`: Core contract (locks, vesting, rewards, autocompound)
 - `src/SwapAdapter.sol`: USDC -> METRO swap adapter (optional)
 - `src/RewardDistributor.sol`: Reward injector (optional; operator calls to deposit rewards into `xMETRO`)
@@ -26,12 +26,7 @@ cd ThorMigrationProject
 
 forge install \
   foundry-rs/forge-std@v1.12.0 \
-  OpenZeppelin/openzeppelin-contracts@v5.5.0 \
-  LayerZero-Labs/LayerZero-v2@ab9b083410b9359285a5756807e1b6145d4711a7 \
-  GNSPS/solidity-bytes-utils@v0.8.1
-
-# Optional (only if you run devtools-based tests):
-# forge install LayerZero-Labs/devtools@16daaee36fe802d11aa99b89c29bb74447354483
+  OpenZeppelin/openzeppelin-contracts@v5.5.0
 
 # Fast compile (deploy profile ignores `test/`, quiet output)
 FOUNDRY_PROFILE=deploy forge build -q && echo "Compile success"
@@ -49,7 +44,6 @@ These **business parameters** must be reviewed/filled by the project team:
 - `DEPLOYER_PRIVATE_KEY`
 - `METRO_NAME`
 - `METRO_SYMBOL`
-- `LZ_ENDPOINT`
 - `USDC`
 - `THOR`
 - `YTHOR`

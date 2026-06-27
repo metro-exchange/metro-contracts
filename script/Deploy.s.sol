@@ -4,7 +4,7 @@ pragma solidity 0.8.30;
 /**
  * @title Deploy.s.sol
  * @notice Single-chain deployment script for Ethereum migration (no cross-chain messaging).
- * @dev Deploys MetroTokenOFT + xMETRO + optional SwapAdapter/RewardDistributor, then ThorMigrationEscrow and wires it
+ * @dev Deploys MetroToken + xMETRO + optional SwapAdapter/RewardDistributor, then ThorMigrationEscrow and wires it
  *      as `xMETRO.migrationEscrow`.
  */
 
@@ -12,7 +12,7 @@ import "forge-std/Script.sol";
 import "forge-std/StdJson.sol";
 import "forge-std/console2.sol";
 
-import { MetroTokenOFT } from "../src/metro.sol";
+import { MetroToken } from "../src/metro.sol";
 import { xMETRO } from "../src/xMETRO.sol";
 import { SwapAdapter } from "../src/SwapAdapter.sol";
 import { RewardDistributor } from "../src/RewardDistributor.sol";
@@ -22,7 +22,7 @@ contract Deploy is Script {
     using stdJson for string;
 
     struct Addresses {
-        address metroOFT;
+        address metro;
         address xMETRO;
         address swapAdapter;
         address rewardDistributor;
@@ -38,7 +38,6 @@ contract Deploy is Script {
         address deployer = deployerPk != 0 ? vm.addr(deployerPk) : owner;
 
         // Core constructor params
-        address lzEndpoint = vm.envAddress("LZ_ENDPOINT");
         address usdc = vm.envAddress("USDC");
         string memory metroName = vm.envString("METRO_NAME");
         string memory metroSymbol = vm.envString("METRO_SYMBOL");
@@ -76,7 +75,7 @@ contract Deploy is Script {
         if (deployerPk != 0) vm.startBroadcast(deployerPk);
         else vm.startBroadcast();
 
-        MetroTokenOFT metro = new MetroTokenOFT(metroName, metroSymbol, lzEndpoint, deployer);
+        MetroToken metro = new MetroToken(metroName, metroSymbol, deployer);
 
         xMETRO xmetro = new xMETRO(deployer, address(metro), usdc, address(0));
         metro.setMinter(address(xmetro), true);
@@ -116,7 +115,6 @@ contract Deploy is Script {
         xmetro.setMigrationEscrow(address(escrow));
 
         // Final ownership transfer
-        metro.setDelegate(owner);
         metro.setMinter(owner, true);
         metro.transferOwnership(owner);
         xmetro.transferOwnership(owner);
@@ -126,7 +124,7 @@ contract Deploy is Script {
 
         vm.stopBroadcast();
 
-        a.metroOFT = address(metro);
+        a.metro = address(metro);
         a.xMETRO = address(xmetro);
         a.swapAdapter = swapAdapter;
         a.rewardDistributor = rewardDistributor;
@@ -136,7 +134,7 @@ contract Deploy is Script {
         _writeAddresses(_addressesPath(), a);
 
         console2.log("=== Deployed Contracts ===");
-        console2.log("MetroTokenOFT:", a.metroOFT);
+        console2.log("MetroToken:", a.metro);
         console2.log("xMETRO:", a.xMETRO);
         console2.log("SwapAdapter:", a.swapAdapter);
         console2.log("RewardDistributor:", a.rewardDistributor);
@@ -205,7 +203,7 @@ contract Deploy is Script {
         string memory obj = "addresses";
         string memory json;
 
-        json = vm.serializeAddress(obj, "metroOFT", a.metroOFT);
+        json = vm.serializeAddress(obj, "metro", a.metro);
         json = vm.serializeAddress(obj, "xMETRO", a.xMETRO);
         json = vm.serializeAddress(obj, "swapAdapter", a.swapAdapter);
         json = vm.serializeAddress(obj, "rewardDistributor", a.rewardDistributor);

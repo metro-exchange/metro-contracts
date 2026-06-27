@@ -1,6 +1,6 @@
-## `MetroTokenOFT` (`src/metro.sol`)
+## `MetroToken` (`src/metro.sol`)
 
-Purpose: OFT-compatible ERC20 token with ERC20 Permit support and an owner-managed minter allowlist.
+Purpose: ERC20 token with ERC20 Permit support and an owner-managed minter allowlist.
 
 ### Owner / Admin
 - `setMinter(address minter, bool status) external`
