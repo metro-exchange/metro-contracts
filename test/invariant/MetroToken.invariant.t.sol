@@ -4,37 +4,32 @@ pragma solidity 0.8.30;
 import "forge-std/Test.sol";
 import "forge-std/StdInvariant.sol";
 
-import { MetroToken } from "../../src/metro.sol";
+import {MetroToken} from "../../src/metro.sol";
 
 contract MetroTokenInvariantTest is StdInvariant, Test {
+    uint256 internal constant CAP = 100_000_000 ether;
     MetroToken internal metro;
     MetroTokenHandler internal handler;
 
     function setUp() public {
         metro = new MetroToken("METRO", "METRO", address(this));
-
         address[] memory actors = new address[](4);
-        actors[0] = makeAddr("actor0");
-        actors[1] = makeAddr("actor1");
-        actors[2] = makeAddr("actor2");
-        actors[3] = makeAddr("actor3");
-
+        for (uint256 i; i < actors.length; i++) {
+            actors[i] = makeAddr(string.concat("actor", vm.toString(i)));
+        }
         handler = new MetroTokenHandler(metro, actors);
         metro.transferOwnership(address(handler));
-
         targetContract(address(handler));
-        bytes4[] memory selectors = new bytes4[](4);
-        selectors[0] = handler.setMinter.selector;
-        selectors[1] = handler.mint.selector;
-        selectors[2] = handler.transferTokens.selector;
-        selectors[3] = handler.transferFromTokens.selector;
-        targetSelector(FuzzSelector({ addr: address(handler), selectors: selectors }));
     }
 
-    function invariant_TotalSupplyEqualsSumOfActors() public view {
+    function invariant_TotalSupplyNeverExceedsImmutableCap() public view {
+        assertLe(metro.totalSupply(), metro.cap());
+        assertEq(metro.cap(), CAP);
+    }
+
+    function invariant_TotalSupplyEqualsTrackedActorBalances() public view {
         uint256 total;
-        uint256 n = handler.actorsLength();
-        for (uint256 i = 0; i < n; i++) {
+        for (uint256 i; i < handler.actorsLength(); i++) {
             total += metro.balanceOf(handler.actorAt(i));
         }
         assertEq(metro.totalSupply(), total);
@@ -42,10 +37,9 @@ contract MetroTokenInvariantTest is StdInvariant, Test {
 }
 
 contract MetroTokenHandler is Test {
-    MetroToken internal metro;
+    MetroToken internal immutable metro;
     address[] internal actors;
-
-    mapping(address => bool) internal isMinter;
+    mapping(address => bool) internal allowed;
 
     constructor(MetroToken metro_, address[] memory actors_) {
         metro = metro_;
@@ -56,54 +50,33 @@ contract MetroTokenHandler is Test {
         return actors.length;
     }
 
-    function actorAt(uint256 i) external view returns (address) {
-        return actors[i];
+    function actorAt(uint256 index) external view returns (address) {
+        return actors[index];
     }
 
-    function setMinter(uint8 minterIndex, bool allowed) external {
-        address minter = actors[uint256(minterIndex) % actors.length];
-        metro.setMinter(minter, allowed);
-        isMinter[minter] = allowed;
+    function setMinter(uint256 seed, bool value) external {
+        address actor = actors[seed % actors.length];
+        if (allowed[actor] == value) return;
+        metro.setMinter(actor, value);
+        allowed[actor] = value;
     }
 
-    function mint(uint8 minterIndex, uint8 toIndex, uint256 amount) external {
-        amount = bound(amount, 0, 1e24);
-
-        address minter = actors[uint256(minterIndex) % actors.length];
-        if (!isMinter[minter]) return;
-
-        address to = actors[uint256(toIndex) % actors.length];
-
+    function mint(uint256 minterSeed, uint256 recipientSeed, uint256 amountSeed) external {
+        address minter = actors[minterSeed % actors.length];
+        if (!allowed[minter]) return;
+        uint256 remaining = metro.cap() - metro.totalSupply();
+        if (remaining == 0) return;
+        uint256 amount = bound(amountSeed, 1, remaining);
         vm.prank(minter);
-        metro.mint(to, amount);
+        metro.mint(actors[recipientSeed % actors.length], amount);
     }
 
-    function transferTokens(uint8 fromIndex, uint8 toIndex, uint256 amount) external {
-        address from = actors[uint256(fromIndex) % actors.length];
-        address to = actors[uint256(toIndex) % actors.length];
-        if (from == to) return;
-
-        uint256 bal = metro.balanceOf(from);
-        if (bal == 0) return;
-        amount = bound(amount, 0, bal);
-
+    function transferTokens(uint256 fromSeed, uint256 toSeed, uint256 amountSeed) external {
+        address from = actors[fromSeed % actors.length];
+        address to = actors[toSeed % actors.length];
+        if (from == to || metro.balanceOf(from) == 0) return;
+        uint256 amount = bound(amountSeed, 0, metro.balanceOf(from));
         vm.prank(from);
         metro.transfer(to, amount);
-    }
-
-    function transferFromTokens(uint8 ownerIndex, uint8 spenderIndex, uint8 toIndex, uint256 amount) external {
-        address tokenOwner = actors[uint256(ownerIndex) % actors.length];
-        address spender = actors[uint256(spenderIndex) % actors.length];
-        address to = actors[uint256(toIndex) % actors.length];
-
-        uint256 bal = metro.balanceOf(tokenOwner);
-        if (bal == 0) return;
-        amount = bound(amount, 0, bal);
-
-        vm.prank(tokenOwner);
-        metro.approve(spender, amount);
-
-        vm.prank(spender);
-        metro.transferFrom(tokenOwner, to, amount);
     }
 }

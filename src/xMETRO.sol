@@ -1,62 +1,62 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
-import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
-import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-
+import {IXMetroDeFiAdapter} from "./interfaces/IXMetroDeFiAdapter.sol";
+import {XMetroCoreLogic} from "./XMetroCoreLogic.sol";
 
 interface IMetroTokenMintable is IERC20 {
     function mint(address to, uint256 amount) external;
 }
 
-
-interface ISwapAdapter {
-    function swap(uint256 amountIn, uint256 minAmountOut, uint256 deadline, bytes calldata swapData)
-        external
-        returns (uint256 amountOut);
+interface IBoundRewardDistributor {
+    function rewardToken() external view returns (address);
 }
 
 contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
+    error Unauthorized();
+    error NoRewards();
+    error InvalidAddress();
+    error InvalidAmount();
+    error InvalidArrayLength();
+    error InvalidConfiguration();
+    error UnauthorizedOperator();
+    error NothingToWithdraw();
+    error ProtectedToken();
+
     using SafeERC20 for IERC20;
 
-
     uint256 private constant ACC_PRECISION = 1e24;
+    uint256 private constant MAX_YTHOR_REWARD_WEIGHT_BPS = type(uint128).max;
+    bytes32 private constant ADAPTER_FAMILY_ID = keccak256("XMETRO_DEFI_ADAPTER_FAMILY_V1");
+    bytes32 private constant STRATEGY_DOMAIN = keccak256("XMETRO_DEFI_STRATEGY_V1");
+    bytes4 private constant XMETRO_BINDING_SELECTOR = bytes4(keccak256("xMETRO()"));
 
+    uint64 public constant UNSTAKE_DELAY = 72 hours;
 
-    uint64 public constant UNSTAKE_DELAY = 7 days;
+    uint64 public constant YTHOR_EXIT_RAMP = 5 * 365 days;
 
+    uint256 private constant BPS_DENOMINATOR = 10_000;
+    uint256 public constant THOR_EXIT_START_BPS = 5_000;
+    uint256 public constant YTHOR_EXIT_START_BPS = 1_000;
+    uint256 public constant YTHOR_EXIT_MAX_BPS = 5_000;
 
-    uint64 public constant THOR_LOCK_MONTH_SECONDS = 30 days;
-
-
-    uint64 public constant YTHOR_CLIFF = 4 * 365 days;
-
-
-    uint64 public constant YTHOR_DURATION = 2 * 365 days;
-
-
-    uint64 public constant CONTRIBUTOR_CLIFF = 6 * THOR_LOCK_MONTH_SECONDS;
-
+    uint64 public constant CONTRIBUTOR_CLIFF = 180 days;
 
     uint64 public constant CONTRIBUTOR_DURATION = (5 * 365 days) / 2;
 
-
-    uint256 public defaultMaxVestingSchedules = 50;
-
-
-    uint256 public defaultMaxThorLocks = 100;
-
-
     uint256 public totalLockedShares;
 
-
     uint256 public accRewardPerShare;
+    uint256 private _accYThorRewardPerPrincipal;
 
     /// @notice Source category for a cooldown request entry.
     enum UnstakeSource {
@@ -66,14 +66,12 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
         Contributor
     }
 
-
-    /// @notice THOR lock entry: `amount` becomes free after `endTime`.
-    struct ThorLock {
-        uint128 amount;
-        uint64 endTime;
+    enum ExitMode {
+        Liquid,
+        Stake
     }
 
-    /// @notice yTHOR vesting schedule entry (cliff handled by `startTime`).
+    /// @notice Contributor vesting schedule entry (cliff handled by `startTime`).
     struct VestingSchedule {
         uint128 totalAmount;
         uint128 claimed;
@@ -87,19 +85,35 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
         uint64 unlockTime;
     }
 
+    struct PendingBatch {
+        address[] users;
+        uint256[] amounts;
+        uint256[] sourceIndexes;
+        uint256 total;
+    }
+
+    struct AutoStrategyPreference {
+        bytes32 strategyId;
+        uint64 adapterEpoch;
+        uint64 logicEpoch;
+        uint64 domainRevision;
+        uint64 strategyRevision;
+    }
 
     IMetroTokenMintable public immutable METRO;
 
-
     IERC20 public immutable rewardToken;
 
-    
+    address public immutable forfeitureRecipient;
+
+    bytes32 private immutable SWAP_METRO_STRATEGY_ID;
+
     address public rewardDistributor;
 
-    
-    ISwapAdapter public swapAdapter;
+    address public deFiAdapter;
 
-    
+    uint64 public deFiAdapterEpoch;
+
     address public migrationEscrow;
 
     /// @notice Operators allowed to call `autocompoundBatch`.
@@ -108,34 +122,13 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
     /// @notice Whether the user has enabled autocompounding.
     mapping(address => bool) public autocompoundEnabled;
 
-    /// @notice Contributor whitelist (only whitelisted addresses can create contributor vesting/lock positions).
-    mapping(address => bool) public contributorWhitelist;
+    mapping(address => AutoStrategyPreference) private _autoStrategyPreferences;
 
     /// @notice user => locked shares (not transferable; used for rewards baseline).
     mapping(address => uint256) public lockedShares;
 
-    /// @dev user => 3-month THOR locks.
-    mapping(address => ThorLock[]) private _thorLocks3m;
-    /// @dev user => 10-month THOR locks.
-    mapping(address => ThorLock[]) private _thorLocks10m;
-
-    /// @notice user => cursor into `_thorLocks3m` for checkpoint processing.
-    mapping(address => uint256) public thorLockCursor3m;
-
-    /// @notice user => cursor into `_thorLocks10m` for checkpoint processing.
-    mapping(address => uint256) public thorLockCursor10m;
-
-    /// @dev user => yTHOR vesting schedules.
-    mapping(address => VestingSchedule[]) private _yThorVests;
-
-    /// @notice user => cursor for batched vesting processing.
-    mapping(address => uint256) public yThorVestCursor;
-
-    /// @dev receiver (beneficiary) => contributor-funded vesting schedules (6m cliff + 2.5y linear).
-    mapping(address => VestingSchedule[]) private _contributorVests;
-
-    /// @notice receiver (beneficiary) => cursor for batched contributor vesting processing.
-    mapping(address => uint256) public contributorVestCursor;
+    uint256 public yThorRewardWeightBps;
+    uint256 private _totalActiveYThorPrincipal;
 
     /// @notice Signed reward debt per user (supports decreasing shares without underflow).
     mapping(address => int256) public rewardDebt;
@@ -152,15 +145,48 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
     mapping(address => uint256) public unstakeCursorYThor;
     mapping(address => uint256) public unstakeCursorContributor;
 
-    event RewardDistributorUpdated(address indexed distributor);
-    event SwapAdapterUpdated(address indexed swapAdapter);
+    event RewardDistributorUpdated(address indexed oldRewardDistributor, address indexed newRewardDistributor);
+    event DeFiAdapterUpdated(address indexed oldAdapter, address indexed newAdapter, uint64 adapterEpoch);
+    event AutoStrategyPreferenceUpdated(
+        address indexed user, bytes32 indexed oldStrategyId, bytes32 indexed newStrategyId
+    );
+    event ClaimAndExecuted(address indexed user, bytes32 indexed strategyId, uint256 rewardIn, uint256 amountOut);
+    event AutoStrategyBatchExecuted(
+        address indexed operator,
+        bytes32 indexed strategyId,
+        uint256 processedUsers,
+        uint256 totalRewardIn,
+        uint256 amountOut
+    );
+    event EmergencyRewardDistributed(address indexed user, uint256 amount);
+    event EmergencyBatchExecuted(address indexed operator, uint256 processedUsers, uint256 totalDistributed);
     event DefaultMaxVestingSchedulesUpdated(uint256 maxVestingSchedules);
-    event DefaultMaxThorLocksUpdated(uint256 maxThorLocks);
 
-    event MigrationEscrowUpdated(address indexed escrow);
+    event MigrationEscrowUpdated(address indexed oldMigrationEscrow, address indexed newMigrationEscrow);
 
-    event LockedTHORCredited(address indexed user, uint256 amount, uint256 lockMonths, uint64 endTime);
-    event LockedVestingCredited(address indexed user, uint256 amount, uint64 startTime, uint64 duration);
+    event ThorPositionCreated(address indexed user, uint256 principal, uint64 migratedAt);
+    event YThorPositionCreated(address indexed user, uint256 principal, uint64 migratedAt);
+    event YThorRewardWeightBpsUpdated(uint256 oldWeightBps, uint256 newWeightBps);
+    event ThorExited(
+        address indexed user,
+        uint256 principal,
+        uint256 payout,
+        uint256 forfeited,
+        uint256 rateBps,
+        ExitMode mode,
+        uint64 exitedAt,
+        address indexed forfeitureRecipient
+    );
+    event YThorExited(
+        address indexed user,
+        uint256 principal,
+        uint256 payout,
+        uint256 forfeited,
+        uint256 rateBps,
+        ExitMode mode,
+        uint64 exitedAt,
+        address indexed forfeitureRecipient
+    );
     event RewardsDeposited(address indexed payer, uint256 amount);
     event RewardClaimed(address indexed user, uint256 amount);
     event Staked(address indexed user, uint256 amount, uint256 mintedShares);
@@ -172,68 +198,71 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
 
     event AutoCompoundOperatorUpdated(address indexed operator, bool allowed);
 
-  
     event AutocompoundEnabledUpdated(address indexed user, bool enabled);
 
-   
     event AutocompoundBatchExecuted(address indexed operator, uint256 totalUsdcIn, uint256 totalMetroOut);
-
 
     event ContributorWhitelistUpdated(address indexed contributor, bool allowed);
 
-   
-    event ContributorStaked(address indexed contributor, address indexed receiver, uint256 amount, uint64 startTime, uint64 duration);
+    event ContributorStaked(
+        address indexed contributor, address indexed receiver, uint256 amount, uint64 startTime, uint64 duration
+    );
 
     event UnlockedClaimedAsShares(address indexed user, UnstakeSource indexed source, uint256 amount);
 
-
     event TokensRescued(address indexed token, address indexed to, uint256 amount);
 
-    constructor(address owner_, address metro_, address rewardToken_, address swapAdapter_) Ownable(owner_) ERC20("xMETRO", "xMETRO") {
-        require(metro_ != address(0) && rewardToken_ != address(0), "xMETRO: zero address");
+    constructor(
+        address owner_,
+        address metro_,
+        address rewardToken_,
+        address forfeitureRecipient_,
+        uint256 initialYThorRewardWeightBps_
+    ) Ownable(owner_) ERC20("xMETRO", "xMETRO") {
+        if (metro_ == address(0) || rewardToken_ == address(0) || forfeitureRecipient_ == address(0)) {
+            revert InvalidAddress();
+        }
+        if (initialYThorRewardWeightBps_ > MAX_YTHOR_REWARD_WEIGHT_BPS) revert InvalidConfiguration();
         METRO = IMetroTokenMintable(metro_);
         rewardToken = IERC20(rewardToken_);
-        swapAdapter = ISwapAdapter(swapAdapter_);
+        forfeitureRecipient = forfeitureRecipient_;
+        yThorRewardWeightBps = initialYThorRewardWeightBps_;
+        SWAP_METRO_STRATEGY_ID =
+            keccak256(abi.encode(block.chainid, STRATEGY_DOMAIN, IXMetroDeFiAdapter.StrategyKind.SwapMetro, metro_));
     }
 
     modifier onlyMigrationEscrow() {
-        require(msg.sender == migrationEscrow, "xMETRO: only migration escrow");
+        if (msg.sender != migrationEscrow) revert Unauthorized();
         _;
     }
 
     /// @notice Stake METRO and receive 1:1 free shares (xMETRO ERC20).
     function stake(uint256 amount) external nonReentrant whenNotPaused returns (uint256 mintedShares) {
-        require(amount > 0, "xMETRO: zero amount");
-
+        if (amount == 0) revert InvalidAmount();
         IERC20(address(METRO)).safeTransferFrom(msg.sender, address(this), amount);
-
         _mintFreeShares(msg.sender, amount);
         mintedShares = amount;
-
         emit Staked(msg.sender, amount, mintedShares);
     }
 
     /// @notice Stake METRO and enable autocompounding in a single transaction.
-    function stakeAndEnableAutocompound(uint256 amount) external nonReentrant whenNotPaused returns (uint256 mintedShares) {
-        require(amount > 0, "xMETRO: zero amount");
-
+    function stakeAndEnableAutocompound(uint256 amount)
+        external
+        nonReentrant
+        whenNotPaused
+        returns (uint256 mintedShares)
+    {
+        if (amount == 0) revert InvalidAmount();
         IERC20(address(METRO)).safeTransferFrom(msg.sender, address(this), amount);
-
         _mintFreeShares(msg.sender, amount);
         mintedShares = amount;
-
         emit Staked(msg.sender, amount, mintedShares);
-
-        autocompoundEnabled[msg.sender] = true;
-        emit AutocompoundEnabledUpdated(msg.sender, true);
+        _enableAutocompound(msg.sender);
     }
 
     /// @notice Request unstake for free shares; burns shares immediately and starts a cooldown.
     function requestUnstake(uint256 amount) external nonReentrant whenNotPaused {
-        require(amount > 0, "xMETRO: zero amount");
-        require(amount <= type(uint128).max, "xMETRO: amount too large");
-
-        require(balanceOf(msg.sender) >= amount, "xMETRO: insufficient free");
+        if (amount == 0 || amount > type(uint128).max || balanceOf(msg.sender) < amount) revert InvalidAmount();
 
         _burnFreeShares(msg.sender, amount);
 
@@ -269,84 +298,73 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
     /// @notice Withdraw matured cooldown requests from the Free queue and receive METRO.
     /// @param maxRequests Max number of matured requests to process (0 = as many as possible).
     function withdrawFree(uint256 maxRequests) external nonReentrant whenNotPaused returns (uint256 amountOut) {
-        UnstakeRequest[] storage requests = _unstakeRequestsFree[msg.sender];
-        uint256 cursor = unstakeCursorFree[msg.sender];
-        if (cursor >= requests.length) return 0;
-
-        (uint256 newCursor, uint256 totalToSend) = _withdrawFromQueue(requests, cursor, maxRequests);
-
-        require(totalToSend > 0, "xMETRO: nothing to withdraw");
-        unstakeCursorFree[msg.sender] = newCursor;
-
-        IERC20(address(METRO)).safeTransfer(msg.sender, totalToSend);
-        emit Withdrawn(msg.sender, UnstakeSource.Free, totalToSend);
-
-        return totalToSend;
+        return _withdraw(msg.sender, UnstakeSource.Free, maxRequests);
     }
 
     /// @notice Withdraw matured cooldown requests from the Thor queue and receive METRO.
     /// @param maxRequests Max number of matured requests to process (0 = as many as possible).
     function withdrawThor(uint256 maxRequests) external nonReentrant whenNotPaused returns (uint256 amountOut) {
-        UnstakeRequest[] storage requests = _unstakeRequestsThor[msg.sender];
-        uint256 cursor = unstakeCursorThor[msg.sender];
-        if (cursor >= requests.length) return 0;
-
-        (uint256 newCursor, uint256 totalToSend) = _withdrawFromQueue(requests, cursor, maxRequests);
-
-        require(totalToSend > 0, "xMETRO: nothing to withdraw");
-        unstakeCursorThor[msg.sender] = newCursor;
-
-        IERC20(address(METRO)).safeTransfer(msg.sender, totalToSend);
-        emit Withdrawn(msg.sender, UnstakeSource.Thor, totalToSend);
-
-        return totalToSend;
+        return _withdraw(msg.sender, UnstakeSource.Thor, maxRequests);
     }
 
     /// @notice Withdraw matured cooldown requests from the YThor queue and receive METRO.
     /// @param maxRequests Max number of matured requests to process (0 = as many as possible).
     function withdrawYThor(uint256 maxRequests) external nonReentrant whenNotPaused returns (uint256 amountOut) {
-        UnstakeRequest[] storage requests = _unstakeRequestsYThor[msg.sender];
-        uint256 cursor = unstakeCursorYThor[msg.sender];
-        if (cursor >= requests.length) return 0;
-
-        (uint256 newCursor, uint256 totalToSend) = _withdrawFromQueue(requests, cursor, maxRequests);
-
-        require(totalToSend > 0, "xMETRO: nothing to withdraw");
-        unstakeCursorYThor[msg.sender] = newCursor;
-
-        IERC20(address(METRO)).safeTransfer(msg.sender, totalToSend);
-        emit Withdrawn(msg.sender, UnstakeSource.YThor, totalToSend);
-
-        return totalToSend;
+        return _withdraw(msg.sender, UnstakeSource.YThor, maxRequests);
     }
 
     /// @notice Withdraw matured cooldown requests from the Contributor queue and receive METRO.
     /// @param maxRequests Max number of matured requests to process (0 = as many as possible).
     function withdrawContributor(uint256 maxRequests) external nonReentrant whenNotPaused returns (uint256 amountOut) {
-        UnstakeRequest[] storage requests = _unstakeRequestsContributor[msg.sender];
-        uint256 cursor = unstakeCursorContributor[msg.sender];
+        return _withdraw(msg.sender, UnstakeSource.Contributor, maxRequests);
+    }
+
+    function _withdraw(address user, UnstakeSource source, uint256 maxRequests) private returns (uint256 amountOut) {
+        UnstakeRequest[] storage requests;
+        uint256 cursor;
+        if (source == UnstakeSource.Free) {
+            requests = _unstakeRequestsFree[user];
+            cursor = unstakeCursorFree[user];
+        } else if (source == UnstakeSource.Thor) {
+            requests = _unstakeRequestsThor[user];
+            cursor = unstakeCursorThor[user];
+        } else if (source == UnstakeSource.YThor) {
+            requests = _unstakeRequestsYThor[user];
+            cursor = unstakeCursorYThor[user];
+        } else {
+            requests = _unstakeRequestsContributor[user];
+            cursor = unstakeCursorContributor[user];
+        }
         if (cursor >= requests.length) return 0;
 
         (uint256 newCursor, uint256 totalToSend) = _withdrawFromQueue(requests, cursor, maxRequests);
+        if (totalToSend == 0) revert NothingToWithdraw();
+        if (source == UnstakeSource.Free) unstakeCursorFree[user] = newCursor;
+        else if (source == UnstakeSource.Thor) unstakeCursorThor[user] = newCursor;
+        else if (source == UnstakeSource.YThor) unstakeCursorYThor[user] = newCursor;
+        else unstakeCursorContributor[user] = newCursor;
 
-        require(totalToSend > 0, "xMETRO: nothing to withdraw");
-        unstakeCursorContributor[msg.sender] = newCursor;
-
-        IERC20(address(METRO)).safeTransfer(msg.sender, totalToSend);
-        emit Withdrawn(msg.sender, UnstakeSource.Contributor, totalToSend);
-
+        IERC20(address(METRO)).safeTransfer(user, totalToSend);
+        emit Withdrawn(user, source, totalToSend);
         return totalToSend;
     }
 
-    /// @notice Deposit rewardToken and update `accRewardPerShare` (pro-rata by total shares, incl. locked).
+    /// @notice Deposit rewardToken using the current base-share and yTHOR reward weights.
     function depositRewards(uint256 amount) external nonReentrant whenNotPaused {
-        require(msg.sender == rewardDistributor, "xMETRO: only distributor");
-        require(amount > 0, "xMETRO: zero amount");
-        uint256 shares = totalShares();
-        require(shares > 0, "xMETRO: no shares");
+        if (msg.sender != rewardDistributor) revert Unauthorized();
+        if (amount == 0) revert InvalidAmount();
+        uint256 activeYThor = _totalActiveYThorPrincipal;
+        uint256 yThorWeight = (activeYThor * yThorRewardWeightBps) / BPS_DENOMINATOR;
+        uint256 weight = totalShares() - activeYThor + yThorWeight;
+        if (weight == 0) revert InvalidConfiguration();
 
+        uint256 delta = (amount * ACC_PRECISION) / weight;
+        if (delta == 0) revert InvalidAmount();
         rewardToken.safeTransferFrom(msg.sender, address(this), amount);
-        accRewardPerShare = accRewardPerShare + ((amount * ACC_PRECISION) / shares);
+        accRewardPerShare += delta;
+        if (yThorWeight != 0) {
+            _accYThorRewardPerPrincipal += Math.mulDiv(delta, yThorWeight, activeYThor);
+        }
 
         emit RewardsDeposited(msg.sender, amount);
     }
@@ -365,9 +383,62 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
         return pending;
     }
 
+    function claimAndExecute(bytes32 id, uint256 minAmountOut, uint256 deadline, bytes calldata executionData)
+        external
+        nonReentrant
+        whenNotPaused
+        returns (uint256 rewardAmount, uint256 amountOut)
+    {
+        IXMetroDeFiAdapter.StrategyInfo memory info = _requireStrategy(id, false);
+        if (info.kind == IXMetroDeFiAdapter.StrategyKind.SwapMetro) revert InvalidConfiguration();
+        rewardAmount = _consumePendingReward(msg.sender);
+        IXMetroDeFiAdapter.ExecutionResult memory result =
+            _executeManual(info, id, msg.sender, rewardAmount, minAmountOut, deadline, executionData);
+        amountOut = result.amountOut;
+        emit ClaimAndExecuted(msg.sender, id, rewardAmount, amountOut);
+    }
+
+    function enableAutoStrategy(bytes32 id) external whenNotPaused {
+        IXMetroDeFiAdapter.StrategyInfo memory info = _requireStrategy(id, true);
+        if (info.kind == IXMetroDeFiAdapter.StrategyKind.SwapMetro) revert InvalidConfiguration();
+        _setAutoPreference(msg.sender, id, info, false);
+    }
+
+    function disableAutoStrategy() external {
+        if (autocompoundEnabled[msg.sender]) return;
+        bytes32 oldStrategyId = _autoStrategyPreferences[msg.sender].strategyId;
+        if (oldStrategyId == bytes32(0)) return;
+        delete _autoStrategyPreferences[msg.sender];
+        emit AutoStrategyPreferenceUpdated(msg.sender, oldStrategyId, bytes32(0));
+    }
+
+    function getAutoStrategyPreference(address user) external view returns (AutoStrategyPreference memory) {
+        return _autoStrategyPreferences[user];
+    }
+
+    function executeAutoStrategyBatch(
+        bytes32 id,
+        address[] calldata candidates,
+        uint256 minTotalAmountOut,
+        uint256[] calldata minUserAmountsOut,
+        uint256 deadline,
+        bytes calldata executionData
+    ) external nonReentrant whenNotPaused returns (uint256 totalRewardAmount, uint256 amountOut) {
+        if (!autoCompoundOperators[msg.sender]) revert UnauthorizedOperator();
+        IXMetroDeFiAdapter.StrategyInfo memory info = _requireStrategy(id, true);
+        if (info.kind == IXMetroDeFiAdapter.StrategyKind.SwapMetro) revert InvalidConfiguration();
+        PendingBatch memory batch = _collectActionPending(candidates, id, false, info);
+        uint256[] memory minima = _compactMinima(info.kind, candidates.length, minUserAmountsOut, batch);
+        IXMetroDeFiAdapter.ExecutionResult memory result =
+            _executeBatch(info, id, batch, minTotalAmountOut, minima, deadline, executionData);
+        amountOut = result.amountOut;
+        emit AutoStrategyBatchExecuted(msg.sender, id, batch.users.length, batch.total, amountOut);
+        return (batch.total, amountOut);
+    }
+
     /// @notice Autocompound: swap user's pending rewards (rewardToken) into METRO and mint received amount as free shares.
     /// @param minMetroOut Slippage protection: minimum METRO to receive.
-    /// @param swapData Opaque routing data consumed by SwapAdapter.
+    /// @param swapData Typed routing data consumed by the active DeFi Adapter.
     function autocompound(uint256 minMetroOut, uint256 deadline, bytes calldata swapData)
         external
         nonReentrant
@@ -377,16 +448,17 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
         return _autocompound(msg.sender, minMetroOut, deadline, swapData);
     }
 
-
     function enableAutocompound() external whenNotPaused {
-        autocompoundEnabled[msg.sender] = true;
-        emit AutocompoundEnabledUpdated(msg.sender, true);
+        _enableAutocompound(msg.sender);
     }
 
-   
-    function disableAutocompound() external whenNotPaused {
+    function disableAutocompound() external {
+        if (!autocompoundEnabled[msg.sender]) return;
         autocompoundEnabled[msg.sender] = false;
         emit AutocompoundEnabledUpdated(msg.sender, false);
+        bytes32 oldStrategyId = _autoStrategyPreferences[msg.sender].strategyId;
+        delete _autoStrategyPreferences[msg.sender];
+        emit AutoStrategyPreferenceUpdated(msg.sender, oldStrategyId, bytes32(0));
     }
 
     /**
@@ -399,75 +471,15 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
         whenNotPaused
         returns (uint256)
     {
-        require(autoCompoundOperators[msg.sender], "xMETRO: only autocompound operator");
-        require(address(swapAdapter) != address(0), "xMETRO: adapter not set");
-        require(users.length > 0, "xMETRO: empty users");
-
-        uint256 len = users.length;
-        uint256[] memory pendings = new uint256[](len);
-
-        uint256 totalPending = 0;
-        uint256 largestPending;
-        uint256 largestPendingIndex = type(uint256).max;
-
-
-        for (uint256 i = 0; i < len; i++) {
-            address user = users[i];
-            if (user == address(0)) continue;
-            if (!autocompoundEnabled[user]) continue;
-
-            (uint256 pending, int256 accumulated) = _pendingAndAccumulated(user);
-            if (pending == 0) continue;
-
-            rewardDebt[user] = accumulated;
-            pendings[i] = pending;
-            totalPending += pending;
-            if (pending > largestPending) {
-                largestPending = pending;
-                largestPendingIndex = i;
-            }
-        }
-
-        require(totalPending > 0, "xMETRO: no rewards");
-
-
-        uint256 metroBefore = METRO.balanceOf(address(this));
-        rewardToken.forceApprove(address(swapAdapter), totalPending);
-        swapAdapter.swap(totalPending, minMetroOut, deadline, swapData);
-        rewardToken.forceApprove(address(swapAdapter), 0);
-
-        uint256 metroAfter = METRO.balanceOf(address(this));
-        uint256 received = metroAfter - metroBefore;
-        require(received >= minMetroOut, "xMETRO: slippage");
-
-        uint256 distributed;
-        for (uint256 i = 0; i < len; i++) {
-            uint256 pending = pendings[i];
-            if (pending == 0) continue;
-
-            uint256 share = (received * pending) / totalPending;
-            distributed += share;
-
-            if (i == largestPendingIndex) continue;
-
-            if (share > 0) {
-                _mintFreeShares(users[i], share);
-                emit AutoCompounded(users[i], pending, share);
-            }
-        }
-
-        uint256 remainder = received - distributed;
-        if (largestPendingIndex != type(uint256).max) {
-            uint256 largestPendingShare = (received * pendings[largestPendingIndex]) / totalPending;
-            uint256 finalShare = largestPendingShare + remainder;
-            if (finalShare > 0) {
-                _mintFreeShares(users[largestPendingIndex], finalShare);
-                emit AutoCompounded(users[largestPendingIndex], pendings[largestPendingIndex], finalShare);
-            }
-        }
-
-
-        emit AutocompoundBatchExecuted(msg.sender, totalPending, received);
+        if (!autoCompoundOperators[msg.sender]) revert UnauthorizedOperator();
+        bytes32 id = SWAP_METRO_STRATEGY_ID;
+        IXMetroDeFiAdapter.StrategyInfo memory info = _requireStrategy(id, true);
+        PendingBatch memory batch = _collectActionPending(users, id, true, info);
+        IXMetroDeFiAdapter.ExecutionResult memory result =
+            _executeBatch(info, id, batch, minMetroOut, new uint256[](0), deadline, swapData);
+        uint256 received = result.amountOut;
+        _distributeCompound(batch, received);
+        emit AutocompoundBatchExecuted(msg.sender, batch.total, received);
         return received;
     }
 
@@ -482,127 +494,173 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
         return super.transferFrom(from, to, amount);
     }
 
+    /// @notice Pays only rewards already accrued in this xMETRO reward ledger and held as rewardToken.
+    /// @dev This is not a permanent shutdown or METRO-principal migration path. The existing owner
+    ///      rewardToken rescue trust boundary remains unchanged, and any failed user transfer reverts
+    ///      the complete batch together with every rewardDebt update.
+    function emergencyDistribute(address[] calldata users)
+        external
+        onlyOwner
+        nonReentrant
+        whenPaused
+        returns (uint256 totalDistributed)
+    {
+        if (users.length == 0) revert InvalidArrayLength();
+        uint256 processedUsers;
+        for (uint256 i; i < users.length; ++i) {
+            address user = users[i];
+            if (user == address(0)) continue;
+            (uint256 pending, int256 accumulated) = _pendingAndAccumulated(user);
+            if (pending == 0) continue;
+            rewardDebt[user] = accumulated;
+            rewardToken.safeTransfer(user, pending);
+            totalDistributed += pending;
+            ++processedUsers;
+            emit EmergencyRewardDistributed(user, pending);
+        }
+        if (processedUsers == 0) revert NoRewards();
+        emit EmergencyBatchExecuted(msg.sender, processedUsers, totalDistributed);
+    }
 
     function pause() external onlyOwner {
         _pause();
     }
 
- 
     function unpause() external onlyOwner {
         _unpause();
     }
 
-    /// @notice Update swap adapter.
-    function setSwapAdapter(address swapAdapter_) external onlyOwner {
-        require(swapAdapter_ != address(0), "xMETRO: bad adapter");
-        swapAdapter = ISwapAdapter(swapAdapter_);
-        emit SwapAdapterUpdated(swapAdapter_);
+    /// @notice Update the reward multiplier used by every active yTHOR position for future reward deposits.
+    function setYThorRewardWeightBps(uint256 newWeightBps) external onlyOwner {
+        if (newWeightBps > MAX_YTHOR_REWARD_WEIGHT_BPS) revert InvalidConfiguration();
+        uint256 oldWeightBps = yThorRewardWeightBps;
+        yThorRewardWeightBps = newWeightBps;
+        emit YThorRewardWeightBpsUpdated(oldWeightBps, newWeightBps);
     }
 
-    /// @notice Set migration escrow allowed to call `creditLocked*FromMigration`.
+    /// @notice Bind or replace the stable Adapter Proxy.
+    function setDeFiAdapter(address adapter_) external onlyOwner {
+        address oldAdapter = deFiAdapter;
+        if (
+            adapter_ == address(this) || adapter_ == address(rewardToken) || adapter_ == address(METRO)
+                || adapter_ == oldAdapter
+        ) revert InvalidAddress();
+        if (!_validAdapterBindings(adapter_)) revert InvalidConfiguration();
+        deFiAdapter = adapter_;
+        ++deFiAdapterEpoch;
+        emit DeFiAdapterUpdated(oldAdapter, adapter_, deFiAdapterEpoch);
+    }
+
+    /// @notice Set the migration escrow allowed to call the THOR/yTHOR credit entrypoints.
     function setMigrationEscrow(address escrow) external onlyOwner {
-        require(escrow != address(0), "xMETRO: bad escrow");
+        if (_readStaticWord(escrow, XMETRO_BINDING_SELECTOR) != bytes32(uint256(uint160(address(this))))) {
+            revert InvalidAddress();
+        }
+        address oldMigrationEscrow = migrationEscrow;
         migrationEscrow = escrow;
-        emit MigrationEscrowUpdated(escrow);
+        emit MigrationEscrowUpdated(oldMigrationEscrow, escrow);
     }
 
     /// @notice Set RewardDistributor (the only caller allowed to `depositRewards`).
     function setRewardDistributor(address distributor) external onlyOwner {
-        require(distributor != address(0), "xMETRO: bad distributor");
+        if (
+            _readStaticWord(distributor, XMETRO_BINDING_SELECTOR) != bytes32(uint256(uint160(address(this))))
+                || _readStaticWord(distributor, IBoundRewardDistributor.rewardToken.selector)
+                    != bytes32(uint256(uint160(address(rewardToken))))
+        ) revert InvalidAddress();
+        address oldRewardDistributor = rewardDistributor;
         rewardDistributor = distributor;
-        emit RewardDistributorUpdated(distributor);
+        emit RewardDistributorUpdated(oldRewardDistributor, distributor);
     }
 
     /// @notice Set/unset an operator allowed to call `autocompoundBatch`.
     function setAutoCompoundOperator(address operator, bool allowed) external onlyOwner {
-        require(operator != address(0), "xMETRO: bad operator");
+        if (operator == address(0)) revert InvalidAddress();
         autoCompoundOperators[operator] = allowed;
         emit AutoCompoundOperatorUpdated(operator, allowed);
     }
 
+    function defaultMaxVestingSchedules() external view returns (uint256) {
+        return XMetroCoreLogic.defaultMaxVestingSchedules();
+    }
+
     /// @notice Set default max vesting schedules processed per checkpoint call.
     function setDefaultMaxVestingSchedules(uint256 newDefault) external onlyOwner {
-        require(newDefault > 0, "xMETRO: zero max");
-        defaultMaxVestingSchedules = newDefault;
+        XMetroCoreLogic.setDefaultMaxVestingSchedules(newDefault);
         emit DefaultMaxVestingSchedulesUpdated(newDefault);
     }
 
-    /// @notice Set default max THOR locks processed per checkpoint call.
-    function setDefaultMaxThorLocks(uint256 newDefault) external onlyOwner {
-        require(newDefault > 0, "xMETRO: zero max");
-        defaultMaxThorLocks = newDefault;
-        emit DefaultMaxThorLocksUpdated(newDefault);
+    function contributorWhitelist(address contributor) external view returns (bool) {
+        return XMetroCoreLogic.contributorWhitelist(contributor);
     }
-
 
     /// @notice Allow or revoke a contributor address (whitelist).
     /// @dev Only whitelisted contributors can call `stakeContributor`.
     function setContributor(address contributor, bool allowed) external onlyOwner {
-        require(contributor != address(0), "xMETRO: bad contributor");
-        contributorWhitelist[contributor] = allowed;
+        XMetroCoreLogic.setContributor(contributor, allowed);
         emit ContributorWhitelistUpdated(contributor, allowed);
     }
-
 
     /// @notice Stake METRO as a contributor and create a locked vesting position (6m cliff + 2.5y linear release).
     /// @param receiver Address credited with the contributor vesting position.
     /// @dev Only callable by `contributorWhitelist[msg.sender] == true`. Funds are pulled from `msg.sender`.
     function stakeContributor(uint256 amount, address receiver) external nonReentrant whenNotPaused {
-        require(contributorWhitelist[msg.sender], "xMETRO: not contributor");
-        require(amount > 0, "xMETRO: zero amount");
-        require(amount <= type(uint128).max, "xMETRO: amount too large");
-        require(receiver != address(0), "xMETRO: bad receiver");
+        (uint64 startTime, uint64 duration) = XMetroCoreLogic.createContributorVesting(msg.sender, receiver, amount);
 
         IERC20(address(METRO)).safeTransferFrom(msg.sender, address(this), amount);
-
-        uint64 startTime = uint64(block.timestamp) + CONTRIBUTOR_CLIFF;
-        uint64 duration = CONTRIBUTOR_DURATION;
-        _contributorVests[receiver].push(VestingSchedule(uint128(amount), 0, startTime, duration));
 
         _increaseLockedShares(receiver, amount);
         emit ContributorStaked(msg.sender, receiver, amount, startTime, duration);
     }
 
-
-    /// @notice Request withdrawal for currently-unlocked THOR-migration principal (3m + 10m locks).
-    /// @param maxLocks Max number of lock entries to consume per lock array (0 uses `defaultMaxThorLocks`).
-    function requestWithdrawUnlockedThor(uint256 maxLocks) external nonReentrant whenNotPaused returns (uint256 amountQueued) {
-        uint256 max = maxLocks == 0 ? defaultMaxThorLocks : maxLocks;
-        require(max > 0, "xMETRO: zero max");
-
-        uint256 unlocked;
-        unlocked += _consumeThorLocks(_thorLocks3m[msg.sender], thorLockCursor3m[msg.sender], msg.sender, true, max);
-        unlocked += _consumeThorLocks(_thorLocks10m[msg.sender], thorLockCursor10m[msg.sender], msg.sender, false, max);
-
-        require(unlocked > 0, "xMETRO: nothing unlocked");
-        require(unlocked <= type(uint128).max, "xMETRO: amount too large");
-
-        _decreaseLockedShares(msg.sender, unlocked);
-
-        uint64 unlockTime = uint64(block.timestamp) + UNSTAKE_DELAY;
-        _unstakeRequestsThor[msg.sender].push(UnstakeRequest(uint128(unlocked), unlockTime));
-        emit UnstakeRequested(msg.sender, UnstakeSource.Thor, unlocked, unlockTime);
-
-        return unlocked;
+    function thorPositions(address user)
+        external
+        view
+        returns (uint128 principal, uint64 migratedAt, uint64 exitedAt, bool exited)
+    {
+        return XMetroCoreLogic.getThorPosition(user);
     }
 
-
-    /// @notice Request withdrawal for currently-vested yTHOR-migration principal.
-    /// @param maxSchedules Max number of vesting schedules to scan/consume (0 uses `defaultMaxVestingSchedules`).
-    function requestWithdrawUnlockedYThor(uint256 maxSchedules) external nonReentrant whenNotPaused returns (uint256 amountQueued) {
-        uint256 unlocked = _consumeVesting(msg.sender, maxSchedules);
-        require(unlocked > 0, "xMETRO: nothing unlocked");
-        require(unlocked <= type(uint128).max, "xMETRO: amount too large");
-
-        _decreaseLockedShares(msg.sender, unlocked);
-
-        uint64 unlockTime = uint64(block.timestamp) + UNSTAKE_DELAY;
-        _unstakeRequestsYThor[msg.sender].push(UnstakeRequest(uint128(unlocked), unlockTime));
-        emit UnstakeRequested(msg.sender, UnstakeSource.YThor, unlocked, unlockTime);
-
-        return unlocked;
+    function yThorPositions(address user)
+        external
+        view
+        returns (uint128 principal, uint64 migratedAt, uint64 exitedAt, bool exited)
+    {
+        return XMetroCoreLogic.getYThorPosition(user);
     }
 
+    /// @notice Preview a one-time THOR exit at the current timestamp.
+    function previewThorExit(address user)
+        external
+        view
+        returns (bool eligible, uint256 rateBps, uint256 payout, uint256 forfeited, uint256 eligibleAt)
+    {
+        return XMetroCoreLogic.previewThorExit(user);
+    }
+
+    /// @notice Close the THOR position and queue liquid METRO for the 72-hour cooldown.
+    function requestThorExit() external nonReentrant whenNotPaused returns (uint256 payout, uint256 forfeited) {
+        return _exitThor(msg.sender, ExitMode.Liquid);
+    }
+
+    /// @notice Close the THOR position and convert its payout directly into free xMETRO.
+    function exitAndStakeThor() external nonReentrant whenNotPaused returns (uint256 payout, uint256 forfeited) {
+        return _exitThor(msg.sender, ExitMode.Stake);
+    }
+
+    /// @notice Preview a one-time yTHOR exit at the current timestamp.
+    function previewYThorExit(address user)
+        external
+        view
+        returns (bool eligible, uint256 rateBps, uint256 payout, uint256 forfeited, uint256 eligibleAt)
+    {
+        return XMetroCoreLogic.previewYThorExit(user);
+    }
+
+    /// @notice Close the yTHOR position using either a liquid cooldown or direct xMETRO stake payout.
+    function exitYThor(ExitMode mode) external nonReentrant whenNotPaused returns (uint256 payout, uint256 forfeited) {
+        return _exitYThor(msg.sender, mode);
+    }
 
     /// @notice Request withdrawal for currently-vested contributor principal.
     /// @param maxSchedules Max number of vesting schedules to scan/consume (0 uses `defaultMaxVestingSchedules`).
@@ -612,54 +670,11 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
         whenNotPaused
         returns (uint256 amountQueued)
     {
-        uint256 unlocked = _consumeContributorVesting(msg.sender, maxSchedules);
-        require(unlocked > 0, "xMETRO: nothing unlocked");
-        require(unlocked <= type(uint128).max, "xMETRO: amount too large");
-
+        uint256 unlocked = XMetroCoreLogic.consumeContributorVesting(msg.sender, maxSchedules);
         _decreaseLockedShares(msg.sender, unlocked);
-
         uint64 unlockTime = uint64(block.timestamp) + UNSTAKE_DELAY;
         _unstakeRequestsContributor[msg.sender].push(UnstakeRequest(uint128(unlocked), unlockTime));
         emit UnstakeRequested(msg.sender, UnstakeSource.Contributor, unlocked, unlockTime);
-
-        return unlocked;
-    }
-
-    /// @notice Convert currently-unlocked THOR-migration principal (3m + 10m locks) into transferable xMETRO (free shares).
-    /// @dev This does NOT withdraw METRO; it only moves the user's shares from `lockedShares` into ERC20 `balanceOf`.
-    /// @param maxLocks Max number of lock entries to consume per lock array (0 uses `defaultMaxThorLocks`).
-    function claimAndStakeUnlockedThor(uint256 maxLocks) external nonReentrant whenNotPaused returns (uint256 sharesMinted) {
-        uint256 max = maxLocks == 0 ? defaultMaxThorLocks : maxLocks;
-        require(max > 0, "xMETRO: zero max");
-
-        uint256 unlocked;
-        unlocked += _consumeThorLocks(_thorLocks3m[msg.sender], thorLockCursor3m[msg.sender], msg.sender, true, max);
-        unlocked += _consumeThorLocks(_thorLocks10m[msg.sender], thorLockCursor10m[msg.sender], msg.sender, false, max);
-
-        require(unlocked > 0, "xMETRO: nothing unlocked");
-        require(unlocked <= type(uint128).max, "xMETRO: amount too large");
-
-        // Convert locked shares -> free (transferable) shares. Total shares stay unchanged.
-        _decreaseLockedShares(msg.sender, unlocked);
-        _mintFreeShares(msg.sender, unlocked);
-
-        emit UnlockedClaimedAsShares(msg.sender, UnstakeSource.Thor, unlocked);
-        return unlocked;
-    }
-
-    /// @notice Convert currently-vested yTHOR-migration principal into transferable xMETRO (free shares).
-    /// @dev This does NOT withdraw METRO; it only moves the user's shares from `lockedShares` into ERC20 `balanceOf`.
-    /// @param maxSchedules Max number of vesting schedules to scan/consume (0 uses `defaultMaxVestingSchedules`).
-    function claimAndStakeUnlockedYThor(uint256 maxSchedules) external nonReentrant whenNotPaused returns (uint256 sharesMinted) {
-        uint256 unlocked = _consumeVesting(msg.sender, maxSchedules);
-        require(unlocked > 0, "xMETRO: nothing unlocked");
-        require(unlocked <= type(uint128).max, "xMETRO: amount too large");
-
-        // Convert locked shares -> free (transferable) shares. Total shares stay unchanged.
-        _decreaseLockedShares(msg.sender, unlocked);
-        _mintFreeShares(msg.sender, unlocked);
-
-        emit UnlockedClaimedAsShares(msg.sender, UnstakeSource.YThor, unlocked);
         return unlocked;
     }
 
@@ -672,249 +687,420 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
         whenNotPaused
         returns (uint256 sharesMinted)
     {
-        uint256 unlocked = _consumeContributorVesting(msg.sender, maxSchedules);
-        require(unlocked > 0, "xMETRO: nothing unlocked");
-        require(unlocked <= type(uint128).max, "xMETRO: amount too large");
-
-        // Convert locked shares -> free (transferable) shares. Total shares stay unchanged.
+        uint256 unlocked = XMetroCoreLogic.consumeContributorVesting(msg.sender, maxSchedules);
         _decreaseLockedShares(msg.sender, unlocked);
         _mintFreeShares(msg.sender, unlocked);
-
         emit UnlockedClaimedAsShares(msg.sender, UnstakeSource.Contributor, unlocked);
         return unlocked;
     }
 
-    /// @notice Migration flow: mint METRO and credit a locked THOR position (3m/10m).
-    function creditLockedTHORFromMigration(address user, uint256 amount, uint256 lockMonths)
+    /// @notice Migration flow: mint METRO and create the user's single THOR position.
+    function creditThorFromMigration(address user, uint256 principal)
         external
         nonReentrant
         whenNotPaused
         onlyMigrationEscrow
     {
-        require(user != address(0) && amount > 0, "xMETRO: bad params");
-        METRO.mint(address(this), amount);
-        _creditLockedTHOR(user, amount, lockMonths);
+        uint64 migratedAt = XMetroCoreLogic.createThorPosition(user, principal);
+        _increaseLockedShares(user, principal);
+
+        METRO.mint(address(this), principal);
+        emit ThorPositionCreated(user, principal, migratedAt);
     }
 
-    /// @notice Migration flow: mint METRO and credit a locked vesting position (yTHOR schedule).
-    function creditLockedVestingFromMigration(address user, uint256 amount)
+    /// @notice Migration flow: mint METRO and create the user's active yTHOR reward position.
+    function creditYThorFromMigration(address user, uint256 principal)
         external
         nonReentrant
         whenNotPaused
         onlyMigrationEscrow
     {
-        require(user != address(0) && amount > 0, "xMETRO: bad params");
-        METRO.mint(address(this), amount);
-        _creditLockedVesting(user, amount);
+        uint64 migratedAt = XMetroCoreLogic.createYThorPosition(user, principal);
+        _increaseYThorShares(user, principal);
+
+        METRO.mint(address(this), principal);
+        emit YThorPositionCreated(user, principal, migratedAt);
     }
 
     /// @notice Rescue tokens (METRO excluded).
     function rescueERC20(address token, address to, uint256 amount) external onlyOwner {
-        require(token != address(METRO), "xMETRO: cannot rescue METRO");
-        require(to != address(0), "xMETRO: bad to");
+        if (token == address(METRO)) revert ProtectedToken();
+        if (to == address(0)) revert InvalidAddress();
         IERC20(token).safeTransfer(to, amount);
         emit TokensRescued(token, to, amount);
     }
 
-    /// @dev Preview: unlockable THOR amount (read-only).
-    function _previewThorUnlockable(address user) internal view returns (uint256 unlockable) {
-        unlockable += _previewThorUnlockableFor(_thorLocks3m[user], thorLockCursor3m[user]);
-        unlockable += _previewThorUnlockableFor(_thorLocks10m[user], thorLockCursor10m[user]);
-    }
+    function _exitThor(address user, ExitMode mode) internal returns (uint256 payout, uint256 forfeited) {
+        XMetroCoreLogic.ExitResult memory result = XMetroCoreLogic.consumeThorExit(user);
+        _decreaseLockedShares(user, result.principal);
 
-    /// @dev Preview: unlockable THOR amount for a single lock array (read-only).
-    function _previewThorUnlockableFor(ThorLock[] storage locks, uint256 cursor) internal view returns (uint256 unlockable) {
-        uint256 len = locks.length;
-        if (cursor >= len) return 0;
-        for (uint256 i = cursor; i < len; i++) {
-            ThorLock memory l = locks[i];
-            if (l.endTime > block.timestamp) break;
-            unlockable += uint256(l.amount);
+        _deliverExitPayout(user, result.payout, UnstakeSource.Thor, mode);
+        if (result.forfeited > 0) {
+            IERC20(address(METRO)).safeTransfer(forfeitureRecipient, result.forfeited);
         }
+        emit ThorExited(
+            user,
+            result.principal,
+            result.payout,
+            result.forfeited,
+            result.rateBps,
+            mode,
+            result.exitedAt,
+            forfeitureRecipient
+        );
+        return (result.payout, result.forfeited);
     }
 
-    /// @dev Preview: unlockable vesting amount (read-only).
-    function _previewVestingUnlockable(address user) internal view returns (uint256 unlockable) {
-        VestingSchedule[] storage schedules = _yThorVests[user];
-        uint256 len = schedules.length;
-        if (len == 0) return 0;
-        uint64 ts = uint64(block.timestamp);
-        for (uint256 i = 0; i < len; i++) {
-            VestingSchedule memory s = schedules[i];
-            unlockable += _releasable(s, ts);
+    function _exitYThor(address user, ExitMode mode) internal returns (uint256 payout, uint256 forfeited) {
+        XMetroCoreLogic.ExitResult memory result = XMetroCoreLogic.consumeYThorExit(user);
+        _decreaseYThorShares(user, result.principal);
+
+        _deliverExitPayout(user, result.payout, UnstakeSource.YThor, mode);
+        if (result.forfeited > 0) {
+            IERC20(address(METRO)).safeTransfer(forfeitureRecipient, result.forfeited);
         }
+        emit YThorExited(
+            user,
+            result.principal,
+            result.payout,
+            result.forfeited,
+            result.rateBps,
+            mode,
+            result.exitedAt,
+            forfeitureRecipient
+        );
+        return (result.payout, result.forfeited);
     }
 
-    /// @dev Preview: unlockable contributor vesting amount (read-only).
-    function _previewContributorUnlockable(address user) internal view returns (uint256 unlockable) {
-        VestingSchedule[] storage schedules = _contributorVests[user];
-        uint256 len = schedules.length;
-        if (len == 0) return 0;
-        uint64 ts = uint64(block.timestamp);
-        for (uint256 i = 0; i < len; i++) {
-            VestingSchedule memory s = schedules[i];
-            unlockable += _releasable(s, ts);
+    function _deliverExitPayout(address user, uint256 amount, UnstakeSource source, ExitMode mode) internal {
+        if (amount == 0) return;
+
+        if (mode == ExitMode.Stake) {
+            _mintFreeShares(user, amount);
+            emit UnlockedClaimedAsShares(user, source, amount);
+            return;
         }
-    }
 
-    /// @dev Credit a THOR lock (updates lockedShares; does not mint ERC20 shares).
-    function _creditLockedTHOR(address user, uint256 amount, uint256 lockMonths) internal {
-        require(amount <= type(uint128).max, "xMETRO: amount too large");
-
-        require(lockMonths == 3 || lockMonths == 10, "xMETRO: bad lock months");
-
-        uint64 endTime = uint64(block.timestamp) + uint64(lockMonths) * THOR_LOCK_MONTH_SECONDS;
-
-        if (lockMonths == 3) {
-            _thorLocks3m[user].push(ThorLock(uint128(amount), endTime));
+        uint64 unlockTime = uint64(block.timestamp) + UNSTAKE_DELAY;
+        if (source == UnstakeSource.Thor) {
+            _unstakeRequestsThor[user].push(UnstakeRequest(uint128(amount), unlockTime));
         } else {
-            _thorLocks10m[user].push(ThorLock(uint128(amount), endTime));
+            _unstakeRequestsYThor[user].push(UnstakeRequest(uint128(amount), unlockTime));
         }
-
-        _increaseLockedShares(user, amount);
-        emit LockedTHORCredited(user, amount, lockMonths, endTime);
+        emit UnstakeRequested(user, source, amount, unlockTime);
     }
 
-    /// @dev Credit a vesting schedule (updates lockedShares; does not mint ERC20 shares).
-    function _creditLockedVesting(address user, uint256 amount) internal {
-        require(amount <= type(uint128).max, "xMETRO: amount too large");
-
-        uint64 startTime = uint64(block.timestamp) + YTHOR_CLIFF;
-        uint64 duration = YTHOR_DURATION;
-
-        _yThorVests[user].push(VestingSchedule(uint128(amount), 0, startTime, duration));
-
-        _increaseLockedShares(user, amount);
-        emit LockedVestingCredited(user, amount, startTime, duration);
-    }
-
-    /// @dev Linear vesting schedule (same math as OZ VestingWallet._vestingSchedule).
-    function _vestingSchedule(uint256 totalAllocation, uint64 timestamp, uint64 startTime, uint64 duration)
-        internal
-        pure
-        returns (uint256)
-    {
-        if (timestamp < startTime) return 0;
-
-        uint64 endTime = startTime + duration;
-        if (timestamp >= endTime) return totalAllocation;
-
-        return (totalAllocation * (timestamp - startTime)) / duration;
-    }
-
-    /// @dev Releasable (vested - claimed) at a given timestamp.
-    function _releasable(VestingSchedule memory s, uint64 timestamp) internal pure returns (uint256) {
-        uint256 vested = _vestingSchedule(uint256(s.totalAmount), timestamp, s.startTime, s.duration);
-        if (vested <= uint256(s.claimed)) return 0;
-        return vested - uint256(s.claimed);
-    }
-
-
-    /// @dev Consume matured THOR lock entries up to `maxLocks`.
-    function _consumeThorLocks(ThorLock[] storage locks, uint256 cursor, address user, bool is3m, uint256 maxLocks)
-        internal
-        returns (uint256 unlocked)
-    {
-        uint256 len = locks.length;
-        if (cursor >= len) return 0;
-
-        uint256 processedCount = 0;
-        while (cursor < len) {
-            ThorLock memory l = locks[cursor];
-            if (l.endTime > block.timestamp) break;
-            unlocked += uint256(l.amount);
-            cursor++;
-            processedCount++;
-            if (processedCount >= maxLocks) break;
-        }
-
-        if (is3m) thorLockCursor3m[user] = cursor;
-        else thorLockCursor10m[user] = cursor;
-    }
-
-    /// @dev Consume vesting schedules in a round-robin window, capped by `maxVestingSchedules`.
-    function _consumeVesting(address user, uint256 maxVestingSchedules) internal returns (uint256 unlocked) {
-        VestingSchedule[] storage schedules = _yThorVests[user];
-        uint256 len = schedules.length;
-        if (len == 0) return 0;
-
-        uint256 max = maxVestingSchedules;
-        if (max == 0) max = defaultMaxVestingSchedules;
-        if (max == 0 || max > len) max = len;
-
-        uint256 idx = yThorVestCursor[user] % len;
-        uint64 ts = uint64(block.timestamp);
-
-        for (uint256 i = 0; i < max; i++) {
-            VestingSchedule storage s = schedules[idx];
-            uint256 releasable = _releasable(s, ts);
-            if (releasable > 0) {
-                s.claimed = uint128(uint256(s.claimed) + releasable);
-                unlocked += releasable;
-            }
-
-            idx = (idx + 1 == len) ? 0 : (idx + 1);
-        }
-
-        yThorVestCursor[user] = idx;
-    }
-
-    /// @dev Consume contributor vesting schedules in a round-robin window.
-    function _consumeContributorVesting(address user, uint256 maxVestingSchedules) internal returns (uint256 unlocked) {
-        VestingSchedule[] storage schedules = _contributorVests[user];
-        uint256 len = schedules.length;
-        if (len == 0) return 0;
-
-        uint256 max = maxVestingSchedules;
-        if (max == 0) max = defaultMaxVestingSchedules;
-        if (max == 0 || max > len) max = len;
-
-        uint256 idx = contributorVestCursor[user] % len;
-        uint64 ts = uint64(block.timestamp);
-
-        for (uint256 i = 0; i < max; i++) {
-            VestingSchedule storage s = schedules[idx];
-            uint256 releasable = _releasable(s, ts);
-            if (releasable > 0) {
-                s.claimed = uint128(uint256(s.claimed) + releasable);
-                unlocked += releasable;
-            }
-
-            idx = (idx + 1 == len) ? 0 : (idx + 1);
-        }
-
-        contributorVestCursor[user] = idx;
-    }
-
-    /// @dev Compute pending rewards and accumulated value used to update `rewardDebt`.
+    /// @dev Compute base-share and yTHOR rewards without rewriting either historical accumulator.
     function _pendingAndAccumulated(address user) internal view returns (uint256 pending, int256 accumulated) {
-        accumulated = int256((totalSharesOf(user) * accRewardPerShare) / ACC_PRECISION);
+        uint256 yThorPrincipal = _activeYThorPrincipal(user);
+        uint256 baseShares = totalSharesOf(user) - yThorPrincipal;
+        accumulated = int256(
+            (baseShares * accRewardPerShare) / ACC_PRECISION + (yThorPrincipal * _accYThorRewardPerPrincipal)
+                / ACC_PRECISION
+        );
         int256 debt = rewardDebt[user];
         if (accumulated <= debt) return (0, accumulated);
         pending = uint256(accumulated - debt);
+    }
+
+    function _consumePendingReward(address user) internal returns (uint256 pending) {
+        int256 accumulated;
+        (pending, accumulated) = _pendingAndAccumulated(user);
+        if (pending == 0) revert NoRewards();
+        rewardDebt[user] = accumulated;
+    }
+
+    function _collectActionPending(
+        address[] calldata candidates,
+        bytes32 id,
+        bool compound,
+        IXMetroDeFiAdapter.StrategyInfo memory info
+    ) internal returns (PendingBatch memory batch) {
+        uint256 length = candidates.length;
+        if (length == 0) revert InvalidArrayLength();
+        address[] memory users = new address[](length);
+        uint256[] memory amounts = new uint256[](length);
+        uint256[] memory sourceIndexes = new uint256[](length);
+        uint256 count;
+        uint256 total;
+
+        for (uint256 i; i < length; ++i) {
+            address user = candidates[i];
+            if (user == address(0)) continue;
+            AutoStrategyPreference storage preference = _autoStrategyPreferences[user];
+            if (compound && !autocompoundEnabled[user]) continue;
+            if (preference.strategyId != id || !_preferenceCurrent(preference, info)) continue;
+
+            (uint256 pending, int256 accumulated) = _pendingAndAccumulated(user);
+            if (pending == 0) continue;
+            rewardDebt[user] = accumulated;
+            users[count] = user;
+            amounts[count] = pending;
+            sourceIndexes[count] = i;
+            total += pending;
+            ++count;
+        }
+
+        if (count == 0) revert NoRewards();
+        assembly ("memory-safe") {
+            mstore(users, count)
+            mstore(amounts, count)
+            mstore(sourceIndexes, count)
+        }
+        batch = PendingBatch(users, amounts, sourceIndexes, total);
+    }
+
+    function _enableAutocompound(address user) internal {
+        bytes32 id = SWAP_METRO_STRATEGY_ID;
+        IXMetroDeFiAdapter.StrategyInfo memory info = _requireStrategy(id, true);
+        _setAutoPreference(user, id, info, true);
+    }
+
+    function _setAutoPreference(address user, bytes32 id, IXMetroDeFiAdapter.StrategyInfo memory info, bool compound)
+        internal
+    {
+        bytes32 oldStrategyId = _autoStrategyPreferences[user].strategyId;
+        _autoStrategyPreferences[user] =
+            AutoStrategyPreference(id, deFiAdapterEpoch, info.logicEpoch, info.domainRevision, info.strategyRevision);
+        autocompoundEnabled[user] = compound;
+        emit AutocompoundEnabledUpdated(user, compound);
+        emit AutoStrategyPreferenceUpdated(user, oldStrategyId, id);
+    }
+
+    function _preferenceCurrent(AutoStrategyPreference storage preference, IXMetroDeFiAdapter.StrategyInfo memory info)
+        internal
+        view
+        returns (bool)
+    {
+        return preference.adapterEpoch == deFiAdapterEpoch && preference.logicEpoch == info.logicEpoch
+            && preference.domainRevision == info.domainRevision && preference.strategyRevision == info.strategyRevision;
+    }
+
+    function _requireStrategy(bytes32 id, bool automatic)
+        internal
+        view
+        returns (IXMetroDeFiAdapter.StrategyInfo memory info)
+    {
+        uint256 selector = uint32(IXMetroDeFiAdapter.strategyInfo.selector);
+        address adapterAddress = deFiAdapter;
+        bool valid;
+        assembly ("memory-safe") {
+            info := mload(0x40)
+            mstore(info, shl(224, selector))
+            mstore(add(info, 4), id)
+            valid := staticcall(gas(), adapterAddress, info, 36, info, 224)
+            valid := and(valid, eq(returndatasize(), 224))
+            if valid {
+                valid := and(valid, lt(mload(info), 6))
+                valid := and(valid, lt(mload(add(info, 32)), 2))
+                valid := and(valid, lt(mload(add(info, 64)), 2))
+            }
+            mstore(0x40, add(info, 224))
+        }
+        if (!valid) revert InvalidConfiguration();
+        if (info.kind == IXMetroDeFiAdapter.StrategyKind.None || !info.enabled || (automatic && !info.autoEnabled)) {
+            revert InvalidConfiguration();
+        }
+    }
+
+    function _readStaticWord(address target, bytes4 selector_) private view returns (bytes32 value) {
+        uint256 selector = uint32(selector_);
+        bool valid;
+        assembly ("memory-safe") {
+            let pointer := mload(0x40)
+            mstore(pointer, shl(224, selector))
+            valid := staticcall(gas(), target, pointer, 4, pointer, 32)
+            valid := and(valid, eq(returndatasize(), 32))
+            value := mload(pointer)
+        }
+        if (!valid) revert InvalidAddress();
+    }
+
+    function _validAdapterBindings(address target) private view returns (bool valid) {
+        uint256 selector = uint32(bytes4(keccak256("configuration()")));
+        address expectedCore = address(this);
+        address expectedUsdc = address(rewardToken);
+        address expectedMetro = address(METRO);
+        bytes32 expectedFamily = ADAPTER_FAMILY_ID;
+        assembly ("memory-safe") {
+            let pointer := mload(0x40)
+            mstore(pointer, shl(224, selector))
+            valid := staticcall(gas(), target, pointer, 4, pointer, 512)
+            valid := and(valid, eq(returndatasize(), 512))
+            valid := and(valid, eq(mload(pointer), and(expectedCore, 0xffffffffffffffffffffffffffffffffffffffff)))
+            valid := and(
+                valid,
+                eq(mload(add(pointer, 32)), and(expectedUsdc, 0xffffffffffffffffffffffffffffffffffffffff))
+            )
+            valid := and(
+                valid,
+                eq(mload(add(pointer, 64)), and(expectedMetro, 0xffffffffffffffffffffffffffffffffffffffff))
+            )
+            valid := and(valid, eq(mload(add(pointer, 96)), expectedFamily))
+            let epoch := mload(add(pointer, 128))
+            valid := and(valid, and(iszero(iszero(epoch)), iszero(shr(64, epoch))))
+            mstore(0x40, add(pointer, 512))
+        }
+    }
+
+    function _compactMinima(
+        IXMetroDeFiAdapter.StrategyKind kind,
+        uint256 candidateCount,
+        uint256[] calldata supplied,
+        PendingBatch memory batch
+    ) internal pure returns (uint256[] memory minima) {
+        if (kind != IXMetroDeFiAdapter.StrategyKind.AaveV4) {
+            if (supplied.length != 0) revert InvalidArrayLength();
+            return new uint256[](0);
+        }
+        if (supplied.length != candidateCount) revert InvalidArrayLength();
+        minima = new uint256[](batch.users.length);
+        for (uint256 i; i < minima.length; ++i) {
+            uint256 minimum = supplied[batch.sourceIndexes[i]];
+            if (minimum == 0) revert InvalidAmount();
+            minima[i] = minimum;
+        }
+    }
+
+    function _executeManual(
+        IXMetroDeFiAdapter.StrategyInfo memory info,
+        bytes32 id,
+        address account,
+        uint256 amount,
+        uint256 minimum,
+        uint256 deadline,
+        bytes calldata executionData
+    ) internal returns (IXMetroDeFiAdapter.ExecutionResult memory result) {
+        if (amount == 0 || minimum == 0) revert InvalidAmount();
+        address adapterAddress = deFiAdapter;
+        rewardToken.safeTransfer(adapterAddress, amount);
+        uint256 selector = uint32(IXMetroDeFiAdapter.execute.selector);
+        uint256 dataLength = executionData.length;
+        bool valid;
+        assembly ("memory-safe") {
+            result := mload(0x40)
+            mstore(result, shl(224, selector))
+            mstore(add(result, 4), 32)
+            let tuple := add(result, 36)
+            mstore(tuple, id)
+            mstore(add(tuple, 32), and(account, 0xffffffffffffffffffffffffffffffffffffffff))
+            mstore(add(tuple, 64), amount)
+            mstore(add(tuple, 96), minimum)
+            mstore(add(tuple, 128), deadline)
+            mstore(add(tuple, 160), 192)
+            mstore(add(tuple, 192), dataLength)
+            let dataPointer := add(tuple, 224)
+            mstore(add(dataPointer, dataLength), 0)
+            calldatacopy(dataPointer, executionData.offset, dataLength)
+            let inputLength := add(260, and(add(dataLength, 31), not(31)))
+            let success := call(gas(), adapterAddress, 0, result, inputLength, result, 96)
+            if iszero(success) {
+                let size := returndatasize()
+                returndatacopy(result, 0, size)
+                revert(result, size)
+            }
+            valid := and(eq(returndatasize(), 96), iszero(shr(160, mload(result))))
+            mstore(0x40, add(result, 96))
+        }
+        if (!valid) revert InvalidConfiguration();
+        if (result.amountIn != amount || result.outputToken != info.outputToken || result.amountOut < minimum) {
+            revert InvalidConfiguration();
+        }
+    }
+
+    function _executeBatch(
+        IXMetroDeFiAdapter.StrategyInfo memory info,
+        bytes32 id,
+        PendingBatch memory batch,
+        uint256 minimum,
+        uint256[] memory minima,
+        uint256 deadline,
+        bytes calldata executionData
+    ) internal returns (IXMetroDeFiAdapter.ExecutionResult memory result) {
+        if (minimum == 0) revert InvalidAmount();
+        address adapterAddress = deFiAdapter;
+        uint256 metroBefore =
+            info.kind == IXMetroDeFiAdapter.StrategyKind.SwapMetro ? METRO.balanceOf(address(this)) : 0;
+        rewardToken.safeTransfer(adapterAddress, batch.total);
+        uint256 selector = uint32(IXMetroDeFiAdapter.executeBatch.selector);
+        uint256 accountCount = batch.users.length;
+        uint256 minimaCount = minima.length;
+        uint256 dataLength = executionData.length;
+        bool valid;
+        assembly ("memory-safe") {
+            result := mload(0x40)
+            mstore(result, shl(224, selector))
+            mstore(add(result, 4), 32)
+            let tuple := add(result, 36)
+            let accountsOffset := 224
+            let arrayBytes := mul(add(accountCount, 1), 32)
+            let amountsOffset := add(accountsOffset, arrayBytes)
+            let minimaOffset := add(amountsOffset, arrayBytes)
+            let minimaBytes := mul(add(minimaCount, 1), 32)
+            let dataOffset := add(minimaOffset, minimaBytes)
+
+            mstore(tuple, id)
+            mstore(add(tuple, 32), accountsOffset)
+            mstore(add(tuple, 64), amountsOffset)
+            mstore(add(tuple, 96), minimum)
+            mstore(add(tuple, 128), minimaOffset)
+            mstore(add(tuple, 160), deadline)
+            mstore(add(tuple, 192), dataOffset)
+            mcopy(add(tuple, accountsOffset), mload(batch), arrayBytes)
+            mcopy(add(tuple, amountsOffset), mload(add(batch, 32)), arrayBytes)
+            mcopy(add(tuple, minimaOffset), minima, minimaBytes)
+
+            mstore(add(tuple, dataOffset), dataLength)
+            let dataPointer := add(add(tuple, dataOffset), 32)
+            mstore(add(dataPointer, dataLength), 0)
+            calldatacopy(dataPointer, executionData.offset, dataLength)
+            let inputLength := add(add(68, dataOffset), and(add(dataLength, 31), not(31)))
+            let success := call(gas(), adapterAddress, 0, result, inputLength, result, 96)
+            if iszero(success) {
+                let size := returndatasize()
+                returndatacopy(result, 0, size)
+                revert(result, size)
+            }
+            valid := and(eq(returndatasize(), 96), iszero(shr(160, mload(result))))
+            mstore(0x40, add(result, 96))
+        }
+        if (!valid) revert InvalidConfiguration();
+        if (result.amountIn != batch.total || result.outputToken != info.outputToken || result.amountOut < minimum) {
+            revert InvalidConfiguration();
+        }
+        if (
+            info.kind == IXMetroDeFiAdapter.StrategyKind.SwapMetro
+                && METRO.balanceOf(address(this)) - metroBefore != result.amountOut
+        ) revert InvalidConfiguration();
+    }
+
+    function _distributeCompound(PendingBatch memory batch, uint256 received) internal {
+        uint256 largest;
+        for (uint256 i = 1; i < batch.amounts.length; ++i) {
+            if (batch.amounts[i] > batch.amounts[largest]) largest = i;
+        }
+        uint256 distributed;
+        for (uint256 i; i < batch.amounts.length; ++i) {
+            if (i == largest) continue;
+            uint256 share = Math.mulDiv(received, batch.amounts[i], batch.total);
+            if (share == 0) revert InvalidAmount();
+            distributed += share;
+            _mintFreeShares(batch.users[i], share);
+            emit AutoCompounded(batch.users[i], batch.amounts[i], share);
+        }
+        uint256 finalShare = received - distributed;
+        _mintFreeShares(batch.users[largest], finalShare);
+        emit AutoCompounded(batch.users[largest], batch.amounts[largest], finalShare);
     }
 
     function _autocompound(address user, uint256 minMetroOut, uint256 deadline, bytes calldata swapData)
         internal
         returns (uint256)
     {
-        require(address(swapAdapter) != address(0), "xMETRO: adapter not set");
-
-        int256 accumulated;
-        uint256 pending;
-        (pending, accumulated) = _pendingAndAccumulated(user);
-        require(pending > 0, "xMETRO: no rewards");
-
-        rewardDebt[user] = accumulated;
-
-        uint256 metroBefore = METRO.balanceOf(address(this));
-        rewardToken.forceApprove(address(swapAdapter), pending);
-        swapAdapter.swap(pending, minMetroOut, deadline, swapData);
-        rewardToken.forceApprove(address(swapAdapter), 0);
-
-        uint256 metroAfter = METRO.balanceOf(address(this));
-        uint256 received = metroAfter - metroBefore;
-        require(received >= minMetroOut, "xMETRO: slippage");
+        bytes32 id = SWAP_METRO_STRATEGY_ID;
+        IXMetroDeFiAdapter.StrategyInfo memory info = _requireStrategy(id, false);
+        uint256 pending = _consumePendingReward(user);
+        uint256 received = _executeManual(info, id, user, pending, minMetroOut, deadline, swapData).amountOut;
 
         _mintFreeShares(user, received);
 
@@ -922,42 +1108,59 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
         return received;
     }
 
-    /// @dev Debt delta for a shares delta.
-    function _debtDelta(uint256 sharesDelta) internal view returns (int256) {
-        return int256((sharesDelta * accRewardPerShare) / ACC_PRECISION);
+    /// @dev Debt delta at the selected historical accumulator.
+    function _debtDelta(uint256 amount, uint256 accumulator) internal pure returns (int256) {
+        return int256((amount * accumulator) / ACC_PRECISION);
     }
 
     /// @dev Increase locked shares and update reward debt so new shares do not get past rewards.
     function _increaseLockedShares(address user, uint256 amount) internal {
         lockedShares[user] += amount;
         totalLockedShares += amount;
-        rewardDebt[user] += _debtDelta(amount);
+        rewardDebt[user] += _debtDelta(amount, accRewardPerShare);
     }
 
     /// @dev Decrease locked shares and update reward debt.
     function _decreaseLockedShares(address user, uint256 amount) internal {
         lockedShares[user] -= amount;
         totalLockedShares -= amount;
-        rewardDebt[user] -= _debtDelta(amount);
+        rewardDebt[user] -= _debtDelta(amount, accRewardPerShare);
+    }
+
+    /// @dev Add locked yTHOR shares to their independent reward accumulator.
+    function _increaseYThorShares(address user, uint256 amount) internal {
+        lockedShares[user] += amount;
+        totalLockedShares += amount;
+        _totalActiveYThorPrincipal += amount;
+        rewardDebt[user] += _debtDelta(amount, _accYThorRewardPerPrincipal);
+    }
+
+    /// @dev Remove yTHOR principal while preserving rewards accrued before exit.
+    function _decreaseYThorShares(address user, uint256 amount) internal {
+        lockedShares[user] -= amount;
+        totalLockedShares -= amount;
+        _totalActiveYThorPrincipal -= amount;
+        rewardDebt[user] -= _debtDelta(amount, _accYThorRewardPerPrincipal);
     }
 
     /// @dev Mint free shares and update reward debt.
     function _mintFreeShares(address to, uint256 amount) internal {
-        rewardDebt[to] += _debtDelta(amount);
+        rewardDebt[to] += _debtDelta(amount, accRewardPerShare);
         _mint(to, amount);
     }
 
     /// @dev Burn free shares and update reward debt.
     function _burnFreeShares(address from, uint256 amount) internal {
-        rewardDebt[from] -= _debtDelta(amount);
+        rewardDebt[from] -= _debtDelta(amount, accRewardPerShare);
         _burn(from, amount);
     }
 
     /// @dev Move reward debt when free shares move.
     function _moveFreeSharesDebt(address from, address to, uint256 amount) internal {
         if (amount == 0 || from == to) return;
-        if (from != address(0)) rewardDebt[from] -= _debtDelta(amount);
-        if (to != address(0)) rewardDebt[to] += _debtDelta(amount);
+        int256 delta = _debtDelta(amount, accRewardPerShare);
+        if (from != address(0)) rewardDebt[from] -= delta;
+        if (to != address(0)) rewardDebt[to] += delta;
     }
 
     /// @notice Total shares = freeShares(totalSupply) + lockedShares(totalLockedShares).
@@ -968,6 +1171,22 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
     /// @notice User total shares = freeShares(balanceOf) + lockedShares.
     function totalSharesOf(address user) public view returns (uint256) {
         return balanceOf(user) + lockedShares[user];
+    }
+
+    function _activeYThorPrincipal(address user) private view returns (uint256) {
+        return XMetroCoreLogic.activeYThorPrincipal(user);
+    }
+
+    /// @notice Reward denominator at the currently configured yTHOR multiplier.
+    function totalRewardWeight() public view returns (uint256) {
+        return totalShares() - _totalActiveYThorPrincipal + (_totalActiveYThorPrincipal * yThorRewardWeightBps)
+            / BPS_DENOMINATOR;
+    }
+
+    /// @notice Current instantaneous reward weight; historical rewards use the two accumulators above.
+    function rewardWeightOf(address user) public view returns (uint256) {
+        uint256 principal = _activeYThorPrincipal(user);
+        return totalSharesOf(user) - principal + (principal * yThorRewardWeightBps) / BPS_DENOMINATOR;
     }
 
     /// @notice Pending claimable rewards for `user` (view).
@@ -994,47 +1213,19 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
         }
     }
 
-    /// @notice Preview the amount currently unlockable across all lock/vesting mechanisms.
-    /// @dev This is the amount that can be queued via `requestWithdrawUnlocked*()`; actual METRO withdrawal happens via `withdrawThor/withdrawYThor/withdrawContributor(...)` after cooldown.
+    /// @notice Compatibility aggregate for amounts that can be exited or vested at the current timestamp.
+    /// @dev THOR and yTHOR are one-time exit quotes; contributor remains a vesting quote.
     function previewWithdrawableNow(address user)
         external
         view
-        returns (uint256 thorUnlockable, uint256 yThorUnlockable, uint256 contributorUnlockable, uint256 totalUnlockable)
+        returns (
+            uint256 thorUnlockable,
+            uint256 yThorUnlockable,
+            uint256 contributorUnlockable,
+            uint256 totalUnlockable
+        )
     {
-        thorUnlockable = _previewThorUnlockable(user);
-        yThorUnlockable = _previewVestingUnlockable(user);
-        contributorUnlockable = _previewContributorUnlockable(user);
-        totalUnlockable = thorUnlockable + yThorUnlockable + contributorUnlockable;
-    }
-
-    /// @notice Vesting schedule count.
-    function yThorVestingCount(address user) external view returns (uint256) {
-        return _yThorVests[user].length;
-    }
-
-    /// @notice Vesting schedule by index.
-    function yThorVesting(address user, uint256 index) external view returns (VestingSchedule memory) {
-        return _yThorVests[user][index];
-    }
-
-    /// @notice THOR lock count (3m).
-    function thorLocks3mCount(address user) external view returns (uint256) {
-        return _thorLocks3m[user].length;
-    }
-
-    /// @notice THOR lock count (10m).
-    function thorLocks10mCount(address user) external view returns (uint256) {
-        return _thorLocks10m[user].length;
-    }
-
-    /// @notice THOR lock entry (3m) by index.
-    function thorLock3m(address user, uint256 index) external view returns (ThorLock memory) {
-        return _thorLocks3m[user][index];
-    }
-
-    /// @notice THOR lock entry (10m) by index.
-    function thorLock10m(address user, uint256 index) external view returns (ThorLock memory) {
-        return _thorLocks10m[user][index];
+        return XMetroCoreLogic.previewMigrationWithdrawableNow(user);
     }
 
     /// @notice Unstake request count / entry by index (Free).
@@ -1075,11 +1266,17 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
 
     /// @notice contributor vesting schedule count.
     function contributorVestingCount(address user) external view returns (uint256) {
-        return _contributorVests[user].length;
+        return XMetroCoreLogic.contributorVestingCount(user);
+    }
+
+    function contributorVestCursor(address user) external view returns (uint256) {
+        return XMetroCoreLogic.contributorVestCursor(user);
     }
 
     /// @notice contributor vesting schedule by index.
     function contributorVesting(address user, uint256 index) external view returns (VestingSchedule memory) {
-        return _contributorVests[user][index];
+        (uint128 totalAmount, uint128 claimed, uint64 startTime, uint64 duration) =
+            XMetroCoreLogic.contributorVesting(user, index);
+        return VestingSchedule(totalAmount, claimed, startTime, duration);
     }
 }

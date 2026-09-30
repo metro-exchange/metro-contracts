@@ -8,7 +8,8 @@ pragma solidity 0.8.30;
 
 import "forge-std/Test.sol";
 
-import { MetroToken } from "../../src/metro.sol";
+import {MetroToken} from "../../src/metro.sol";
+import {ERC20Capped} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 
 contract MetroTokenTest is Test {
     MetroToken internal metro;
@@ -20,10 +21,56 @@ contract MetroTokenTest is Test {
     address internal user = makeAddr("user");
     uint256 internal alicePk = 0xA11CE;
     address internal alice;
+    uint256 internal constant CAP = 100_000_000 ether;
 
     function setUp() public {
         metro = new MetroToken("METRO", "METRO", owner);
         alice = vm.addr(alicePk);
+    }
+
+    function test_Constructor_SetsImmutableCap() public view {
+        assertEq(metro.cap(), CAP);
+        assertEq(metro.MAX_SUPPLY(), CAP);
+    }
+
+    function test_Mint_MultipleMintersShareOneCap() public {
+        metro.setMinter(owner, true);
+        metro.setMinter(minter, true);
+
+        metro.mint(user, CAP - 1);
+        vm.prank(minter);
+        metro.mint(user, 1);
+        assertEq(metro.totalSupply(), CAP);
+
+        vm.prank(minter);
+        vm.expectRevert(abi.encodeWithSelector(ERC20Capped.ERC20ExceededCap.selector, CAP + 1, CAP));
+        metro.mint(user, 1);
+        assertEq(metro.totalSupply(), CAP);
+    }
+
+    function test_Mint_CrossingCapRevertsAtomically() public {
+        metro.setMinter(owner, true);
+        metro.mint(user, CAP - 10);
+
+        vm.expectRevert(abi.encodeWithSelector(ERC20Capped.ERC20ExceededCap.selector, CAP + 1, CAP));
+        metro.mint(user, 11);
+
+        assertEq(metro.totalSupply(), CAP - 10);
+        assertEq(metro.balanceOf(user), CAP - 10);
+    }
+
+    function test_TransferToDeadAddressDoesNotBurnOrRestoreCap() public {
+        address dead = 0x000000000000000000000000000000000000dEaD;
+        metro.setMinter(owner, true);
+        metro.mint(user, CAP);
+
+        vm.prank(user);
+        metro.transfer(dead, CAP);
+        assertEq(metro.balanceOf(dead), CAP);
+        assertEq(metro.totalSupply(), CAP);
+
+        vm.expectRevert(abi.encodeWithSelector(ERC20Capped.ERC20ExceededCap.selector, CAP + 1, CAP));
+        metro.mint(user, 1);
     }
 
     function test_SetMinter_OnlyOwner() public {
@@ -54,7 +101,7 @@ contract MetroTokenTest is Test {
         assertEq(metro.balanceOf(user), 3 ether);
     }
 
-    function test_Constructor_SetsOwnerAndDefaultMinter() public {
+    function test_Constructor_SetsOwnerAndNoDefaultMinter() public {
         assertEq(metro.owner(), owner);
 
         assertTrue(!metro.isMinter(owner));
@@ -128,9 +175,8 @@ contract MetroTokenTest is Test {
         uint256 nonce = metro.nonces(alice);
         uint256 deadline = block.timestamp + 1 days;
 
-        bytes32 typehash = keccak256(
-            "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
-        );
+        bytes32 typehash =
+            keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
         bytes32 structHash = keccak256(abi.encode(typehash, alice, spender, value, nonce, deadline));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", metro.DOMAIN_SEPARATOR(), structHash));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePk, digest);
@@ -156,9 +202,8 @@ contract MetroTokenTest is Test {
         uint256 nonce = metro.nonces(alice);
         uint256 deadline = block.timestamp + 1 days;
 
-        bytes32 typehash = keccak256(
-            "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
-        );
+        bytes32 typehash =
+            keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
         bytes32 structHash = keccak256(abi.encode(typehash, alice, spender, value, nonce, deadline));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", metro.DOMAIN_SEPARATOR(), structHash));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePk, digest);

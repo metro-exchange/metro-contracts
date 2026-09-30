@@ -1,18 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title ERC20Mintable
  * @notice Mintable ERC20 for tests (custom decimals).
  * @dev Test-only.
  */
-contract ERC20Mintable is ERC20 {
+contract ERC20Mintable is ERC20, Ownable {
     /// @dev Custom decimals.
     uint8 private immutable _decimals;
 
-    constructor(string memory name_, string memory symbol_, uint8 decimals_) ERC20(name_, symbol_) {
+    constructor(string memory name_, string memory symbol_, uint8 decimals_)
+        ERC20(name_, symbol_)
+        Ownable(msg.sender)
+    {
         _decimals = decimals_;
     }
 
@@ -21,7 +25,7 @@ contract ERC20Mintable is ERC20 {
     }
 
     /// @notice Test mint.
-    function mint(address to, uint256 amount) external {
+    function mint(address to, uint256 amount) external onlyOwner {
         _mint(to, amount);
     }
 }

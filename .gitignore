@@ -1,19 +1,18 @@
 # Compiler files
 cache/
 out/
+/cache-*/
+/out-*/
 
 # Dependencies (installed via `forge install`)
 lib/
+node_modules/
 
 # Ignores development broadcast logs
-!/broadcast
-/broadcast/*/31337/
-/broadcast/**/dry-run/
-# Do not commit local anvil/mainnet-fork broadcast run files (chainId=1).
-/broadcast/Deploy.s.sol/1/run-*.json
+/broadcast/
 
 # Docs
-docs/
+/docs/
 
 # Dotenv file
 .env
@@ -26,3 +25,25 @@ deployments/addresses.json
 
 # macOS
 .DS_Store
+
+# Local research and unverified deployment outputs are not release material.
+/size-probe/
+/IMPLEMENTATION_EVIDENCE_2026-08-28.md
+/deployments/31337/
+/deployments/31338/
+/deployments/adapter-replacement.json
+/deployments/adapter-upgrade.json
+/integration/testing/base/evidence/
+/integration/testing/base/wallets.json
+
+# Internal fixture and diagnostic scripts; the delivered fork tests live in test/fork-v2/mainnet.
+/script/create-base-qa-wallets.mjs
+/script/fetch-1inch-frontend-fixtures.mjs
+/script/fetch-1inch-live-fixtures.mjs
+/script/fetch-base-qa-protocol-sources.mjs
+/script/fetch-maple-live-authorization.mjs
+/script/probe-1inch-proxy-routes.mjs
+/script/test-base-qa-mocks.mjs
+/script/verify-base-qa-mock-abi.mjs
+/script/verify-mainnet-fork-gas-evidence.py
+/script/verify-release-artifacts.sh

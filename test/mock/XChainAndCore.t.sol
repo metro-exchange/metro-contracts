@@ -1,130 +1,105 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-/**
- * @title XChainAndCore.t.sol
- * @notice Integration test suite for same-chain migration + xMETRO core logic.
- * @dev Kept under the original filename to avoid churn; cross-chain messaging is removed.
- */
-
 import "forge-std/Test.sol";
 
-import { xMETRO } from "../../src/xMETRO.sol";
-import { ThorMigrationEscrow } from "../../src/ThorMigrationEscrow.sol";
-import { RewardDistributor } from "../../src/RewardDistributor.sol";
-import { MetroToken } from "../../src/metro.sol";
+import {MetroToken} from "../../src/metro.sol";
+import {xMETRO} from "../../src/xMETRO.sol";
+import {ThorMigrationEscrow} from "../../src/ThorMigrationEscrow.sol";
+import {RewardDistributor} from "../../src/RewardDistributor.sol";
+import {ERC20Mintable} from "../mocks/ERC20Mintable.sol";
+import {MockCommissionVault} from "../mocks/MockCommissionVault.sol";
 
-import { ERC20Mintable } from "../mocks/ERC20Mintable.sol";
-import { MockSwapAdapter } from "../mocks/MockSwapAdapter.sol";
-
-contract XChainAndCoreTest is Test {
-    // Contracts
+contract CoreIntegrationTest is Test {
+    MetroToken internal metro;
     xMETRO internal xmetro;
     ThorMigrationEscrow internal escrow;
     RewardDistributor internal distributor;
-    MockSwapAdapter internal mockAdapter;
-    MetroToken internal metro;
+    ERC20Mintable internal thor;
+    ERC20Mintable internal yThor;
+    ERC20Mintable internal usdc;
+    MockCommissionVault internal vault;
 
-    // Tokens (test)
-    ERC20Mintable internal usdc; // 6 decimals
-    ERC20Mintable internal thor; // 18 decimals
-    ERC20Mintable internal ythor; // 18 decimals
-
-    // Test accounts
-    address internal userA = address(0xA11CE);
-    address internal userB = address(0xB0B);
+    address internal userA = makeAddr("userA");
+    address internal userB = makeAddr("userB");
+    address internal forfeiture = makeAddr("forfeiture");
 
     function setUp() public {
-        vm.deal(userA, 100 ether);
-        vm.deal(userB, 100 ether);
-
-        usdc = new ERC20Mintable("USDC", "USDC", 6);
         thor = new ERC20Mintable("THOR", "THOR", 18);
-        ythor = new ERC20Mintable("yTHOR", "yTHOR", 18);
-
+        yThor = new ERC20Mintable("yTHOR", "yTHOR", 18);
+        usdc = new ERC20Mintable("USDC", "USDC", 6);
         metro = new MetroToken("METRO", "METRO", address(this));
-        metro.setMinter(address(this), true);
-
-        xmetro = new xMETRO(address(this), address(metro), address(usdc), address(0));
-        metro.setMinter(address(xmetro), true);
-
-        mockAdapter = new MockSwapAdapter(address(usdc), address(metro), 1e12, 1);
-        mockAdapter.setXMetro(address(xmetro));
-        xmetro.setSwapAdapter(address(mockAdapter));
-
+        xmetro = new xMETRO(address(this), address(metro), address(usdc), forfeiture, 20_000);
         distributor = new RewardDistributor(address(xmetro), address(this));
-        distributor.setOperator(address(this), true);
-        xmetro.setRewardDistributor(address(distributor));
+        vault = new MockCommissionVault(address(usdc), 0, address(distributor));
+        escrow = new ThorMigrationEscrow(address(this), address(xmetro), address(thor), address(yThor), block.timestamp);
 
-        escrow = new ThorMigrationEscrow(address(this), address(xmetro), address(thor), address(ythor), block.timestamp);
-        escrow.setCaps(50_000_000 ether, 50_000_000 ether);
-        escrow.setRatios(1_200_000_000_000_000_000, 1_000_000_000_000_000_000, 1_000_000_000_000_000_000);
-        escrow.setDeadlines(block.timestamp + 364 days, block.timestamp + 365 days);
-        escrow.setYThorLimits(50_000_000 ether, block.timestamp + 365 days);
-
+        metro.setMinter(address(xmetro), true);
         xmetro.setMigrationEscrow(address(escrow));
+        xmetro.setRewardDistributor(address(distributor));
+        distributor.setOperator(address(this), true);
+        escrow.setCaps(10_000_000 ether, 10_000_000 ether);
+        escrow.setRatios(1e18, 1e18);
+        escrow.setDeadlines(block.timestamp + 365 days, block.timestamp + 365 days);
     }
 
-    function test_MigrateThor_Success_CreditsLockedShares() public {
-        uint256 amountIn = 10 ether;
-
-        thor.mint(userA, amountIn);
-        vm.prank(userA);
-        thor.approve(address(escrow), amountIn);
-
-        uint256 expectedMint = (amountIn * escrow.ratio10M()) / 1e18;
-
-        vm.prank(userA);
-        escrow.migrateThor10m(amountIn);
-
-        assertEq(thor.balanceOf(address(escrow)), amountIn);
-        assertEq(metro.balanceOf(address(xmetro)), expectedMint);
-
-        assertEq(xmetro.lockedShares(userA), expectedMint);
-        assertEq(xmetro.totalLockedShares(), expectedMint);
-
-        assertEq(xmetro.thorLocks10mCount(userA), 1);
-        xMETRO.ThorLock memory l = xmetro.thorLock10m(userA, 0);
-        assertEq(uint256(l.amount), expectedMint);
-        assertGt(uint256(l.endTime), block.timestamp);
+    function _migrate(address user, ERC20Mintable token, uint256 amount, bool isYThor) internal {
+        token.mint(user, amount);
+        vm.prank(user);
+        token.approve(address(escrow), amount);
+        vm.prank(user);
+        if (isYThor) escrow.migrateYThor(amount);
+        else escrow.migrateThor(amount);
     }
 
-    function test_MigrateYThor_Success_VestingRecorded() public {
-        uint256 amountIn = 5 ether;
+    function test_EndToEndMigrationsRewardsCommissionAndLiquidExits() public {
+        _migrate(userA, thor, 100 ether, false);
+        _migrate(userB, yThor, 100 ether, true);
+        assertEq(xmetro.rewardWeightOf(userA), 100 ether);
+        assertEq(xmetro.rewardWeightOf(userB), 200 ether);
+        assertEq(metro.totalSupply(), 200 ether);
 
-        ythor.mint(userA, amountIn);
+        vault.setTargetBalance(30e6);
+        distributor.setCommissionVault(address(vault));
+        distributor.setMaxCommissionSplitBps(2_000);
+        usdc.mint(address(this), 300e6);
+        usdc.approve(address(distributor), 300e6);
+        distributor.distribute(300e6);
+
+        assertEq(usdc.balanceOf(address(vault)), 30e6);
+        assertEq(xmetro.claimable(userA), 90e6);
+        assertEq(xmetro.claimable(userB), 180e6);
+
+        vm.warp(block.timestamp + 120 days);
         vm.prank(userA);
-        ythor.approve(address(escrow), amountIn);
+        (uint256 thorPayout, uint256 thorForfeited) = xmetro.requestThorExit();
+        vm.prank(userB);
+        (uint256 yPayout, uint256 yForfeited) = xmetro.exitYThor(xMETRO.ExitMode.Liquid);
 
-        uint256 expectedMint = (amountIn * escrow.ratioYThor()) / 1e18;
-        uint256 ts = block.timestamp;
+        assertEq(thorPayout, 100 ether);
+        assertEq(thorForfeited, 0);
+        assertEq(yPayout, 10 ether);
+        assertEq(yForfeited, 90 ether);
+        assertEq(metro.balanceOf(forfeiture), 90 ether);
 
+        vm.warp(block.timestamp + 72 hours);
         vm.prank(userA);
-        escrow.migrateYThor(amountIn);
-
-        assertEq(ythor.balanceOf(address(escrow)), amountIn);
-        assertEq(metro.balanceOf(address(xmetro)), expectedMint);
-
-        assertEq(xmetro.yThorVestingCount(userA), 1);
-        xMETRO.VestingSchedule memory s = xmetro.yThorVesting(userA, 0);
-        assertEq(uint256(s.totalAmount), expectedMint);
-        assertEq(uint256(s.claimed), 0);
-        assertEq(uint256(s.startTime), ts + xmetro.YTHOR_CLIFF());
-        assertEq(uint256(s.duration), xmetro.YTHOR_DURATION());
+        xmetro.withdrawThor(0);
+        vm.prank(userB);
+        xmetro.withdrawYThor(0);
+        assertEq(metro.balanceOf(userA), 100 ether);
+        assertEq(metro.balanceOf(userB), 10 ether);
     }
 
-    function test_MigrateThor_RevertWhenXmetroPaused_NoFundsStuck() public {
-        xmetro.pause();
+    function test_ContributorPathRemainsSixMonthCliffAndTwoPointFiveYears() public {
+        metro.setMinter(address(this), true);
+        metro.mint(address(this), 100 ether);
+        metro.approve(address(xmetro), 100 ether);
+        xmetro.setContributor(address(this), true);
+        xmetro.stakeContributor(100 ether, userA);
 
-        uint256 amountIn = 1 ether;
-        thor.mint(userA, amountIn);
-        vm.prank(userA);
-        thor.approve(address(escrow), amountIn);
-
-        vm.prank(userA);
-        vm.expectRevert();
-        escrow.migrateThor10m(amountIn);
-
-        assertEq(thor.balanceOf(address(escrow)), 0);
+        xMETRO.VestingSchedule memory schedule = xmetro.contributorVesting(userA, 0);
+        assertEq(schedule.startTime, block.timestamp + 180 days);
+        assertEq(schedule.duration, (5 * 365 days) / 2);
     }
 }

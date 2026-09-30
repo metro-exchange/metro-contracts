@@ -1,0 +1,8 @@
+No files changed, compilation skipped
+
+Ran 2 tests for test/adapter/XMetroDeFiAdapter.flows.t.sol:CompactSwapFlowTest
+[PASS] test_OneInchAccountingUsesActualBalancesAndExactSpend() (gas: 835666)
+[PASS] test_OneInchRejectsWrongCriticalFieldsAndForbiddenFlags() (gas: 708472)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 8.49ms (4.12ms CPU time)
+
+Ran 1 test suite in 14.22ms (8.49ms CPU time): 2 tests passed, 0 failed, 0 skipped (2 total tests)

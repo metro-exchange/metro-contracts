@@ -8,12 +8,9 @@ on:
   pull_request:
   workflow_dispatch:
 
-env:
-  FOUNDRY_PROFILE: ci
-
 jobs:
   check:
-    name: Foundry project
+    name: Release artifacts and tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -32,11 +29,34 @@ jobs:
           forge install OpenZeppelin/openzeppelin-contracts@v5.5.0
 
       - name: Run Forge fmt
-        continue-on-error: true
-        run: forge fmt --check
+        run: |
+          forge fmt --check \
+            src/xMETRO.sol \
+            src/XMetroCoreLogic.sol \
+            src/XMetroDeFiAdapter.sol \
+            src/interfaces \
+            script/DeFiAdapterScriptBase.sol \
+            script/Deploy.s.sol \
+            script/UpgradeDeFiAdapter.s.sol \
+            script/ReplaceDeFiAdapter.s.sol
 
-      - name: Run Forge build
-        run: forge build --sizes
+      - name: Build production xMETRO artifact
+        run: FOUNDRY_PROFILE=core forge build --sizes
 
-      - name: Run Forge tests
-        run: forge test -vvv
+      - name: Build production Adapter artifact
+        run: FOUNDRY_PROFILE=adapter forge build --sizes
+
+      - name: Compile Ethereum fork tests
+        run: FOUNDRY_PROFILE=fork-v2 forge build
+
+      - name: Run legacy business regression
+        run: FOUNDRY_PROFILE=regression forge test -vv
+
+      - name: Run Core tests
+        run: FOUNDRY_PROFILE=core forge test -vv
+
+      - name: Run Adapter tests
+        run: FOUNDRY_PROFILE=adapter forge test -vv
+
+      - name: Run deployment-script tests
+        run: FOUNDRY_PROFILE=deployment-test forge test -vv
