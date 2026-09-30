@@ -67,19 +67,19 @@ contract xMETROFuzzTest is Test {
         public
     {
         uint256 principal = bound(uint256(principalSeed), 1, metro.MAX_SUPPLY());
-        uint256 elapsed = bound(uint256(elapsedSeed), 0, 200 days);
+        uint256 elapsed = bound(uint256(elapsedSeed), 0, 2 * 10800 seconds);
         xmetro.creditThorFromMigration(userA, principal);
         (, uint64 migratedAt,,) = xmetro.thorPositions(userA);
         vm.warp(uint256(migratedAt) + elapsed);
 
         (bool eligible, uint256 rate, uint256 payout, uint256 forfeited,) = xmetro.previewThorExit(userA);
-        if (elapsed < 30 days) {
+        if (elapsed < 3600 seconds) {
             assertFalse(eligible);
             assertEq(rate, 0);
             return;
         }
 
-        uint256 expectedRate = elapsed >= 90 days ? 10_000 : 5_000 + Math.mulDiv(elapsed - 30 days, 5_000, 60 days);
+        uint256 expectedRate = elapsed >= 10800 seconds ? 10_000 : 5_000 + Math.mulDiv(elapsed - 3600 seconds, 5_000, 7200 seconds);
         assertTrue(eligible);
         assertEq(rate, expectedRate);
         assertEq(payout, Math.mulDiv(principal, expectedRate, 10_000));
@@ -99,22 +99,22 @@ contract xMETROFuzzTest is Test {
         public
     {
         uint256 principal = bound(uint256(principalSeed), 1, metro.MAX_SUPPLY());
-        uint256 maxElapsed = 120 days + 10 * 365 days;
+        uint256 maxElapsed = 14400 seconds + 2 * 43200 seconds;
         uint256 elapsed = bound(uint256(elapsedSeed), 0, maxElapsed);
         xmetro.creditYThorFromMigration(userA, principal);
         (, uint64 migratedAt,,) = xmetro.yThorPositions(userA);
         vm.warp(uint256(migratedAt) + elapsed);
 
         (bool eligible, uint256 rate, uint256 payout, uint256 forfeited,) = xmetro.previewYThorExit(userA);
-        if (elapsed < 120 days) {
+        if (elapsed < 14400 seconds) {
             assertFalse(eligible);
             assertEq(rate, 0);
             return;
         }
 
-        uint256 sinceEligible = elapsed - 120 days;
+        uint256 sinceEligible = elapsed - 14400 seconds;
         uint256 expectedRate =
-            sinceEligible >= 5 * 365 days ? 5_000 : 1_000 + Math.mulDiv(sinceEligible, 4_000, 5 * 365 days);
+            sinceEligible >= 43200 seconds ? 5_000 : 1_000 + Math.mulDiv(sinceEligible, 4_000, 43200 seconds);
         assertEq(rate, expectedRate);
         assertGe(rate, 1_000);
         assertLe(rate, 5_000);
@@ -133,8 +133,8 @@ contract xMETROFuzzTest is Test {
     }
 
     function testFuzz_YThorRateIsMonotonic(uint32 firstSeed, uint32 secondSeed) public {
-        uint256 first = bound(uint256(firstSeed), 120 days, 120 days + 10 * 365 days);
-        uint256 second = bound(uint256(secondSeed), 120 days, 120 days + 10 * 365 days);
+        uint256 first = bound(uint256(firstSeed), 14400 seconds, 14400 seconds + 2 * 43200 seconds);
+        uint256 second = bound(uint256(secondSeed), 14400 seconds, 14400 seconds + 2 * 43200 seconds);
         if (first > second) (first, second) = (second, first);
         xmetro.creditYThorFromMigration(userA, 100_000 ether);
         (, uint64 migratedAt,,) = xmetro.yThorPositions(userA);
@@ -154,7 +154,7 @@ contract xMETROFuzzTest is Test {
     ) public {
         uint256 principal = bound(uint256(principalSeed), 1e6, 1e24);
         uint256 rewards = bound(uint256(rewardsSeed), 10, 1e24);
-        uint256 elapsed = bound(uint256(eligibleElapsedSeed), 120 days, 120 days + 5 * 365 days);
+        uint256 elapsed = bound(uint256(eligibleElapsedSeed), 14400 seconds, 14400 seconds + 43200 seconds);
         xmetro.creditYThorFromMigration(userA, principal);
         _stake(userB, principal);
         _deposit(rewards);
@@ -184,7 +184,7 @@ contract xMETROFuzzTest is Test {
         xmetro.creditThorFromMigration(userA, thorAmount);
         xmetro.creditYThorFromMigration(userA, yThorAmount);
         (, uint64 migratedAt,,) = xmetro.yThorPositions(userA);
-        vm.warp(uint256(migratedAt) + 120 days);
+        vm.warp(uint256(migratedAt) + 14400 seconds);
 
         vm.prank(userA);
         xmetro.exitYThor(XMetroCore.ExitMode.Liquid);
@@ -205,7 +205,7 @@ contract xMETROFuzzTest is Test {
         uint256 principal = bound(uint256(principalSeed), 1 ether, 1e24);
         uint256 rewardUnits = bound(uint256(rewardUnitsSeed), 1, 1e12);
         uint256 rewards = rewardUnits * 3;
-        uint256 elapsed = bound(uint256(elapsedSeed), 120 days, 120 days + 5 * 365 days);
+        uint256 elapsed = bound(uint256(elapsedSeed), 14400 seconds, 14400 seconds + 43200 seconds);
         xmetro.creditYThorFromMigration(userA, principal);
         _stake(userB, principal);
         _deposit(rewards);

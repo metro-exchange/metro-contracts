@@ -21,6 +21,7 @@ Owners do not automatically receive these business permissions. `true` grants an
 | --- | --- | --- |
 | METRO owner | `setMinter(minter,allowed)` | Controls mint access; no owner setter can change the 100,000,000 METRO cap. |
 | xMETRO owner | `setYThorRewardWeightBps(weightBps)` | `10,000=1x`, `20,000=2x`; values from zero to the contract technical bound. Applies to future reward deposits for all active yTHOR positions, never reprices accrued rewards; no pause required. |
+| xMETRO owner (Base QA only) | `setForfeitureRecipient(newRecipient)` | Nonzero address receiving future THOR/yTHOR exit forfeitures; does not move prior transfers. The production Core has an immutable recipient and no setter. |
 | xMETRO owner | `setContributor(account,allowed)`; `setAutoCompoundOperator(account,allowed)` | Contributor and Keeper allowlists. |
 | xMETRO owner | `setDeFiAdapter(proxy)` | Must be the current-family proxy correctly bound to this core, USDC, and METRO. Use the proxy address, not the implementation. |
 | xMETRO owner | `setMigrationEscrow(escrow)`; `setRewardDistributor(distributor)` | Requires binding to this core; Distributor must use the same USDC. |
@@ -28,7 +29,7 @@ Owners do not automatically receive these business permissions. `true` grants an
 | xMETRO owner | `pause()`; `unpause()` | Global core pause. Normal configuration does not require pausing. |
 | xMETRO owner | `emergencyDistribute(users)` | Requires the core to be paused; pays recorded USDC rewards, not METRO principal. |
 | xMETRO owner | `rescueERC20(token,to,amount)` | Cannot rescue principal-backing METRO; other rescue decisions must account for reward liabilities. |
-| Escrow owner | `setMigrationStartTime(timestamp)` | Unix seconds; must not be in the past. |
+| Escrow owner | `setMigrationStartTime(timestamp)` | Unix seconds; must not be in the past. Base QA constructor input `0` starts at the Escrow deployment block; production constructor requires a timestamp not before its deployment block. |
 | Escrow owner | `setDeadlines(thorDeadline,yThorDeadline)` | Separate Unix-second deadlines, each after migration start. |
 | Escrow owner | `setRatios(thorRatio,yThorRatio)` | 18-decimal fixed-point, both nonzero; can be set **once only**. `0.3928569546` encodes as `392856954600000000`. |
 | Escrow owner | `setCaps(thorCap,yThorCap)` | 18-decimal METRO principal limits after conversion, not input-token counts. |
@@ -104,4 +105,4 @@ The new xMETRO and the other project contracts use one-step ownership transfer; 
 
 ## Readback checklist
 
-After each confirmed transaction, read `owner()` from each contract; `METRO.isMinter`, `Distributor.operators`, `xMETRO.autoCompoundOperators`, `xMETRO.contributorWhitelist`, `xMETRO.yThorRewardWeightBps`, core bindings and pause status, Escrow start/deadline/ratio/cap getters, Distributor Vault/split getters, Adapter `configuration`/`strategyInfo`/`aaveV4Giver`, and each user's auto preference when relevant. For QA, also read each TestToken/Mock `owner()` and public mint rights. A local `.env` edit, UI status, or dry run does not change chain state.
+After each confirmed transaction, read `owner()` from each contract; `METRO.isMinter`, `Distributor.operators`, `xMETRO.autoCompoundOperators`, `xMETRO.contributorWhitelist`, `xMETRO.yThorRewardWeightBps`, QA `xMETRO.forfeitureRecipient`, core bindings and pause status, Escrow start/deadline/ratio/cap getters, Distributor Vault/split getters, Adapter `configuration`/`strategyInfo`/`aaveV4Giver`, and each user's auto preference when relevant. For QA, also read each TestToken/Mock `owner()` and public mint rights. A local `.env` edit, UI status, or dry run does not change chain state.

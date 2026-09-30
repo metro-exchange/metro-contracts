@@ -8,7 +8,7 @@ This index follows the current `src/` contracts. See [legacy integration](integr
 
 ## ThorMigrationEscrow
 
-Users call `migrateThor(uint256)` or `migrateYThor(uint256)`. Each input token has its own one-time marker per address. The owner configures `setMigrationStartTime(uint256)`, `setDeadlines(uint256,uint256)`, `setRatios(uint256,uint256)` (nonzero and one-time), and `setCaps(uint256,uint256)`. The owner also has `pause()`, `unpause()`, and `rescueTokens(address,address,uint256)`; THOR and yTHOR cannot be rescued. Caps and migrated counters are measured in post-conversion METRO principal, not input-token units. yTHOR reward weight belongs to xMETRO, not Escrow.
+Users call `migrateThor(uint256)` or `migrateYThor(uint256)`. Each input token has its own one-time marker per address. The owner configures `setMigrationStartTime(uint256)`, `setDeadlines(uint256,uint256)`, `setRatios(uint256,uint256)` (nonzero and one-time), and `setCaps(uint256,uint256)`. A zero constructor start time is a Base QA-only shortcut for the Escrow deployment block. The owner also has `pause()`, `unpause()`, and `rescueTokens(address,address,uint256)`; THOR and yTHOR cannot be rescued. Caps and migrated counters are measured in post-conversion METRO principal, not input-token units. yTHOR reward weight belongs to xMETRO, not Escrow.
 
 ## xMETRO
 
@@ -22,7 +22,7 @@ xMETRO is immutable. `XMetroCoreLogic.sol` is internal code compiled into it, no
 - Escrow-only `creditYThorFromMigration(address,uint256)`; user `previewYThorExit(address)`, `exitYThor(ExitMode)`, `withdrawYThor(uint256)`
 - Contributor `stakeContributor(uint256,address)`, `requestWithdrawUnlockedContributor(uint256)`, `claimAndStakeUnlockedContributor(uint256)`, `withdrawContributor(uint256)`
 
-The production liquid-withdrawal cooldown is `UNSTAKE_DELAY = 72 hours`. THOR exits at 50% on day 30 and rises to 100% by day 90. yTHOR exits at 10% on day 120 and rises to 50% over the next five years. `previewWithdrawableNow(address)` aggregates currently exit-eligible THOR/yTHOR payouts and unlocked Contributor value; it excludes every already-requested withdrawal queue. Queue information is available through the corresponding `unstakeRequestCount*`, `unstakeRequest*`, and `unstakeCursor*` getters.
+This Base QA build has `UNSTAKE_DELAY = 30 minutes`, THOR exit from 50% at 1 hour to 100% at 3 hours, and yTHOR exit from 10% at 4 hours to 50% over the next 12 hours. Production uses 72 hours, days 30–90, and day 120 plus five years respectively. `previewWithdrawableNow(address)` aggregates currently exit-eligible THOR/yTHOR payouts and unlocked Contributor value; it excludes every already-requested withdrawal queue. Queue information is available through the corresponding `unstakeRequestCount*`, `unstakeRequest*`, and `unstakeCursor*` getters.
 
 ### Reward accounting
 
@@ -62,6 +62,7 @@ Legacy compound and general auto strategies are mutually exclusive. A batch swap
 
 - `setDeFiAdapter(address proxy)` checks runtime code, core/USDC/METRO binding, Adapter family, valid configuration, and logic version. A full replacement increments `deFiAdapterEpoch`.
 - `setYThorRewardWeightBps(uint256)` changes future rewards for all active yTHOR positions without pausing. `10,000=1x`; zero and sub-1x values are valid up to the technical bound.
+- `setForfeitureRecipient(address)` is Base QA-only and lets the current owner redirect future THOR/yTHOR exit forfeitures to a nonzero address. Production has an immutable recipient and no setter.
 - `setAutoCompoundOperator(address,bool)`; `setMigrationEscrow(address)`; `setRewardDistributor(address)`; `setContributor(address,bool)`; `setDefaultMaxVestingSchedules(uint256)`
 - `pause()`; `unpause()`; `rescueERC20(address,address,uint256)` (principal-backing METRO is protected)
 - `transferOwnership(address)` acts in one step; there is no `pendingOwner` or `acceptOwnership()` on the current version. `renounceOwnership()` is irreversible and also prevents later Adapter upgrades. The constructor leaves the core unpaused.

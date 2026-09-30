@@ -26,7 +26,7 @@ deployments/addresses.json
 # macOS
 .DS_Store
 
-# Local research and unverified deployment outputs are not release material.
+# Historical local QA runs and diagnostics are not part of the project-facing deployment.
 /size-probe/
 /IMPLEMENTATION_EVIDENCE_2026-08-28.md
 /deployments/31337/
@@ -34,7 +34,10 @@ deployments/addresses.json
 /deployments/adapter-replacement.json
 /deployments/adapter-upgrade.json
 /integration/testing/base/evidence/
+/integration/testing/base/RESULTS.md
 /integration/testing/base/wallets.json
+/script/base-qa/timers.mjs
+/script/base-qa/prestart-rejection.mjs
 
 # Internal fixture and diagnostic scripts; the delivered fork tests live in test/fork-v2/mainnet.
 /script/create-base-qa-wallets.mjs

@@ -39,7 +39,7 @@ Before migration, read `migrationStartTime`, `deadlineThor`, `ratioThor`, `capTh
 
 `migrateYThor(amountIn)` keeps its name but now creates one position; check `hasMigratedYThor(user)` first. Read `yThorPositions(user)` instead of old multiple vesting entries. `exitYThor(0)` requests liquid exit and later `withdrawYThor(maxRequests)`; `exitYThor(1)` stakes the payout immediately. Both are one-time exits. `creditYThorFromMigration` is Escrow-only.
 
-Principal is `floor(amountIn * ratioYThor / 1e18)`; the reward multiplier does not increase redeemable principal. At day 120, the payout starts at 10% and grows to 50% during the following five years. Unreturned principal goes to `forfeitureRecipient`, not to a burn address. THOR and yTHOR migration markers are independent.
+Principal is `floor(amountIn * ratioYThor / 1e18)`; the reward multiplier does not increase redeemable principal. In this Base QA build, payout starts at 10% after 4 hours and grows to 50% during the following 12 hours. Production uses day 120 and five years. Unreturned principal goes to `forfeitureRecipient`, not to a burn address. THOR and yTHOR migration markers are independent.
 
 For reward UI, read `rewardWeightOf(user)` and `totalRewardWeight()`. `totalSharesOf(user)` reports actual principal shares and must not be mistaken for weighted reward shares. Do not hardcode a 2x yTHOR multiplier: the current owner-set weight affects future rewards for all active yTHOR positions without repricing historical pending.
 
@@ -64,7 +64,7 @@ The current xMETRO uses original one-step ownership, allows renouncing, and star
 | Free unstake | `requestUnstake` then `withdrawFree` | Production cooldown is now 72 hours rather than the previous seven days. |
 | xMETRO ERC-20 transfers | `transfer`, `transferFrom` | Transfer free shares and future reward weight; sender keeps accrued pending. |
 | USDC claim | `claimable` then `claimRewards` | No user USDC approval; a quote can change before inclusion. |
-| Contributor | Existing allowlist, stake, release, liquid/stake exits | 180-day cliff and subsequent 2.5-year release; `maxSchedules=0` uses the configured default scan size. |
+| Contributor | Existing allowlist, stake, release, liquid/stake exits | This QA build has a 6-hour cliff and subsequent 6-hour release; production uses 180 days and 2.5 years. `maxSchedules=0` uses the configured default scan size. |
 | Auto-Compound preference | `enableAutocompound`, `disableAutocompound` | Mutually exclusive with a general auto strategy; disabling remains available while paused. |
 | Manual compound | `autocompound(minMetroOut,deadline,swapData)` | Same user entrypoint, execution now uses the Adapter. No prior auto opt-in is required. |
 | Keeper compound batch | `autocompoundBatch(users,minMetroOut,deadline,swapData)` | One swap; shares allocated in proportion to pending rewards. |

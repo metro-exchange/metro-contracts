@@ -14,16 +14,16 @@ library XMetroCoreLogic {
         0x427fcf91de87d612093b6e8edf157454b8509e2ae8d2b0077cdae916e2bcfb00;
 
     uint256 private constant DEFAULT_MAX_VESTING_SCHEDULES = 50;
-    uint64 private constant THOR_EXIT_DELAY = 30 days;
-    uint64 private constant THOR_EXIT_FULL_TIME = 90 days;
-    uint64 private constant YTHOR_EXIT_DELAY = 120 days;
-    uint64 private constant YTHOR_EXIT_RAMP = 5 * 365 days;
+    uint64 private constant THOR_EXIT_DELAY = 3600 seconds;
+    uint64 private constant THOR_EXIT_FULL_TIME = 10800 seconds;
+    uint64 private constant YTHOR_EXIT_DELAY = 14400 seconds;
+    uint64 private constant YTHOR_EXIT_RAMP = 43200 seconds;
     uint256 private constant BPS_DENOMINATOR = 10_000;
     uint256 private constant THOR_EXIT_START_BPS = 5_000;
     uint256 private constant YTHOR_EXIT_START_BPS = 1_000;
     uint256 private constant YTHOR_EXIT_MAX_BPS = 5_000;
-    uint64 private constant CONTRIBUTOR_CLIFF = 180 days;
-    uint64 private constant CONTRIBUTOR_DURATION = (5 * 365 days) / 2;
+    uint64 private constant CONTRIBUTOR_CLIFF = 21600 seconds;
+    uint64 private constant CONTRIBUTOR_DURATION = 21600 seconds;
 
     struct Position {
         uint128 principal;

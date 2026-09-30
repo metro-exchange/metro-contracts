@@ -2,6 +2,8 @@
 
 This Foundry project implements THOR/yTHOR migration, METRO staking, USDC rewards, automated reward actions, commission routing, and upgradeable DeFi integrations.
 
+**Base QA branch:** this branch uses the seven shortened waiting periods listed below. It is not the production-time audit build. The initial TestToken and Mock protocol owners remain with the deployment team until the project's management address is supplied.
+
 ## Contract architecture
 
 - `src/metro.sol`: METRO ERC-20 with Permit, owner-managed minters, and an immutable 100 million token supply cap.
@@ -52,11 +54,11 @@ Maple configuration stores a SyrupRouter and `bytes32 depositData`; syrupUSDC is
 ## Migration and exits
 
 - Each address may migrate THOR once and yTHOR once; the markers are independent.
-- THOR cannot exit before day 30; the payout rises linearly from 50% on day 30 to 100% on day 90.
-- yTHOR principal uses the configured `ratioYThor`. Reward weight starts at the constructor's `YTHOR_REWARD_WEIGHT_BPS` (`10,000 = 1x`) and may be changed by the xMETRO owner without pausing. The current weight applies to future reward deposits for all active yTHOR positions; accrued rewards are not repriced. yTHOR cannot exit before day 120; its payout rises from 10% then to 50% over five years.
-- Forfeited principal goes to the immutable `forfeitureRecipient`.
-- Liquid exits for free stake, THOR, yTHOR, and Contributor positions have separate 72-hour withdrawal queues. Exit-to-stake produces transferable xMETRO immediately.
-- Contributor vesting has a 180-day cliff followed by 2.5 years of linear release.
+- THOR cannot exit before 1 hour; the payout rises linearly from 50% at 1 hour to 100% at 3 hours. Production uses days 30–90.
+- yTHOR principal uses the configured `ratioYThor`. Reward weight starts at the constructor's `YTHOR_REWARD_WEIGHT_BPS` (`10,000 = 1x`) and may be changed by the xMETRO owner without pausing. The current weight applies to future reward deposits for all active yTHOR positions; accrued rewards are not repriced. This QA build opens yTHOR exit at 4 hours and increases payout from 10% to 50% over the next 12 hours. Production uses day 120 and a five-year ramp.
+- Forfeited principal goes to `forfeitureRecipient`. Only the Base QA xMETRO owner may update this address for future exits; the production recipient remains immutable.
+- Liquid exits for free stake, THOR, yTHOR, and Contributor positions have separate 30-minute QA withdrawal queues (72 hours in production). Exit-to-stake produces transferable xMETRO immediately.
+- Contributor vesting has a 6-hour QA cliff followed by 6 hours of linear release (180 days and 2.5 years in production).
 - Transferring METRO to a dead address does not restore mint capacity; the global cap is permanently fixed at 100,000,000 METRO.
 
 ## Commission routing
@@ -71,9 +73,9 @@ The Distributor transfers the commission directly to the Vault and deposits the 
 
 ## Production and Base QA versions
 
-The production branch retains the full time constants and is the audit/mainnet baseline. The project-facing Base QA branch shortens seven waiting periods: 30-minute unstake delay; THOR exit at 1–3 hours; yTHOR exit starting at 4 hours with a 12-hour ramp; and a 6-hour Contributor cliff plus 6-hour vesting period. The QA build also allows its owner to change the forfeiture recipient for future exits and accepts a zero Escrow constructor start time as the deployment-block timestamp. The production recipient is immutable, and its Escrow requires an explicit start time. Other business ratios, one-step ownership, and default unpaused state remain aligned; the two builds do not have identical ABIs or bytecode. QA uses freshly deployed owner-mintable TestTokens, Aave/Maple protocol mocks, and real Base Uniswap V2 liquidity. Mock integration does not prove the production protocols are available on Base.
+The production branch retains the full time constants and is the audit/mainnet baseline. The project-facing Base QA branch shortens seven waiting periods: 30-minute unstake delay; THOR exit at 1–3 hours; yTHOR exit starting at 4 hours with a 12-hour ramp; and a 6-hour Contributor cliff plus 6-hour vesting period. QA migration starts in the Escrow deployment block, and the THOR and yTHOR deadlines are both 30 days later. Both QA conversion ratios are `0.3928569546`. QA-only differences also allow the owner to update the forfeiture recipient and allow an Escrow constructor start value of zero to mean its deployment block. Production has neither behavior. Other business ratios, one-step ownership, and default unpaused state remain aligned. QA uses freshly deployed owner-mintable TestTokens, Aave/Maple protocol mocks, and real Base Uniswap V2 liquidity. Mock integration does not prove the production protocols are available on Base.
 
-Historical rapid-QA addresses and receipts are test evidence only. The fresh project-facing deployment and its transaction hashes are recorded in the Base QA branch's integration config and checklist. The production branch keeps a Base config template; it must not be mistaken for a second deployment or mixed with historical addresses.
+Historical rapid-QA addresses and receipts are test evidence only. The fresh project-facing deployment is recorded separately in `integration/config/base-qa.json`; that file must never mix historical addresses with the new deployment.
 
 ## Repository guide
 
@@ -88,6 +90,8 @@ Historical rapid-QA addresses and receipts are test evidence only. The fresh pro
 ## Configure and deploy
 
 Copy `.env.example` to an untracked local `.env`. Fill in the signing EOA, intended owner, chain-specific tokens and routers, migration ratios/windows, and integrations that are ready to enable. Never commit a private key. Build and inspect the intended release artifacts before broadcasting; a dry run is not evidence that any transaction was sent. Deployment and configuration consist of multiple transactions, so verify every receipt and on-chain binding.
+
+The recorded Base QA system is already deployed at the addresses in [`integration/config/base-qa.json`](integration/config/base-qa.json). Its TestTokens, mocks, liquidity, and project contracts were prepared with `script/base-qa/`; that deployment helper uses local signer material and the public QA role-address file. The Forge commands below describe a separate generic deployment, not the recorded 87-transaction QA setup.
 
 `script/Deploy.s.sol` transfers xMETRO ownership in one step and leaves it unpaused; no `acceptOwnership()` or initial `unpause()` is required. `script/VerifyDeployment.s.sol` can read back the broadcast deployment.
 

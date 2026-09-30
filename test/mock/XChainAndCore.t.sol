@@ -70,7 +70,7 @@ contract CoreIntegrationTest is Test {
         assertEq(xmetro.claimable(userA), 90e6);
         assertEq(xmetro.claimable(userB), 180e6);
 
-        vm.warp(block.timestamp + 120 days);
+        vm.warp(block.timestamp + 14400 seconds);
         vm.prank(userA);
         (uint256 thorPayout, uint256 thorForfeited) = xmetro.requestThorExit();
         vm.prank(userB);
@@ -82,7 +82,7 @@ contract CoreIntegrationTest is Test {
         assertEq(yForfeited, 90 ether);
         assertEq(metro.balanceOf(forfeiture), 90 ether);
 
-        vm.warp(block.timestamp + 72 hours);
+        vm.warp(block.timestamp + xmetro.UNSTAKE_DELAY());
         vm.prank(userA);
         xmetro.withdrawThor(0);
         vm.prank(userB);
@@ -99,7 +99,7 @@ contract CoreIntegrationTest is Test {
         xmetro.stakeContributor(100 ether, userA);
 
         xMETRO.VestingSchedule memory schedule = xmetro.contributorVesting(userA, 0);
-        assertEq(schedule.startTime, block.timestamp + 180 days);
-        assertEq(schedule.duration, (5 * 365 days) / 2);
+        assertEq(schedule.startTime, block.timestamp + xmetro.CONTRIBUTOR_CLIFF());
+        assertEq(schedule.duration, xmetro.CONTRIBUTOR_DURATION());
     }
 }

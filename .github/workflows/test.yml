@@ -10,7 +10,7 @@ on:
 
 jobs:
   check:
-    name: Release artifacts and tests
+    name: Base QA artifacts and tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -40,10 +40,10 @@ jobs:
             script/UpgradeDeFiAdapter.s.sol \
             script/ReplaceDeFiAdapter.s.sol
 
-      - name: Build production xMETRO artifact
+      - name: Build Base QA xMETRO artifact
         run: FOUNDRY_PROFILE=core forge build --sizes
 
-      - name: Build production Adapter artifact
+      - name: Build Adapter artifact
         run: FOUNDRY_PROFILE=adapter forge build --sizes
 
       - name: Compile Ethereum fork tests

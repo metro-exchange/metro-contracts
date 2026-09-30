@@ -146,9 +146,6 @@ abstract contract XMetroForkBase is Test {
             abi.encode(address(this), metroToken, rewardToken, makeAddr("fork-forfeiture"), 20_000)
         );
         core = IXMetroCoreFork(_create(coreInit));
-        assertFalse(core.paused(), "Core must deploy unpaused");
-        // Pause explicitly to test configuration/unpause boundaries; the constructor is not paused.
-        core.pause();
         address implementation =
             _create(_artifactCreationCode("out-adapter/XMetroDeFiAdapter.sol/XMetroDeFiAdapter.json"));
         bytes memory initData =
@@ -156,7 +153,7 @@ abstract contract XMetroForkBase is Test {
         proxy = address(new ERC1967Proxy(implementation, initData));
         adapter = IXMetroDeFiAdapter(proxy);
         core.setDeFiAdapter(proxy);
-        assertEq(address(core).code.length, 22_514);
+        assertEq(address(core).code.length, 22_607);
         assertEq(implementation.code.length, 20_487);
         assertEq(core.deFiAdapter(), proxy);
     }

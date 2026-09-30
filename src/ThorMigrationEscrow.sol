@@ -52,12 +52,13 @@ contract ThorMigrationEscrow is Ownable, Pausable, ReentrancyGuard {
     {
         require(xMETRO_ != address(0), "ThorEscrow: zero xMETRO");
         require(thor_ != address(0) && yThor_ != address(0), "ThorEscrow: zero token");
-        require(migrationStartTime_ >= block.timestamp, "ThorEscrow: bad start time");
+        require(migrationStartTime_ == 0 || migrationStartTime_ >= block.timestamp, "ThorEscrow: bad start time");
 
         xMETRO = IxMETROMigration(xMETRO_);
         thorToken = IERC20(thor_);
         yThorToken = IERC20(yThor_);
-        migrationStartTime = migrationStartTime_;
+        // Base QA only: zero starts the migration window in the deployment block.
+        migrationStartTime = migrationStartTime_ == 0 ? block.timestamp : migrationStartTime_;
     }
 
     /// @notice Migrate THOR through the single project-configured conversion path.

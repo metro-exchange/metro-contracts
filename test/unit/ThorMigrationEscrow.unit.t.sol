@@ -75,8 +75,17 @@ contract ThorMigrationEscrowUnitTest is Test {
         vm.expectRevert(bytes("ThorEscrow: zero token"));
         new ThorMigrationEscrow(owner, address(xmetro), address(0), address(yThor), block.timestamp);
 
+        vm.warp(100);
         vm.expectRevert(bytes("ThorEscrow: bad start time"));
         new ThorMigrationEscrow(owner, address(xmetro), address(thor), address(yThor), block.timestamp - 1);
+    }
+
+    function test_BaseQaZeroStartUsesDeploymentTimestamp() public {
+        ThorMigrationEscrow immediate = new ThorMigrationEscrow(owner, address(xmetro), address(thor), address(yThor), 0);
+        assertEq(immediate.migrationStartTime(), block.timestamp);
+        immediate.setDeadlines(block.timestamp + 1 days, block.timestamp + 2 days);
+        assertEq(immediate.deadlineThor(), block.timestamp + 1 days);
+        assertEq(immediate.deadlineYThor(), block.timestamp + 2 days);
     }
 
     function test_ConfigurationPermissionsValidationAndEvents() public {

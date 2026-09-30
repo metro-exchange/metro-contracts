@@ -40,18 +40,18 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
     bytes32 private constant STRATEGY_DOMAIN = keccak256("XMETRO_DEFI_STRATEGY_V1");
     bytes4 private constant XMETRO_BINDING_SELECTOR = bytes4(keccak256("xMETRO()"));
 
-    uint64 public constant UNSTAKE_DELAY = 72 hours;
+    uint64 public constant UNSTAKE_DELAY = 1800 seconds;
 
-    uint64 public constant YTHOR_EXIT_RAMP = 5 * 365 days;
+    uint64 public constant YTHOR_EXIT_RAMP = 43200 seconds;
 
     uint256 private constant BPS_DENOMINATOR = 10_000;
     uint256 public constant THOR_EXIT_START_BPS = 5_000;
     uint256 public constant YTHOR_EXIT_START_BPS = 1_000;
     uint256 public constant YTHOR_EXIT_MAX_BPS = 5_000;
 
-    uint64 public constant CONTRIBUTOR_CLIFF = 180 days;
+    uint64 public constant CONTRIBUTOR_CLIFF = 21600 seconds;
 
-    uint64 public constant CONTRIBUTOR_DURATION = (5 * 365 days) / 2;
+    uint64 public constant CONTRIBUTOR_DURATION = 21600 seconds;
 
     uint256 public totalLockedShares;
 
@@ -104,7 +104,7 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
 
     IERC20 public immutable rewardToken;
 
-    address public immutable forfeitureRecipient;
+    address public forfeitureRecipient;
 
     bytes32 private immutable SWAP_METRO_STRATEGY_ID;
 
@@ -163,6 +163,7 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
     event DefaultMaxVestingSchedulesUpdated(uint256 maxVestingSchedules);
 
     event MigrationEscrowUpdated(address indexed oldMigrationEscrow, address indexed newMigrationEscrow);
+    event ForfeitureRecipientUpdated(address indexed oldRecipient, address indexed newRecipient);
 
     event ThorPositionCreated(address indexed user, uint256 principal, uint64 migratedAt);
     event YThorPositionCreated(address indexed user, uint256 principal, uint64 migratedAt);
@@ -234,6 +235,14 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
     modifier onlyMigrationEscrow() {
         if (msg.sender != migrationEscrow) revert Unauthorized();
         _;
+    }
+
+    /// @notice Base QA only: redirect future THOR/yTHOR exit forfeitures after ownership handover.
+    function setForfeitureRecipient(address newRecipient) external onlyOwner {
+        if (newRecipient == address(0)) revert InvalidAddress();
+        address oldRecipient = forfeitureRecipient;
+        forfeitureRecipient = newRecipient;
+        emit ForfeitureRecipientUpdated(oldRecipient, newRecipient);
     }
 
     /// @notice Stake METRO and receive 1:1 free shares (xMETRO ERC20).

@@ -2,6 +2,8 @@
 
 This file reports the recorded execution for the [functional checklist](CHECKLIST.md). All transactions occurred on a **local fork**, never on Ethereum mainnet. Check the source/artifact manifest when comparing these results with a later build; a changed source tree is not automatically covered by an older log.
 
+These Ethereum results belong to the production-time source identified in the manifest, not to this Base QA branch's shortened-time bytecode. They must not be counted as a fork run of the Base QA deployment.
+
 ## Recorded run
 
 | Item | Recorded value |
@@ -24,8 +26,6 @@ ETH_RPC_URL=<Ethereum RPC> FOUNDRY_PROFILE=fork-v2 \
 ```
 
 The [fork block readback](evidence/2026-09-29-eth26077998-01/fork-block.json), [version provenance](evidence/2026-09-29-eth26077998-01/continuation-provenance.json), [Core layout](evidence/2026-09-29-eth26077998-01/core-storage-layout.json), and [Adapter layout](evidence/2026-09-29-eth26077998-01/adapter-storage-layout.json) are retained. Historical test functions for the superseded two-step Owner/default-paused design are not counted as current ownership evidence. The current business code uses one-step ownership and does not pause Core in its constructor; later focused regression and artifact checks are recorded in [the current-Core log](evidence/2026-09-29-eth26077998-01/X07-current-core-rerun.log) and [artifact log](evidence/2026-09-29-eth26077998-01/X07-current-release-artifacts.log). These focused reruns do not turn the failed full-suite assertion into a pass.
-
-On 2026-09-30 the 15-suite command above was also rerun against the then-current production source using the public Ethereum RPC: 155 passed, 1 failed, 0 skipped. The same `test_E07_ManualIndependentOfAutoPreference` transfer-balance failure remained. This review rerun was not saved as a new release manifest or full log; the linked manifest identifies the earlier recorded build, not every later source edit. A new full-fork log and manifest are not required for this source upload.
 
 ## Project deployment and real assets
 
