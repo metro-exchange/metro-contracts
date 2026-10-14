@@ -1,0 +1,30 @@
+Compiling 1 files with Solc 0.8.30
+Solc 0.8.30 finished in 2.52s
+Compiler run successful!
+
+Ran 10 tests for test/fork-v2/mainnet/AutoCompound.t.sol:AutoCompoundMainnetTest
+[PASS] test_E07_EnableDisableAndMutualPreference() (gas: 174248)
+[PASS] test_E07_ManualFailuresPreservePendingAndFunds() (gas: 627764)
+[FAIL: ERC20: transfer amount exceeds balance] test_E07_ManualIndependentOfAutoPreference() (gas: 1207696)
+Logs:
+  E07 observed claimable raw: 10000001
+  E07 observed Core USDC raw: 10000000
+
+[PASS] test_E07_ManualRealV2AndBackingEventAllowance() (gas: 511583)
+[PASS] test_E08_BatchRollbackAndSingleUserEquivalence() (gas: 847564)
+[PASS] test_E08_FilterCandidatesAndVersionExpiry() (gas: 1167683)
+[PASS] test_E08_KeeperGrantAndRevoke() (gas: 930232)
+[PASS] test_E08_OneRealSwapProRataAndLargestRemainder() (gas: 953184)
+[PASS] test_E08_ThreeUserFailureLeavesEveryPendingUntouched() (gas: 843732)
+[PASS] test_E08_ZeroRoundedShareRevertsAtomically() (gas: 24502159)
+Suite result: FAILED. 9 passed; 1 failed; 0 skipped; finished in 496.86ms (287.53ms CPU time)
+
+Ran 1 test suite in 500.70ms (496.86ms CPU time): 9 tests passed, 1 failed, 0 skipped (10 total tests)
+
+Failing tests:
+Encountered 1 failing test in test/fork-v2/mainnet/AutoCompound.t.sol:AutoCompoundMainnetTest
+[FAIL: ERC20: transfer amount exceeds balance] test_E07_ManualIndependentOfAutoPreference() (gas: 1207696)
+
+Encountered a total of 1 failing tests, 9 tests succeeded
+
+Tip: Run `forge test --rerun` to retry only the 1 failed test

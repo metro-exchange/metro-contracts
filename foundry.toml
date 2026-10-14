@@ -7,21 +7,171 @@ optimizer = true
 optimizer_runs = 200
 via_ir = true
 fs_permissions = [
+    { access = "read", path = "./out-adapter" },
     { access = "read-write", path = "./deployments" },
     { access = "read-write", path = "./broadcast" },
 ]
 
+[invariant]
+runs = 128
+depth = 100
+fail_on_revert = false
+
 [profile.deploy]
+src = "src"
+out = "out-deploy"
+cache_path = "cache-deploy"
+libs = ["lib"]
+script = "script"
+test = "test_disabled"
+skip = ["src/XMetroDeFiAdapter.sol"]
+solc_version = "0.8.30"
+optimizer = true
+optimizer_runs = 50
+via_ir = true
+evm_version = "osaka"
+bytecode_hash = "none"
+cbor_metadata = false
+optimizer_details = { yul = true, yulDetails = { stackAllocation = true, optimizerSteps = "dhfoDgvulfnTUtnIfxa[r]EscLMVcul [j]Trpeulxa[r]cLgvifMCTUca[r]LSsTFOtfDnca[r]IulcscCTUtgvifMx[scCTUt] TOntnfDIulgvifMjmul[jul] VcTOcul jmuldhfoDgvulfnTUtnIfxa[r]EscLMVcul [j]Trpeulxa[r]cLgvifMCTUca[r]LSsTFOtfDnca[r]IulcscCTUtgvifMx[scCTUt] TOntnfDIulgvifMjmul[jul] VcTOcul jmul:fDnTOcmuO" } }
+fs_permissions = [
+    { access = "read", path = "./out-adapter" },
+    { access = "read-write", path = "./deployments" },
+    { access = "read-write", path = "./broadcast" },
+]
+
+[profile.deployment-test]
+src = "src"
+out = "out-deployment-test"
+cache_path = "cache-deployment-test"
+libs = ["lib"]
+script = "script"
+test = "test/deployment"
+skip = ["src/XMetroDeFiAdapter.sol"]
+solc_version = "0.8.30"
+optimizer = true
+optimizer_runs = 50
+via_ir = true
+evm_version = "osaka"
+bytecode_hash = "none"
+cbor_metadata = false
+optimizer_details = { yul = true, yulDetails = { stackAllocation = true, optimizerSteps = "dhfoDgvulfnTUtnIfxa[r]EscLMVcul [j]Trpeulxa[r]cLgvifMCTUca[r]LSsTFOtfDnca[r]IulcscCTUtgvifMx[scCTUt] TOntnfDIulgvifMjmul[jul] VcTOcul jmuldhfoDgvulfnTUtnIfxa[r]EscLMVcul [j]Trpeulxa[r]cLgvifMCTUca[r]LSsTFOtfDnca[r]IulcscCTUtgvifMx[scCTUt] TOntnfDIulgvifMjmul[jul] VcTOcul jmul:fDnTOcmuO" } }
+fs_permissions = [
+    { access = "read", path = "./out-adapter" },
+    { access = "read-write", path = "./deployments" },
+    { access = "read-write", path = "./broadcast" },
+]
+
+[profile.release]
 src = "src"
 out = "out"
 libs = ["lib"]
 script = "script"
-test = "test_disabled"
+test = "test"
 solc_version = "0.8.30"
 optimizer = true
 optimizer_runs = 200
 via_ir = true
+evm_version = "osaka"
+bytecode_hash = "none"
+cbor_metadata = false
 fs_permissions = [
+    { access = "read", path = "./out-adapter" },
     { access = "read-write", path = "./deployments" },
     { access = "read-write", path = "./broadcast" },
+]
+
+[profile.core]
+src = "src"
+out = "out-core"
+cache_path = "cache-core"
+libs = ["lib"]
+script = "script_disabled"
+test = "test/core"
+skip = ["src/XMetroDeFiAdapter.sol"]
+solc_version = "0.8.30"
+optimizer = true
+optimizer_runs = 50
+via_ir = true
+evm_version = "osaka"
+bytecode_hash = "none"
+cbor_metadata = false
+optimizer_details = { yul = true, yulDetails = { stackAllocation = true, optimizerSteps = "dhfoDgvulfnTUtnIfxa[r]EscLMVcul [j]Trpeulxa[r]cLgvifMCTUca[r]LSsTFOtfDnca[r]IulcscCTUtgvifMx[scCTUt] TOntnfDIulgvifMjmul[jul] VcTOcul jmuldhfoDgvulfnTUtnIfxa[r]EscLMVcul [j]Trpeulxa[r]cLgvifMCTUca[r]LSsTFOtfDnca[r]IulcscCTUtgvifMx[scCTUt] TOntnfDIulgvifMjmul[jul] VcTOcul jmul:fDnTOcmuO" } }
+fs_permissions = [
+    { access = "read", path = "./out-adapter" },
+    { access = "read-write", path = "./deployments" },
+    { access = "read-write", path = "./broadcast" },
+]
+
+[profile.regression]
+src = "src"
+out = "out-regression"
+cache_path = "cache-regression"
+libs = ["lib"]
+script = "script_disabled"
+test = "test"
+skip = [
+    "src/XMetroDeFiAdapter.sol",
+    "test/adapter/**",
+    "test/core/**",
+    "test/deployment/**",
+    "test/fork-v2/**",
+]
+solc_version = "0.8.30"
+optimizer = true
+optimizer_runs = 50
+via_ir = true
+evm_version = "osaka"
+bytecode_hash = "none"
+cbor_metadata = false
+optimizer_details = { yul = true, yulDetails = { stackAllocation = true, optimizerSteps = "dhfoDgvulfnTUtnIfxa[r]EscLMVcul [j]Trpeulxa[r]cLgvifMCTUca[r]LSsTFOtfDnca[r]IulcscCTUtgvifMx[scCTUt] TOntnfDIulgvifMjmul[jul] VcTOcul jmuldhfoDgvulfnTUtnIfxa[r]EscLMVcul [j]Trpeulxa[r]cLgvifMCTUca[r]LSsTFOtfDnca[r]IulcscCTUtgvifMx[scCTUt] TOntnfDIulgvifMjmul[jul] VcTOcul jmul:fDnTOcmuO" } }
+fs_permissions = [
+    { access = "read", path = "./out-adapter" },
+    { access = "read-write", path = "./deployments" },
+    { access = "read-write", path = "./broadcast" },
+]
+
+[profile.adapter]
+src = "src"
+out = "out-adapter"
+cache_path = "cache-adapter"
+libs = ["lib"]
+script = "script_disabled"
+test = "test/adapter"
+skip = ["src/xMETRO.sol"]
+solc_version = "0.8.30"
+optimizer = true
+optimizer_runs = 1
+via_ir = true
+evm_version = "osaka"
+bytecode_hash = "none"
+cbor_metadata = false
+optimizer_details = { yul = true, yulDetails = { stackAllocation = true, optimizerSteps = "dhfoDgvulfnTUtnIfxa[r]cLgvifMCTU:fDnTOcmuO" } }
+fs_permissions = [
+    { access = "read", path = "./out-adapter" },
+    { access = "read-write", path = "./deployments" },
+    { access = "read-write", path = "./broadcast" },
+]
+
+[profile.fork-v2]
+src = "src"
+out = "out-fork-v2"
+cache_path = "cache-fork-v2"
+libs = ["lib"]
+script = "script_disabled"
+test = "test/fork-v2"
+skip = ["src/xMETRO.sol", "src/XMetroDeFiAdapter.sol"]
+solc_version = "0.8.30"
+optimizer = true
+optimizer_runs = 200
+via_ir = true
+evm_version = "osaka"
+bytecode_hash = "none"
+cbor_metadata = false
+ffi = true
+fs_permissions = [
+    { access = "read", path = "./out-core" },
+    { access = "read", path = "./out-adapter" },
+    { access = "read", path = "./script" },
+    { access = "read", path = "./integration/testing/ethereum-fork/evidence" },
+    { access = "read-write", path = "./deployments" },
 ]

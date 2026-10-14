@@ -1,0 +1,14 @@
+No files changed, compilation skipped
+
+Ran 8 tests for test/fork-v2/mainnet/ContributorVesting.t.sol:ContributorVestingMainnetTest
+[PASS] test_E06_ClaimAndStakePartialThenFull() (gas: 567252)
+[PASS] test_E06_ClaimedPrefixZeroScanRollbackAndRecovery() (gas: 614818)
+[PASS] test_E06_DefaultExplicitScanAndIndependentCursors() (gas: 580825)
+[PASS] test_E06_MultipleSchedulesAndLockedRewards() (gas: 496123)
+[PASS] test_E06_ProductionCliffLinearMidpointAndEnd() (gas: 255190)
+[PASS] test_E06_RequestAndWithdrawContributorQueue() (gas: 348272)
+[PASS] test_E06_RevocationDoesNotFreezeExistingReceiver() (gas: 514662)
+[PASS] test_E06_WhitelistOwnAndOtherReceiver() (gas: 357468)
+Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 220.79ms (3.80ms CPU time)
+
+Ran 1 test suite in 225.98ms (220.79ms CPU time): 8 tests passed, 0 failed, 0 skipped (8 total tests)

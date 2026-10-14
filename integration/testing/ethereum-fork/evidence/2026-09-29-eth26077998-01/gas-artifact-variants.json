@@ -1,0 +1,54 @@
+{
+  "observedAtUtc": "2026-09-29T11:07:00.379Z",
+  "fixedForkBlock": 26077998,
+  "fixedForkHash": "0xb75cb3bedaa74adf79199d847c94bbca4724d092da355d3e13c354773e2eb2aa",
+  "variants": {
+    "original": {
+      "runFile": "G01-G09-anvil-200-resumed.json",
+      "runFileSha256": "2e6261dfc38c20863fdd1777e4a9261fa7020aea6d5b96038050f60758a3ddf1",
+      "generatedAtUtc": "2026-09-29T09:56:17.565Z",
+      "rpc": "http://127.0.0.1:8546",
+      "core": "0x1E2c6e631C5822b0fd8Fa74C10b895F49a7D4879",
+      "proxy": "0x2169b1ec8eF2B10FBcE8ca50d064B6F64D3dfDb0",
+      "coreArtifactSha256": "128fdc390fe8430bde1a64a75adf07bf9ca733256766b997fbb1d59abb4e7b87",
+      "coreRuntimeKeccak256": "0x8ebd114be65f1ac1a1735152b4bf8a3982fa7583aca5e96549bf0ce4df7b2f4c",
+      "coreRuntimeBytes": 22607,
+      "sourceArtifactHashes": {
+        "out-core/metro.sol/MetroToken.json": "857da31cb449b917f582648b2924f3d77815f373d24f75f940969481708036f3",
+        "out-core/xMETRO.sol/xMETRO.json": "128fdc390fe8430bde1a64a75adf07bf9ca733256766b997fbb1d59abb4e7b87",
+        "out-core/RewardDistributor.sol/RewardDistributor.json": "b9d31b8af38f49d4d5c08d8942e39d5aaa0b67295be001bee950cbbe66de3fbc",
+        "out-core/ThorMigrationEscrow.sol/ThorMigrationEscrow.json": "bb99eab14f20064a72a719cc4c26e63d4d908911b4e7dd390197c7cbb052021a",
+        "out-adapter/XMetroDeFiAdapter.sol/XMetroDeFiAdapter.json": "fd6e6a4e68304e5875ff3071b7ed78f9dec9a5b19131263c0cd034d29f7e539c",
+        "out-deploy/ERC1967Proxy.sol/ERC1967Proxy.json": "24e9f8a4571dae59cfc0ff3387e6ee118adae51cf90f459e30a75783aa30f443",
+        "out-fork-v2/CommissionVault.sol/CommissionVault.json": "bd5a03c37673a5062b1ad2c27ff72bd0fb707d13c6259a3af6d681d1e9324bf5"
+      }
+    },
+    "blast_retry": {
+      "runFile": "G05-G06-G09-blast-retry.json",
+      "runFileSha256": "00bfe29af08582e3a6928a09c6f8f7bd43d1907fb8140f6eae6862485753553d",
+      "generatedAtUtc": "2026-09-29T10:33:10.191Z",
+      "rpc": "http://127.0.0.1:8555",
+      "core": "0x1E2c6e631C5822b0fd8Fa74C10b895F49a7D4879",
+      "proxy": "0x2169b1ec8eF2B10FBcE8ca50d064B6F64D3dfDb0",
+      "coreArtifactSha256": "9b7163640c20c6844ee20f62170045264784d7ef779f9fee7b49b5d9ee8cb3e4",
+      "coreRuntimeKeccak256": "0x08780c21dc941072db83c883190be6feb5329219f3d0dc94e5e30ddadfb780e8",
+      "coreRuntimeBytes": 22514,
+      "sourceArtifactHashes": {
+        "out-core/metro.sol/MetroToken.json": "857da31cb449b917f582648b2924f3d77815f373d24f75f940969481708036f3",
+        "out-core/xMETRO.sol/xMETRO.json": "9b7163640c20c6844ee20f62170045264784d7ef779f9fee7b49b5d9ee8cb3e4",
+        "out-core/RewardDistributor.sol/RewardDistributor.json": "b9d31b8af38f49d4d5c08d8942e39d5aaa0b67295be001bee950cbbe66de3fbc",
+        "out-core/ThorMigrationEscrow.sol/ThorMigrationEscrow.json": "bb99eab14f20064a72a719cc4c26e63d4d908911b4e7dd390197c7cbb052021a",
+        "out-adapter/XMetroDeFiAdapter.sol/XMetroDeFiAdapter.json": "fd6e6a4e68304e5875ff3071b7ed78f9dec9a5b19131263c0cd034d29f7e539c",
+        "out-deploy/ERC1967Proxy.sol/ERC1967Proxy.json": "24e9f8a4571dae59cfc0ff3387e6ee118adae51cf90f459e30a75783aa30f443",
+        "out-fork-v2/CommissionVault.sol/CommissionVault.json": "bd5a03c37673a5062b1ad2c27ff72bd0fb707d13c6259a3af6d681d1e9324bf5"
+      }
+    }
+  },
+  "artifactDifferences": [
+    {
+      "path": "out-core/xMETRO.sol/xMETRO.json",
+      "originalSha256": "128fdc390fe8430bde1a64a75adf07bf9ca733256766b997fbb1d59abb4e7b87",
+      "retrySha256": "9b7163640c20c6844ee20f62170045264784d7ef779f9fee7b49b5d9ee8cb3e4"
+    }
+  ]
+}
