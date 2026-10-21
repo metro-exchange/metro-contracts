@@ -1,0 +1,116 @@
+{
+  "checkedAtUtc": "2026-09-29T11:28:07.913860+00:00",
+  "fixedForkBlock": 26077998,
+  "fixedForkHash": "0xb75cb3bedaa74adf79199d847c94bbca4724d092da355d3e13c354773e2eb2aa",
+  "transactionGasCap": 16777216,
+  "sources": {
+    "gas-partial-before-receipt-fix.json": "6a2f8385c8b52593fbc1679f59858c75c18223550086bb9d5a3e6f860c7d72b4",
+    "G01-G09-anvil-50-200.json": "16ef8e2cd88c3fbd310ab14150f72b4616f7991d526961953c12fa8a350b814a",
+    "G02-G05-anvil-1-200.json": "5f9aab3958a3cbfbf00e0be557dcab113f3b7acccb89b80a19fe0b716264ed2e",
+    "G01-G09-anvil-200-resumed.json": "2e6261dfc38c20863fdd1777e4a9261fa7020aea6d5b96038050f60758a3ddf1",
+    "G05-G06-G09-blast-retry.json": "00bfe29af08582e3a6928a09c6f8f7bd43d1907fb8140f6eae6862485753553d",
+    "G05-100-original-artifact-retry.json": "29de5a5fe755334f3a0c1dae74c00bcb5f9d6556b36a664ed01c04f58c5f5079",
+    "G05-100-original-artifact-prestate.json": "95e19de093508b9e1da4a27d26f89a729d8f04b2f2541b59772fecae7fb5ad38",
+    "G06-200-direct-cap.json": "db07aef23eca1c7cf4158308f27d850b3cb3880042bfa3e6bcd4cb79b7ebc424",
+    "G09-200-direct-cap.json": "0dc32b80d1a57f454fa262ccac629e88ebcb4d9a9fb4f5e1655a4ec83e1e68c6"
+  },
+  "receiptObservations": 88,
+  "duplicateReceiptObservations": 1,
+  "receiptCount": 87,
+  "passedReceipts": 84,
+  "accountingAnomalyReceipts": 3,
+  "originalArtifactXaut100": {
+    "firstTransactionHash": "0xf71b9e8cc13c0d2a8290470135f5ff9fe68b31f792bd9db54b2ed5d0529babdc",
+    "existingTransactionHash": "0xb7515fc4af63f13420d12bef29b577e6f731315597595bb7408d5ec12e1a48e3",
+    "firstGasUsed": 5768889,
+    "existingGasUsed": 4058889,
+    "all100ZeroOutputBeforeFirst": true,
+    "all100PositiveOutputBeforeExisting": true,
+    "firstUserRewardDebtBeforeFirst": "500000"
+  },
+  "overCapEstimates": [
+    {
+      "source": "G01-G09-anvil-50-200.json",
+      "g": "G-08",
+      "users": 100,
+      "state": "first",
+      "estimatedGas": "20910912"
+    },
+    {
+      "source": "G01-G09-anvil-200-resumed.json",
+      "g": "G-07",
+      "users": 200,
+      "state": "first",
+      "estimatedGas": "18391113"
+    }
+  ],
+  "unreceiptedErrors": [
+    {
+      "source": "G02-G05-anvil-1-200.json",
+      "g": "G-05",
+      "users": 100,
+      "error": "missing response"
+    },
+    {
+      "source": "G01-G09-anvil-200-resumed.json",
+      "g": "G-06",
+      "users": 200,
+      "error": "timeout"
+    },
+    {
+      "source": "G01-G09-anvil-200-resumed.json",
+      "g": "G-09",
+      "users": 200,
+      "error": "timeout"
+    },
+    {
+      "source": "G01-G09-anvil-200-resumed.json",
+      "g": "G-08",
+      "users": 200,
+      "error": "execution reverted"
+    },
+    {
+      "source": "G05-G06-G09-blast-retry.json",
+      "g": "G-06",
+      "users": 200,
+      "error": "timeout"
+    },
+    {
+      "source": "G05-G06-G09-blast-retry.json",
+      "g": "G-09",
+      "users": 200,
+      "error": "timeout"
+    }
+  ],
+  "directCapFailures": [
+    {
+      "source": "G06-200-direct-cap.json",
+      "g": "G-06",
+      "users": 200,
+      "transactionHash": "0x55f61694895ae8bb376ff7ea47419b9ac86cc33d9af0426b097c72bda3a8a615",
+      "status": 0,
+      "gasUsed": 16493655,
+      "readOnlyGasUsed": 17475040
+    },
+    {
+      "source": "G09-200-direct-cap.json",
+      "g": "G-09",
+      "users": 200,
+      "transactionHash": "0x44df7aecbf7a08959346fdc9b75cb62d054f0e7090f12673889b70aee6dea84e",
+      "status": 0,
+      "gasUsed": 16493178,
+      "readOnlyGasUsed": 17481928
+    }
+  ],
+  "checks": [
+    "same fixed fork hash",
+    "receipt status=1 for recorded success/anomaly",
+    "gasUsed<=gasLimit<=EIP-7825 cap",
+    "exact ETH cost from gasUsed and effectiveGasPrice",
+    "passed samples have zero first/last pending and adapter allowance",
+    "original Core XAUT/100 has 100 zero pre-first output balances and positive pre-existing balances",
+    "single_tx_limit estimates exceed cap and have no transaction hash",
+    "direct-cap failures have status=0 and out-of-gas trace",
+    "both direct-cap reverted transactions preserve first/last pending, Core USDC and Adapter allowance"
+  ]
+}

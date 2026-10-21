@@ -1,0 +1,189 @@
+No files changed, compilation skipped
+
+Ran 1 test for test/fork-v2/mainnet/AdapterLifecycle.t.sol:AdapterLifecycleMainnetTest
+[PASS] test_E21_DisableDepositStrategiesAdvancesOwnRevisions() (gas: 598893)
+Traces:
+  [598893] AdapterLifecycleMainnetTest::test_E21_DisableDepositStrategiesAdvancesOwnRevisions()
+    ├─ [98619] ERC1967Proxy::fallback(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D, 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45, 0x111111125421cA6dc452d289314280a0f8842A65)
+    │   ├─ [93803] 0xF62849F9A0B5Bf2913b396098F7c7019b51A820a::setRouters(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D, 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45, 0x111111125421cA6dc452d289314280a0f8842A65) [delegatecall]
+    │   │   ├─ [3491] 0x2e234DAe75C793f67A35089C9d99245E1C58470b::owner() [staticcall]
+    │   │   │   └─ ← [Return] AdapterLifecycleMainnetTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496]
+    │   │   ├─ [2382] 0x2e234DAe75C793f67A35089C9d99245E1C58470b::deFiAdapter() [staticcall]
+    │   │   │   └─ ← [Return] ERC1967Proxy: [0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9]
+    │   │   ├─ emit ConfigurationChanged(key: 0x0000000000000000000000000000000000000000000000000000000000000000, revision: 2)
+    │   │   └─ ← [Stop]
+    │   └─ ← [Return]
+    ├─ [13687] ERC1967Proxy::fallback(true, true)
+    │   ├─ [13377] 0xF62849F9A0B5Bf2913b396098F7c7019b51A820a::setSwapMetroConfig(true, true) [delegatecall]
+    │   │   ├─ [1491] 0x2e234DAe75C793f67A35089C9d99245E1C58470b::owner() [staticcall]
+    │   │   │   └─ ← [Return] AdapterLifecycleMainnetTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496]
+    │   │   ├─ [382] 0x2e234DAe75C793f67A35089C9d99245E1C58470b::deFiAdapter() [staticcall]
+    │   │   │   └─ ← [Return] ERC1967Proxy: [0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9]
+    │   │   ├─ emit ConfigurationChanged(key: 0x9389ac637db215f18ebd69f0e1b9ab0fa7686b2759d61ce91f93d9c4eb13c3e2, revision: 2)
+    │   │   └─ ← [Stop]
+    │   └─ ← [Return]
+    ├─ [36859] ERC1967Proxy::fallback(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2, true, true)
+    │   ├─ [36540] 0xF62849F9A0B5Bf2913b396098F7c7019b51A820a::setSwapTokenConfig(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2, true, true) [delegatecall]
+    │   │   ├─ [1491] 0x2e234DAe75C793f67A35089C9d99245E1C58470b::owner() [staticcall]
+    │   │   │   └─ ← [Return] AdapterLifecycleMainnetTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496]
+    │   │   ├─ [382] 0x2e234DAe75C793f67A35089C9d99245E1C58470b::deFiAdapter() [staticcall]
+    │   │   │   └─ ← [Return] ERC1967Proxy: [0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9]
+    │   │   ├─ emit ConfigurationChanged(key: 0x2f9a583dc43ca98c0c7a28867c7c352de3e3a397627b61ef8f18d88740b780dc, revision: 1)
+    │   │   └─ ← [Return] 0x2f9a583dc43ca98c0c7a28867c7c352de3e3a397627b61ef8f18d88740b780dc
+    │   └─ ← [Return] 0x2f9a583dc43ca98c0c7a28867c7c352de3e3a397627b61ef8f18d88740b780dc
+    ├─ [139952] ERC1967Proxy::fallback(0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2, 0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c, 37, true, true)
+    │   ├─ [139621] 0xF62849F9A0B5Bf2913b396098F7c7019b51A820a::setAaveV3Config(0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2, 0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c, 37, true, true) [delegatecall]
+    │   │   ├─ [1491] 0x2e234DAe75C793f67A35089C9d99245E1C58470b::owner() [staticcall]
+    │   │   │   └─ ← [Return] AdapterLifecycleMainnetTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496]
+    │   │   ├─ [382] 0x2e234DAe75C793f67A35089C9d99245E1C58470b::deFiAdapter() [staticcall]
+    │   │   │   └─ ← [Return] ERC1967Proxy: [0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9]
+    │   │   ├─ [7424] 0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c::UNDERLYING_ASSET_ADDRESS() [staticcall]
+    │   │   │   ├─ [2375] 0xadC45Df3cf1584624C97338BEF33363BF5b97AdA::UNDERLYING_ASSET_ADDRESS() [delegatecall]
+    │   │   │   │   └─ ← [Return] 0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48
+    │   │   │   └─ ← [Return] 0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48
+    │   │   ├─ [875] 0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c::POOL() [staticcall]
+    │   │   │   ├─ [326] 0xadC45Df3cf1584624C97338BEF33363BF5b97AdA::POOL() [delegatecall]
+    │   │   │   │   └─ ← [Return] 0x00000000000000000000000087870bca3f3fd6335c3f4ce8392d69350b4fa4e2
+    │   │   │   └─ ← [Return] 0x00000000000000000000000087870bca3f3fd6335c3f4ce8392d69350b4fa4e2
+    │   │   ├─ [27520] 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2::getReserveData(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48) [staticcall]
+    │   │   │   ├─ [22422] 0x728a138A4823392C2EFA55e028d434F526fE03CF::getReserveData(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48) [delegatecall]
+    │   │   │   │   ├─ [2488] 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e::getAddress(0x4d4f434b5f535441424c455f4445425400000000000000000000000000000000) [staticcall]
+    │   │   │   │   │   └─ ← [Return] 0x000000000000000000000000102633152313c81cd80419b6ecf66d14ad68949a
+    │   │   │   │   └─ ← [Return] 0x100000000000000000000007d00b2d05e000a0eebb0003e8850628d21e781d4c000000000000000000000000000000000000000003d63475ce04e35743ba0a1a0000000000000000000000000000000000000000001e1374d012f1ee47702c9d0000000000000000000000000000000000000000040ade7b73a367caac1cda4c00000000000000000000000000000000000000000023f88d4c1a51fe328022d20000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006ababd67000000000000000000000000000000000000000000000000000000000000000300000000000000000000000098c23e9d8f34fefb1b7bd6a91b7ff122f4e16f5c000000000000000000000000102633152313c81cd80419b6ecf66d14ad68949a00000000000000000000000072e95b8931767c79ba4eee721354d6e99a61d0040000000000000000000000009ec6f08190dea04a54f8afc53db96134e5e3fdfb00000000000000000000000000000000000000000000000000000007d1540aa700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+    │   │   │   └─ ← [Return] 0x100000000000000000000007d00b2d05e000a0eebb0003e8850628d21e781d4c000000000000000000000000000000000000000003d63475ce04e35743ba0a1a0000000000000000000000000000000000000000001e1374d012f1ee47702c9d0000000000000000000000000000000000000000040ade7b73a367caac1cda4c00000000000000000000000000000000000000000023f88d4c1a51fe328022d20000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006ababd67000000000000000000000000000000000000000000000000000000000000000300000000000000000000000098c23e9d8f34fefb1b7bd6a91b7ff122f4e16f5c000000000000000000000000102633152313c81cd80419b6ecf66d14ad68949a00000000000000000000000072e95b8931767c79ba4eee721354d6e99a61d0040000000000000000000000009ec6f08190dea04a54f8afc53db96134e5e3fdfb00000000000000000000000000000000000000000000000000000007d1540aa700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+    │   │   ├─ emit ConfigurationChanged(key: 0x639e7097c961b301f380e51bdbde53531dd2fa8ac1c7842a02f00550ee5e4b78, revision: 1)
+    │   │   └─ ← [Return] 0x639e7097c961b301f380e51bdbde53531dd2fa8ac1c7842a02f00550ee5e4b78
+    │   └─ ← [Return] 0x639e7097c961b301f380e51bdbde53531dd2fa8ac1c7842a02f00550ee5e4b78
+    ├─ [104931] ERC1967Proxy::fallback(0x94e7A5dCbE816e498b89aB752661904E2F56c485, 0x17A54b8d6D9C68e7fa1C7112AC998EA1BA51d11e, 7, true, true)
+    │   ├─ [104603] 0xF62849F9A0B5Bf2913b396098F7c7019b51A820a::setAaveV4Config(0x94e7A5dCbE816e498b89aB752661904E2F56c485, 0x17A54b8d6D9C68e7fa1C7112AC998EA1BA51d11e, 7, true, true) [delegatecall]
+    │   │   ├─ [1491] 0x2e234DAe75C793f67A35089C9d99245E1C58470b::owner() [staticcall]
+    │   │   │   └─ ← [Return] AdapterLifecycleMainnetTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496]
+    │   │   ├─ [382] 0x2e234DAe75C793f67A35089C9d99245E1C58470b::deFiAdapter() [staticcall]
+    │   │   │   └─ ← [Return] ERC1967Proxy: [0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9]
+    │   │   ├─ [10866] 0x94e7A5dCbE816e498b89aB752661904E2F56c485::getReserve(7) [staticcall]
+    │   │   │   ├─ [5921] 0xABd0E26FE17BDe4F1f1187Ed8aA80C274E03D8b5::getReserve(7) [delegatecall]
+    │   │   │   │   └─ ← [Return] 0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48000000000000000000000000cca852bc40e560adc3b1cc58ca5b55638ce826c9000000000000000000000000000000000000000000000000000000000000000500000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000000
+    │   │   │   └─ ← [Return] 0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48000000000000000000000000cca852bc40e560adc3b1cc58ca5b55638ce826c9000000000000000000000000000000000000000000000000000000000000000500000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000000
+    │   │   ├─ [2606] 0x17A54b8d6D9C68e7fa1C7112AC998EA1BA51d11e::isSpokeRegistered(0x94e7A5dCbE816e498b89aB752661904E2F56c485) [staticcall]
+    │   │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000000000000000000000000001
+    │   │   ├─ [3170] 0x94e7A5dCbE816e498b89aB752661904E2F56c485::isPositionManagerActive(0x17A54b8d6D9C68e7fa1C7112AC998EA1BA51d11e) [staticcall]
+    │   │   │   ├─ [2755] 0xABd0E26FE17BDe4F1f1187Ed8aA80C274E03D8b5::isPositionManagerActive(0x17A54b8d6D9C68e7fa1C7112AC998EA1BA51d11e) [delegatecall]
+    │   │   │   │   └─ ← [Return] true
+    │   │   │   └─ ← [Return] true
+    │   │   ├─ emit ConfigurationChanged(key: 0x0ca9ad727775cdaa863c38b6423cc0b23ffd14f302085ad8a239b7bbd5b9d0b6, revision: 2)
+    │   │   └─ ← [Stop]
+    │   └─ ← [Return]
+    ├─ [115378] ERC1967Proxy::fallback(0x134cCaaA4F1e4552eC8aEcb9E4A2360dDcF8df76, 0x0000000000000000000000000000000000000000000000000000000000000000, true, true)
+    │   ├─ [115053] 0xF62849F9A0B5Bf2913b396098F7c7019b51A820a::setMapleConfig(0x134cCaaA4F1e4552eC8aEcb9E4A2360dDcF8df76, 0x0000000000000000000000000000000000000000000000000000000000000000, true, true) [delegatecall]
+    │   │   ├─ [1491] 0x2e234DAe75C793f67A35089C9d99245E1C58470b::owner() [staticcall]
+    │   │   │   └─ ← [Return] AdapterLifecycleMainnetTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496]
+    │   │   ├─ [382] 0x2e234DAe75C793f67A35089C9d99245E1C58470b::deFiAdapter() [staticcall]
+    │   │   │   └─ ← [Return] ERC1967Proxy: [0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9]
+    │   │   ├─ [206] 0x134cCaaA4F1e4552eC8aEcb9E4A2360dDcF8df76::pool() [staticcall]
+    │   │   │   └─ ← [Return] 0x00000000000000000000000080ac24aa929eaf5013f6436cda2a7ba190f5cc0b
+    │   │   ├─ [271] 0x134cCaaA4F1e4552eC8aEcb9E4A2360dDcF8df76::poolManager() [staticcall]
+    │   │   │   └─ ← [Return] 0x7aD5fFa5fdF509E30186F4609c2f6269f4B6158F
+    │   │   ├─ [293] 0x134cCaaA4F1e4552eC8aEcb9E4A2360dDcF8df76::poolPermissionManager() [staticcall]
+    │   │   │   └─ ← [Return] 0xBe10aDcE8B6E3E02Db384E7FaDA5395DD113D8b3
+    │   │   ├─ [228] 0x134cCaaA4F1e4552eC8aEcb9E4A2360dDcF8df76::asset() [staticcall]
+    │   │   │   └─ ← [Return] 0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48
+    │   │   ├─ [2427] 0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b::asset() [staticcall]
+    │   │   │   └─ ← [Return] 0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48
+    │   │   ├─ emit ConfigurationChanged(key: 0xd7109b4a4c12c270e7ca8f0e67b871daa0f3a652b9b27d3afe4c2be4948e864e, revision: 1)
+    │   │   └─ ← [Return] 0xd7109b4a4c12c270e7ca8f0e67b871daa0f3a652b9b27d3afe4c2be4948e864e
+    │   └─ ← [Return] 0xd7109b4a4c12c270e7ca8f0e67b871daa0f3a652b9b27d3afe4c2be4948e864e
+    ├─ [2310] ERC1967Proxy::fallback(0x639e7097c961b301f380e51bdbde53531dd2fa8ac1c7842a02f00550ee5e4b78) [staticcall]
+    │   ├─ [1970] 0xF62849F9A0B5Bf2913b396098F7c7019b51A820a::strategyInfo(0x639e7097c961b301f380e51bdbde53531dd2fa8ac1c7842a02f00550ee5e4b78) [delegatecall]
+    │   │   └─ ← [Return] StrategyInfo({ kind: 3, enabled: true, autoEnabled: true, logicEpoch: 1, domainRevision: 2, strategyRevision: 1, outputToken: 0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c })
+    │   └─ ← [Return] StrategyInfo({ kind: 3, enabled: true, autoEnabled: true, logicEpoch: 1, domainRevision: 2, strategyRevision: 1, outputToken: 0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c })
+    ├─ [2310] ERC1967Proxy::fallback(0x0ca9ad727775cdaa863c38b6423cc0b23ffd14f302085ad8a239b7bbd5b9d0b6) [staticcall]
+    │   ├─ [1970] 0xF62849F9A0B5Bf2913b396098F7c7019b51A820a::strategyInfo(0x0ca9ad727775cdaa863c38b6423cc0b23ffd14f302085ad8a239b7bbd5b9d0b6) [delegatecall]
+    │   │   └─ ← [Return] StrategyInfo({ kind: 4, enabled: true, autoEnabled: true, logicEpoch: 1, domainRevision: 2, strategyRevision: 2, outputToken: 0x0000000000000000000000000000000000000000 })
+    │   └─ ← [Return] StrategyInfo({ kind: 4, enabled: true, autoEnabled: true, logicEpoch: 1, domainRevision: 2, strategyRevision: 2, outputToken: 0x0000000000000000000000000000000000000000 })
+    ├─ [2310] ERC1967Proxy::fallback(0xd7109b4a4c12c270e7ca8f0e67b871daa0f3a652b9b27d3afe4c2be4948e864e) [staticcall]
+    │   ├─ [1970] 0xF62849F9A0B5Bf2913b396098F7c7019b51A820a::strategyInfo(0xd7109b4a4c12c270e7ca8f0e67b871daa0f3a652b9b27d3afe4c2be4948e864e) [delegatecall]
+    │   │   └─ ← [Return] StrategyInfo({ kind: 5, enabled: true, autoEnabled: true, logicEpoch: 1, domainRevision: 2, strategyRevision: 1, outputToken: 0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b })
+    │   └─ ← [Return] StrategyInfo({ kind: 5, enabled: true, autoEnabled: true, logicEpoch: 1, domainRevision: 2, strategyRevision: 1, outputToken: 0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b })
+    ├─ [7175] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000, 0, false, false)
+    │   ├─ [6844] 0xF62849F9A0B5Bf2913b396098F7c7019b51A820a::setAaveV3Config(0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000, 0, false, false) [delegatecall]
+    │   │   ├─ [1491] 0x2e234DAe75C793f67A35089C9d99245E1C58470b::owner() [staticcall]
+    │   │   │   └─ ← [Return] AdapterLifecycleMainnetTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496]
+    │   │   ├─ [382] 0x2e234DAe75C793f67A35089C9d99245E1C58470b::deFiAdapter() [staticcall]
+    │   │   │   └─ ← [Return] ERC1967Proxy: [0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9]
+    │   │   ├─ emit ConfigurationChanged(key: 0x639e7097c961b301f380e51bdbde53531dd2fa8ac1c7842a02f00550ee5e4b78, revision: 2)
+    │   │   └─ ← [Return] 0x639e7097c961b301f380e51bdbde53531dd2fa8ac1c7842a02f00550ee5e4b78
+    │   └─ ← [Return] 0x639e7097c961b301f380e51bdbde53531dd2fa8ac1c7842a02f00550ee5e4b78
+    ├─ [7175] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000, 0, false, false)
+    │   ├─ [6844] 0xF62849F9A0B5Bf2913b396098F7c7019b51A820a::setAaveV3Config(0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000, 0, false, false) [delegatecall]
+    │   │   ├─ [1491] 0x2e234DAe75C793f67A35089C9d99245E1C58470b::owner() [staticcall]
+    │   │   │   └─ ← [Return] AdapterLifecycleMainnetTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496]
+    │   │   ├─ [382] 0x2e234DAe75C793f67A35089C9d99245E1C58470b::deFiAdapter() [staticcall]
+    │   │   │   └─ ← [Return] ERC1967Proxy: [0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9]
+    │   │   ├─ emit ConfigurationChanged(key: 0x639e7097c961b301f380e51bdbde53531dd2fa8ac1c7842a02f00550ee5e4b78, revision: 3)
+    │   │   └─ ← [Return] 0x639e7097c961b301f380e51bdbde53531dd2fa8ac1c7842a02f00550ee5e4b78
+    │   └─ ← [Return] 0x639e7097c961b301f380e51bdbde53531dd2fa8ac1c7842a02f00550ee5e4b78
+    ├─ [7158] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000, 0, false, false)
+    │   ├─ [6830] 0xF62849F9A0B5Bf2913b396098F7c7019b51A820a::setAaveV4Config(0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000, 0, false, false) [delegatecall]
+    │   │   ├─ [1491] 0x2e234DAe75C793f67A35089C9d99245E1C58470b::owner() [staticcall]
+    │   │   │   └─ ← [Return] AdapterLifecycleMainnetTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496]
+    │   │   ├─ [382] 0x2e234DAe75C793f67A35089C9d99245E1C58470b::deFiAdapter() [staticcall]
+    │   │   │   └─ ← [Return] ERC1967Proxy: [0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9]
+    │   │   ├─ emit ConfigurationChanged(key: 0x0ca9ad727775cdaa863c38b6423cc0b23ffd14f302085ad8a239b7bbd5b9d0b6, revision: 3)
+    │   │   └─ ← [Stop]
+    │   └─ ← [Return]
+    ├─ [7158] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000, 0, false, false)
+    │   ├─ [6830] 0xF62849F9A0B5Bf2913b396098F7c7019b51A820a::setAaveV4Config(0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000, 0, false, false) [delegatecall]
+    │   │   ├─ [1491] 0x2e234DAe75C793f67A35089C9d99245E1C58470b::owner() [staticcall]
+    │   │   │   └─ ← [Return] AdapterLifecycleMainnetTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496]
+    │   │   ├─ [382] 0x2e234DAe75C793f67A35089C9d99245E1C58470b::deFiAdapter() [staticcall]
+    │   │   │   └─ ← [Return] ERC1967Proxy: [0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9]
+    │   │   ├─ emit ConfigurationChanged(key: 0x0ca9ad727775cdaa863c38b6423cc0b23ffd14f302085ad8a239b7bbd5b9d0b6, revision: 4)
+    │   │   └─ ← [Stop]
+    │   └─ ← [Return]
+    ├─ [7057] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000000000000000000000000000, false, false)
+    │   ├─ [6732] 0xF62849F9A0B5Bf2913b396098F7c7019b51A820a::setMapleConfig(0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000000000000000000000000000, false, false) [delegatecall]
+    │   │   ├─ [1491] 0x2e234DAe75C793f67A35089C9d99245E1C58470b::owner() [staticcall]
+    │   │   │   └─ ← [Return] AdapterLifecycleMainnetTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496]
+    │   │   ├─ [382] 0x2e234DAe75C793f67A35089C9d99245E1C58470b::deFiAdapter() [staticcall]
+    │   │   │   └─ ← [Return] ERC1967Proxy: [0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9]
+    │   │   ├─ emit ConfigurationChanged(key: 0xd7109b4a4c12c270e7ca8f0e67b871daa0f3a652b9b27d3afe4c2be4948e864e, revision: 2)
+    │   │   └─ ← [Return] 0xd7109b4a4c12c270e7ca8f0e67b871daa0f3a652b9b27d3afe4c2be4948e864e
+    │   └─ ← [Return] 0xd7109b4a4c12c270e7ca8f0e67b871daa0f3a652b9b27d3afe4c2be4948e864e
+    ├─ [7057] ERC1967Proxy::fallback(0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000000000000000000000000000, false, false)
+    │   ├─ [6732] 0xF62849F9A0B5Bf2913b396098F7c7019b51A820a::setMapleConfig(0x0000000000000000000000000000000000000000, 0x0000000000000000000000000000000000000000000000000000000000000000, false, false) [delegatecall]
+    │   │   ├─ [1491] 0x2e234DAe75C793f67A35089C9d99245E1C58470b::owner() [staticcall]
+    │   │   │   └─ ← [Return] AdapterLifecycleMainnetTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496]
+    │   │   ├─ [382] 0x2e234DAe75C793f67A35089C9d99245E1C58470b::deFiAdapter() [staticcall]
+    │   │   │   └─ ← [Return] ERC1967Proxy: [0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9]
+    │   │   ├─ emit ConfigurationChanged(key: 0xd7109b4a4c12c270e7ca8f0e67b871daa0f3a652b9b27d3afe4c2be4948e864e, revision: 3)
+    │   │   └─ ← [Return] 0xd7109b4a4c12c270e7ca8f0e67b871daa0f3a652b9b27d3afe4c2be4948e864e
+    │   └─ ← [Return] 0xd7109b4a4c12c270e7ca8f0e67b871daa0f3a652b9b27d3afe4c2be4948e864e
+    ├─ [2310] ERC1967Proxy::fallback(0x639e7097c961b301f380e51bdbde53531dd2fa8ac1c7842a02f00550ee5e4b78) [staticcall]
+    │   ├─ [1970] 0xF62849F9A0B5Bf2913b396098F7c7019b51A820a::strategyInfo(0x639e7097c961b301f380e51bdbde53531dd2fa8ac1c7842a02f00550ee5e4b78) [delegatecall]
+    │   │   └─ ← [Return] StrategyInfo({ kind: 3, enabled: false, autoEnabled: false, logicEpoch: 1, domainRevision: 2, strategyRevision: 3, outputToken: 0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c })
+    │   └─ ← [Return] StrategyInfo({ kind: 3, enabled: false, autoEnabled: false, logicEpoch: 1, domainRevision: 2, strategyRevision: 3, outputToken: 0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c })
+    ├─ [2310] ERC1967Proxy::fallback(0x0ca9ad727775cdaa863c38b6423cc0b23ffd14f302085ad8a239b7bbd5b9d0b6) [staticcall]
+    │   ├─ [1970] 0xF62849F9A0B5Bf2913b396098F7c7019b51A820a::strategyInfo(0x0ca9ad727775cdaa863c38b6423cc0b23ffd14f302085ad8a239b7bbd5b9d0b6) [delegatecall]
+    │   │   └─ ← [Return] StrategyInfo({ kind: 4, enabled: false, autoEnabled: false, logicEpoch: 1, domainRevision: 2, strategyRevision: 4, outputToken: 0x0000000000000000000000000000000000000000 })
+    │   └─ ← [Return] StrategyInfo({ kind: 4, enabled: false, autoEnabled: false, logicEpoch: 1, domainRevision: 2, strategyRevision: 4, outputToken: 0x0000000000000000000000000000000000000000 })
+    ├─ [2310] ERC1967Proxy::fallback(0xd7109b4a4c12c270e7ca8f0e67b871daa0f3a652b9b27d3afe4c2be4948e864e) [staticcall]
+    │   ├─ [1970] 0xF62849F9A0B5Bf2913b396098F7c7019b51A820a::strategyInfo(0xd7109b4a4c12c270e7ca8f0e67b871daa0f3a652b9b27d3afe4c2be4948e864e) [delegatecall]
+    │   │   └─ ← [Return] StrategyInfo({ kind: 5, enabled: false, autoEnabled: false, logicEpoch: 1, domainRevision: 2, strategyRevision: 3, outputToken: 0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b })
+    │   └─ ← [Return] StrategyInfo({ kind: 5, enabled: false, autoEnabled: false, logicEpoch: 1, domainRevision: 2, strategyRevision: 3, outputToken: 0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b })
+    ├─ [2310] ERC1967Proxy::fallback(0x639e7097c961b301f380e51bdbde53531dd2fa8ac1c7842a02f00550ee5e4b78) [staticcall]
+    │   ├─ [1970] 0xF62849F9A0B5Bf2913b396098F7c7019b51A820a::strategyInfo(0x639e7097c961b301f380e51bdbde53531dd2fa8ac1c7842a02f00550ee5e4b78) [delegatecall]
+    │   │   └─ ← [Return] StrategyInfo({ kind: 3, enabled: false, autoEnabled: false, logicEpoch: 1, domainRevision: 2, strategyRevision: 3, outputToken: 0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c })
+    │   └─ ← [Return] StrategyInfo({ kind: 3, enabled: false, autoEnabled: false, logicEpoch: 1, domainRevision: 2, strategyRevision: 3, outputToken: 0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c })
+    ├─ [2310] ERC1967Proxy::fallback(0x0ca9ad727775cdaa863c38b6423cc0b23ffd14f302085ad8a239b7bbd5b9d0b6) [staticcall]
+    │   ├─ [1970] 0xF62849F9A0B5Bf2913b396098F7c7019b51A820a::strategyInfo(0x0ca9ad727775cdaa863c38b6423cc0b23ffd14f302085ad8a239b7bbd5b9d0b6) [delegatecall]
+    │   │   └─ ← [Return] StrategyInfo({ kind: 4, enabled: false, autoEnabled: false, logicEpoch: 1, domainRevision: 2, strategyRevision: 4, outputToken: 0x0000000000000000000000000000000000000000 })
+    │   └─ ← [Return] StrategyInfo({ kind: 4, enabled: false, autoEnabled: false, logicEpoch: 1, domainRevision: 2, strategyRevision: 4, outputToken: 0x0000000000000000000000000000000000000000 })
+    ├─ [2310] ERC1967Proxy::fallback(0xd7109b4a4c12c270e7ca8f0e67b871daa0f3a652b9b27d3afe4c2be4948e864e) [staticcall]
+    │   ├─ [1970] 0xF62849F9A0B5Bf2913b396098F7c7019b51A820a::strategyInfo(0xd7109b4a4c12c270e7ca8f0e67b871daa0f3a652b9b27d3afe4c2be4948e864e) [delegatecall]
+    │   │   └─ ← [Return] StrategyInfo({ kind: 5, enabled: false, autoEnabled: false, logicEpoch: 1, domainRevision: 2, strategyRevision: 3, outputToken: 0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b })
+    │   └─ ← [Return] StrategyInfo({ kind: 5, enabled: false, autoEnabled: false, logicEpoch: 1, domainRevision: 2, strategyRevision: 3, outputToken: 0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b })
+    └─ ← [Return]
+
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 1.05s (1.22ms CPU time)
+
+Ran 1 test suite in 1.07s (1.05s CPU time): 1 tests passed, 0 failed, 0 skipped (1 total tests)

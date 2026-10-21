@@ -1,0 +1,69 @@
+{
+  "recordedAtUtc": "2026-09-29T11:31:48.594660+00:00",
+  "fixedForkBlock": 26077998,
+  "fixedForkHash": "0xb75cb3bedaa74adf79199d847c94bbca4724d092da355d3e13c354773e2eb2aa",
+  "baselineManifest": "manifest.json",
+  "baselineManifestSha256": "4b3a87debc31577a609d0b1f65241bf8b72a396c6333c216de261d092778be0d",
+  "baselineManifestPreserved": true,
+  "sourceAndArtifactDrift": [
+    {
+      "path": "src/xMETRO.sol",
+      "baselineSha256": "d6adf109591a61bddaca7a9784a9883d89d6a8b47460f67830fa27f8e0cbe3cd",
+      "currentSha256": "b21d47d0473f675c5f35904394dd9f3afec02b0a4fe8e5b1b63c1734638657a4"
+    },
+    {
+      "path": "test/fork-v2/mainnet/MainnetForkBase.sol",
+      "baselineSha256": "4c1d8c270a0be909d170a505dc5245b274a84efe5b35901a764e13be4bcc76ed",
+      "currentSha256": "a1054a340e529c55bc230d91868bb33024bfcc35a4e052a002a3f0148a885c5f"
+    },
+    {
+      "path": "test/fork-v2/mainnet/DeploymentGovernance.t.sol",
+      "baselineSha256": "c136a6ab40c1d49a668fbc0b69acac3c9c48059bb31b068a175695c4b3284bc0",
+      "currentSha256": "8f3c3a47287f54ded922d53f0ad0938821c5697c56712b965598521a5d34fef6"
+    },
+    {
+      "path": "out-core/xMETRO.sol/xMETRO.json",
+      "baselineSha256": "128fdc390fe8430bde1a64a75adf07bf9ca733256766b997fbb1d59abb4e7b87",
+      "currentSha256": "9b7163640c20c6844ee20f62170045264784d7ef779f9fee7b49b5d9ee8cb3e4"
+    },
+    {
+      "path": "script/verify-release-artifacts.sh",
+      "baselineSha256": "f89ec7d6eac24ba7a2b8f637f09fd6c713b46485e366e7003af627a592318da4",
+      "currentSha256": "81a480810fc9baef12280e9f5cd9cb530052a86882b1667ec17e687fab639fba"
+    },
+    {
+      "path": "test/fork-v2/mainnet/YThorRewardWeight.t.sol",
+      "baselineSha256": "746de243af449100d1ffce88a1914993510c3f3f3c3f222b1c9f393ba2544b49",
+      "currentSha256": "773570df4aafaf21da39c63a3c6b1d79354d98a8088e40cf203768fa72589fb8"
+    },
+    {
+      "path": "test/fork-v2/mainnet/AdapterLifecycle.t.sol",
+      "baselineSha256": "a7653ba2cc7a06b05b63d250e5214087270c9c7238dd3fa87127194026950708",
+      "currentSha256": "d71b943d15f36c21a3d6b6f26412716e2d57b1b32b593cf2bb6004ac0bd6457a"
+    },
+    {
+      "path": "script/run-mainnet-fork-gas.mjs",
+      "baselineSha256": "66101c16ec8fa73f6cf0a1f00e5dc2b220ed2257937e629ca61e23f247a48bf0",
+      "currentSha256": "55270f8219454efe012951901d557a99f0042d1dfe6066cbb8e28ea56a9dc1a2"
+    }
+  ],
+  "currentCoreArtifactSha256": "9b7163640c20c6844ee20f62170045264784d7ef779f9fee7b49b5d9ee8cb3e4",
+  "originalGasCoreArtifactSha256": "128fdc390fe8430bde1a64a75adf07bf9ca733256766b997fbb1d59abb4e7b87",
+  "evidenceSha256": {
+    "oneinch-excluding-pmm-v2-v3.json": "8b715737bb543aae886bd41e6f3d60133433a704206243c1c7076ab4ec261f7b",
+    "oneinch-gas-proxy-five-routes.json": "fa744c6b9bd1a036c52d46a1c700bc212d4c2faeaf0db40e8d51750829aad7f2",
+    "G05-100-original-artifact-retry.json": "29de5a5fe755334f3a0c1dae74c00bcb5f9d6556b36a664ed01c04f58c5f5079",
+    "G05-100-original-artifact-prestate.json": "95e19de093508b9e1da4a27d26f89a729d8f04b2f2541b59772fecae7fb5ad38",
+    "gas-artifact-variants.json": "3457915a41d6972f9cb3a82a6d8f7f432789ca7ece15649869064d74b55649db",
+    "gas-receipt-audit.json": "5d3ed5823c880e50f97452f211f629bd904193028c896ae22f12f756499ef5ea",
+    "G06-200-direct-cap.json": "db07aef23eca1c7cf4158308f27d850b3cb3880042bfa3e6bcd4cb79b7ebc424",
+    "G09-200-direct-cap.json": "0dc32b80d1a57f454fa262ccac629e88ebcb4d9a9fb4f5e1655a4ec83e1e68c6",
+    "X07-current-release-artifacts.log": "b1b7d728bff3803bf7159fac3e42a480aad5f935b1957e9570535027d2ab20b4",
+    "X07-current-core-rerun.log": "e356432fa00cb1cfd3cc3322d846e1665efbbbbf342a76058e84088e27c70c6f",
+    "current-mainnet-suite-rerun.log": "d39f065011b5514e6148945216a5328153e93f4b696b2afe1932096fdae02687"
+  },
+  "auditScript": "script/verify-mainnet-fork-gas-evidence.py",
+  "auditScriptSha256": "ceeb26b187cca90d1062eb716f23d550f4293e1e59a7568e3df5f2358af68292",
+  "interpretation": "Baseline hashes describe earlier executed tests. Current hashes describe the checked working tree after deployment artifact rebuild. Historical gas receipts are identified by the deployed Core runtime and artifact hashes; no historical manifest hash is rewritten.",
+  "scopeNote": "Full current-suite rerun predates the later instruction to avoid governance-driven full regression; no further full suite was requested or run afterward. F-01 remains documented without source modification."
+}

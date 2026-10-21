@@ -1,198 +1,97 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
-import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 interface IxMETROMigration {
-    function creditLockedTHORFromMigration(address user, uint256 amount, uint256 lockMonths) external;
-    function creditLockedVestingFromMigration(address user, uint256 amount) external;
+    function creditThorFromMigration(address user, uint256 principal) external;
+    function creditYThorFromMigration(address user, uint256 principal) external;
 }
 
+/// @title ThorMigrationEscrow
+/// @notice Custodies migrated THOR/yTHOR and creates the corresponding locked METRO positions.
 contract ThorMigrationEscrow is Ownable, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
-
     IxMETROMigration public immutable xMETRO;
-
-
     IERC20 public immutable thorToken;
-
-
     IERC20 public immutable yThorToken;
-
 
     uint256 public migrationStartTime;
 
-
-    uint256 public cap10M;
-
-
-    uint256 public cap3M;
-
-
-    uint256 public minted10M;
-
-
-    uint256 public minted3M;
-
+    uint256 public capThor;
+    uint256 public migratedThor;
+    uint256 public deadlineThor;
+    uint256 public ratioThor;
 
     uint256 public capYThor;
-
-
-    uint256 public mintedYThor;
-
-
-    uint256 public deadline10M;
-
-
-    uint256 public deadline3M;
-
-
+    uint256 public migratedYThor;
     uint256 public deadlineYThor;
-
-
-    uint256 public ratio10M;
-
-
-    uint256 public ratio3M;
-
-
     uint256 public ratioYThor;
 
-    event MigratedThor(
-        address indexed user,
-        uint256 amountIn,
-        uint256 mintAmount,
-        uint256 lockMonths
-    );
+    event MigratedThor(address indexed user, uint256 amountIn, uint256 principal);
+    event MigratedYThor(address indexed user, uint256 amountIn, uint256 principal);
 
-    event MigratedYThor(address indexed user, uint256 amountIn, uint256 mintAmount);
-
-    event DeadlinesUpdated(uint256 deadline10M, uint256 deadline3M);
-    event RatiosUpdated(uint256 ratio10M, uint256 ratio3M, uint256 ratioYThor);
-    event CapsUpdated(uint256 cap10M, uint256 cap3M);
+    event DeadlinesUpdated(uint256 deadlineThor, uint256 deadlineYThor);
+    event RatiosUpdated(uint256 ratioThor, uint256 ratioYThor);
+    event CapsUpdated(uint256 capThor, uint256 capYThor);
     event MigrationStartTimeUpdated(uint256 migrationStartTime);
-    event YThorLimitsUpdated(uint256 capYThor, uint256 deadlineYThor);
-
     event TokensRescued(address indexed token, address indexed to, uint256 amount);
 
-    constructor(
-        address owner_,
-        address xMETRO_,
-        address thor_,
-        address yThor_,
-        uint256 migrationStartTime_
-    ) Ownable(owner_) {
+    constructor(address owner_, address xMETRO_, address thor_, address yThor_, uint256 migrationStartTime_)
+        Ownable(owner_)
+    {
         require(xMETRO_ != address(0), "ThorEscrow: zero xMETRO");
         require(thor_ != address(0) && yThor_ != address(0), "ThorEscrow: zero token");
         require(migrationStartTime_ >= block.timestamp, "ThorEscrow: bad start time");
+
         xMETRO = IxMETROMigration(xMETRO_);
         thorToken = IERC20(thor_);
         yThorToken = IERC20(yThor_);
         migrationStartTime = migrationStartTime_;
     }
 
-    /**
-     * @notice Migrate THOR using the 10-month bucket.
-     * @dev Reverts if the 10m bucket is not available (expired or cap exceeded).
-     */
-    function migrateThor10m(uint256 amountIn) external nonReentrant whenNotPaused {
+    /// @notice Migrate THOR through the single project-configured conversion path.
+    function migrateThor(uint256 amountIn) external nonReentrant whenNotPaused {
         require(block.timestamp >= migrationStartTime, "ThorEscrow: not started");
         require(amountIn > 0, "ThorEscrow: zero amount");
+        require(capThor != 0 && ratioThor != 0, "ThorEscrow: thor config not set");
+        require(block.timestamp <= deadlineThor, "ThorEscrow: thor expired");
 
-        require(cap10M != 0 && cap3M != 0, "ThorEscrow: caps not set");
-        require(block.timestamp <= deadline10M, "ThorEscrow: 10m expired");
+        uint256 principal = Math.mulDiv(amountIn, ratioThor, 1e18);
+        require(principal > 0, "ThorEscrow: zero mint");
+        require(migratedThor + principal <= capThor, "ThorEscrow: thor cap");
 
-        uint256 mintAmount = Math.mulDiv(amountIn, ratio10M, 1e18);
-        require(mintAmount > 0, "ThorEscrow: zero mint");
-        require(minted10M + mintAmount <= cap10M, "ThorEscrow: 10m cap");
-
-        minted10M += mintAmount;
-
-        thorToken.safeTransferFrom(msg.sender, address(this), amountIn);
-
-        xMETRO.creditLockedTHORFromMigration(msg.sender, mintAmount, 10);
-
-        emit MigratedThor(msg.sender, amountIn, mintAmount, 10);
-    }
-
-    /**
-     * @notice Migrate THOR using the 3-month bucket.
-     * @dev Only allowed when the full amount no longer fits in the 10m bucket.
-     */
-    function migrateThor3m(uint256 amountIn) external nonReentrant whenNotPaused {
-        require(block.timestamp >= migrationStartTime, "ThorEscrow: not started");
-        require(amountIn > 0, "ThorEscrow: zero amount");
-
-        require(cap10M != 0 && cap3M != 0, "ThorEscrow: caps not set");
-
-        uint256 remainingMint10 = _remainingMintCapacity10M();
-        uint256 fullMint10 = Math.mulDiv(amountIn, ratio10M, 1e18);
-        if (remainingMint10 != 0 && fullMint10 <= remainingMint10) {
-            revert("ThorEscrow: 10m available");
-        }
-
-        uint256 amount10In;
-        uint256 mint10;
-        if (remainingMint10 != 0) {
-            amount10In = Math.min(amountIn, _maxAmountForMintCapacity(remainingMint10, ratio10M));
-            mint10 = Math.mulDiv(amount10In, ratio10M, 1e18);
-            if (mint10 > remainingMint10) {
-                revert("ThorEscrow: 10m cap");
-            }
-        }
-
-        require(block.timestamp <= deadline3M, "ThorEscrow: 3m expired");
-
-        uint256 amount3In = amountIn - amount10In;
-        uint256 mint3 = Math.mulDiv(amount3In, ratio3M, 1e18);
-        require(mint3 > 0, "ThorEscrow: zero mint");
-        require(minted3M + mint3 <= cap3M, "ThorEscrow: 3m cap");
-
-        if (mint10 > 0) {
-            minted10M += mint10;
-        }
-        minted3M += mint3;
+        migratedThor += principal;
 
         thorToken.safeTransferFrom(msg.sender, address(this), amountIn);
+        xMETRO.creditThorFromMigration(msg.sender, principal);
 
-        if (mint10 > 0) {
-            xMETRO.creditLockedTHORFromMigration(msg.sender, mint10, 10);
-            emit MigratedThor(msg.sender, amount10In, mint10, 10);
-        }
-
-        xMETRO.creditLockedTHORFromMigration(msg.sender, mint3, 3);
-
-        emit MigratedThor(msg.sender, amount3In, mint3, 3);
+        emit MigratedThor(msg.sender, amountIn, principal);
     }
 
-    /**
-     * @notice Migrate yTHOR (credits a vesting schedule in xMETRO).
-     */
+    /// @notice Migrate yTHOR into an active position whose future reward multiplier is managed by xMETRO.
     function migrateYThor(uint256 amountIn) external nonReentrant whenNotPaused {
         require(block.timestamp >= migrationStartTime, "ThorEscrow: not started");
         require(amountIn > 0, "ThorEscrow: zero amount");
-
-        require(capYThor != 0, "ThorEscrow: ythor cap not set");
+        require(capYThor != 0 && ratioYThor != 0, "ThorEscrow: ythor config not set");
         require(block.timestamp <= deadlineYThor, "ThorEscrow: ythor expired");
 
-        uint256 mintAmount = Math.mulDiv(amountIn, ratioYThor, 1e18);
-        require(mintAmount > 0, "ThorEscrow: zero mint");
-
-        require(mintedYThor + mintAmount <= capYThor, "ThorEscrow: ythor cap");
-        mintedYThor += mintAmount;
+        uint256 principal = Math.mulDiv(amountIn, ratioYThor, 1e18);
+        require(principal > 0, "ThorEscrow: zero mint");
+        require(migratedYThor + principal <= capYThor, "ThorEscrow: ythor cap");
+        migratedYThor += principal;
 
         yThorToken.safeTransferFrom(msg.sender, address(this), amountIn);
+        xMETRO.creditYThorFromMigration(msg.sender, principal);
 
-        xMETRO.creditLockedVestingFromMigration(msg.sender, mintAmount);
-
-        emit MigratedYThor(msg.sender, amountIn, mintAmount);
+        emit MigratedYThor(msg.sender, amountIn, principal);
     }
 
     /// @notice Set migration start time (onlyOwner).
@@ -202,45 +101,38 @@ contract ThorMigrationEscrow is Ownable, Pausable, ReentrancyGuard {
         emit MigrationStartTimeUpdated(newStartTime);
     }
 
-    /// @notice Set THOR bucket deadlines (onlyOwner).
-    function setDeadlines(uint256 newDeadline10M, uint256 newDeadline3M) external onlyOwner {
-        require(newDeadline10M >= block.timestamp && newDeadline3M >= block.timestamp, "ThorEscrow: bad deadline");
-        require(newDeadline3M > newDeadline10M, "ThorEscrow: bad deadline order");
-        require(newDeadline10M > migrationStartTime && newDeadline3M > migrationStartTime, "ThorEscrow: deadline before start");
-        deadline10M = newDeadline10M;
-        deadline3M = newDeadline3M;
-        emit DeadlinesUpdated(newDeadline10M, newDeadline3M);
-    }
+    /// @notice Configure THOR and yTHOR migration deadlines.
+    function setDeadlines(uint256 newDeadlineThor, uint256 newDeadlineYThor) external onlyOwner {
+        require(newDeadlineThor >= block.timestamp && newDeadlineYThor >= block.timestamp, "ThorEscrow: bad deadline");
+        require(
+            newDeadlineThor > migrationStartTime && newDeadlineYThor > migrationStartTime,
+            "ThorEscrow: deadline before start"
+        );
 
-    /// @notice Set ratios (onlyOwner, 1e18 scaled).
-    function setRatios(uint256 newRatio10M, uint256 newRatio3M, uint256 newRatioYThor) external onlyOwner {
-        require(newRatio10M > 0 && newRatio3M > 0 && newRatioYThor > 0, "ThorEscrow: bad ratio");
-        require(ratio10M == 0 && ratio3M == 0 && ratioYThor == 0, "ThorEscrow: ratios locked");
-        ratio10M = newRatio10M;
-        ratio3M = newRatio3M;
-        ratioYThor = newRatioYThor;
-        emit RatiosUpdated(newRatio10M, newRatio3M, newRatioYThor);
-    }
-
-    /// @notice Set mint caps (onlyOwner, denominated in minted METRO).
-    function setCaps(uint256 newCap10M, uint256 newCap3M) external onlyOwner {
-        require(newCap10M > 0 && newCap3M > 0, "ThorEscrow: bad cap");
-        cap10M = newCap10M;
-        cap3M = newCap3M;
-        emit CapsUpdated(newCap10M, newCap3M);
-    }
-
-    /// @notice Set yTHOR mint cap + deadline (onlyOwner; cap denominated in minted METRO).
-    function setYThorLimits(uint256 newCapYThor, uint256 newDeadlineYThor) external onlyOwner {
-        require(newCapYThor > 0, "ThorEscrow: bad cap");
-        require(newDeadlineYThor >= block.timestamp, "ThorEscrow: bad deadline");
-        require(newDeadlineYThor > migrationStartTime, "ThorEscrow: deadline before start");
-        capYThor = newCapYThor;
+        deadlineThor = newDeadlineThor;
         deadlineYThor = newDeadlineYThor;
-        emit YThorLimitsUpdated(newCapYThor, newDeadlineYThor);
+        emit DeadlinesUpdated(newDeadlineThor, newDeadlineYThor);
     }
 
-    /// @notice Pause/unpause (onlyOwner).
+    /// @notice Configure the one-time, 1e18-scaled conversion ratios.
+    function setRatios(uint256 newRatioThor, uint256 newRatioYThor) external onlyOwner {
+        require(newRatioThor > 0 && newRatioYThor > 0, "ThorEscrow: bad ratio");
+        require(ratioThor == 0 && ratioYThor == 0, "ThorEscrow: ratios locked");
+
+        ratioThor = newRatioThor;
+        ratioYThor = newRatioYThor;
+        emit RatiosUpdated(newRatioThor, newRatioYThor);
+    }
+
+    /// @notice Configure principal caps, denominated in minted METRO.
+    function setCaps(uint256 newCapThor, uint256 newCapYThor) external onlyOwner {
+        require(newCapThor > 0 && newCapYThor > 0, "ThorEscrow: bad cap");
+
+        capThor = newCapThor;
+        capYThor = newCapYThor;
+        emit CapsUpdated(newCapThor, newCapYThor);
+    }
+
     function pause() external onlyOwner {
         _pause();
     }
@@ -249,25 +141,13 @@ contract ThorMigrationEscrow is Ownable, Pausable, ReentrancyGuard {
         _unpause();
     }
 
-    /**
-     * @notice Rescue tokens sent to this contract by mistake (onlyOwner).
-     */
+    /// @notice Rescue unrelated tokens. Migration tokens are intentionally non-rescuable.
     function rescueTokens(address token, address to, uint256 amount) external onlyOwner {
-        require(token != address(thorToken) && token != address(yThorToken), "ThorEscrow: cannot rescue migration tokens");
+        require(
+            token != address(thorToken) && token != address(yThorToken), "ThorEscrow: cannot rescue migration tokens"
+        );
         require(to != address(0), "ThorEscrow: bad to");
         IERC20(token).safeTransfer(to, amount);
         emit TokensRescued(token, to, amount);
     }
-
-    function _remainingMintCapacity10M() internal view returns (uint256 remainingMint10) {
-        if (block.timestamp > deadline10M) return 0;
-        if (minted10M >= cap10M) return 0;
-        return cap10M - minted10M;
-    }
-
-    function _maxAmountForMintCapacity(uint256 remainingMint, uint256 ratio) internal pure returns (uint256) {
-        if (remainingMint == 0) return 0;
-        return Math.mulDiv(remainingMint + 1, 1e18, ratio, Math.Rounding.Ceil) - 1;
-    }
-
 }

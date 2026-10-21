@@ -1,0 +1,139 @@
+No files changed, compilation skipped
+
+Ran 5 tests for test/fork-v2/mainnet/SwapRoutes.t.sol:SwapRoutesMainnetTest
+[PASS] test_E17_InvalidRouteDeadlineMinimumAndMetroEntry() (gas: 740592)
+[PASS] test_E17_V2MultiHopBatchProRata() (gas: 1025801)
+[PASS] test_E17_V2SingleManualWithoutAutoPreference() (gas: 567173)
+[PASS] test_E17_V3SingleAndMultiHopRealPools() (gas: 850525)
+[PASS] test_E17_WhitelistAddDisableAndResume() (gas: 617116)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 968.36ms (8.61ms CPU time)
+
+Ran 4 tests for test/fork-v2/mainnet/AaveV3Deposit.t.sol:AaveV3DepositMainnetTest
+[PASS] test_E18_BatchSingleSupplyScaledConservationAndDonations() (gas: 1263398)
+[PASS] test_E18_ConfigUpdateChangesActualPoolReferral() (gas: 628261)
+[PASS] test_E18_ManualRealSupplyReserveBindingAndReferral() (gas: 623604)
+Logs:
+  Aave V3 manual scaled aUSDC: 84216698
+
+[PASS] test_E18_MinimumAndDisableRollbackThenResume() (gas: 960463)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 969.92ms (8.43ms CPU time)
+
+Ran 8 tests for test/fork-v2/mainnet/AaveV4GiverDeposit.t.sol:AaveV4GiverDepositMainnetTest
+[PASS] test_E19_BatchThreePerUserSuppliesAndDonationBaseline() (gas: 1119787)
+[PASS] test_E19_LastUserRevokedRollsBackEarlierSupplies() (gas: 1028253)
+[PASS] test_E19_Manual100UsdcThroughGiverAndBothProtocolEvents() (gas: 546970)
+Logs:
+  Aave V4 Giver manual shares: 98133534
+
+[PASS] test_E19_MissingOrRevokedAuthorizationPreservesPending() (gas: 443427)
+[PASS] test_E19_OfficialRegistrationActivationAndUserAuthorization() (gas: 78996)
+[PASS] test_E19_SecondUserRevokedRollsBackFirstSupply() (gas: 867028)
+[PASS] test_E19_UserAndTotalMinimumRollback() (gas: 1869446)
+[PASS] test_X02_FilteredCandidateMinimaKeepOriginalIndexes() (gas: 1791074)
+Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 976.10ms (15.91ms CPU time)
+
+Ran 1 test for test/fork-v2/mainnet/CommissionNetPaths.t.sol:CommissionNetPathsMainnetTest
+[PASS] test_X06_NetRewardReachablePathsAndEmergency() (gas: 12625384)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 998.10ms (36.19ms CPU time)
+
+Ran 6 tests for test/fork-v2/mainnet/MapleDeposit.t.sol:MapleDepositMainnetTest
+[PASS] test_E20_BatchOneRealDepositProRataAndDonationIsolation() (gas: 1755101)
+[PASS] test_E20_InvalidAuthorizationAndSlippageRollback() (gas: 1036627)
+[PASS] test_E20_OldProxySignatureCannotAuthorizeReplacement() (gas: 938354)
+[PASS] test_E20_RealApiAuthorizationAndManualDeposit() (gas: 893204)
+Logs:
+  Maple real shares for 100 USDC: 84360341
+
+[PASS] test_E20_SubsequentDepositNeedsNoSignature() (gas: 1229188)
+[PASS] test_E20_ZeroAndNamedDepositDataBothAccepted() (gas: 1364873)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 1.01s (24.75ms CPU time)
+
+Ran 14 tests for test/fork-v2/mainnet/AdapterLifecycle.t.sol:AdapterLifecycleMainnetTest
+[PASS] test_E21_DisableDepositStrategiesAdvancesOwnRevisions() (gas: 599236)
+[PASS] test_E21_LiveConfigReadbackAndRevisionRules() (gas: 615432)
+[PASS] test_E21_LogicEpochInvalidatesAutoButManualStillExecutes() (gas: 5756066)
+[PASS] test_E21_ManualAutoFlagsAndPreferenceSeparation() (gas: 1022183)
+[PASS] test_E21_OnlyCurrentOperationalCoreCanExecute() (gas: 598264)
+[PASS] test_E21_RealRouterChangeExecutesOnNewRouter() (gas: 683476)
+[PASS] test_E21_RealV4SpokeChangeOnlyExpiresV4AndNeedsNewPermission() (gas: 1553046)
+[PASS] test_E21_SingleStepOwnerAuthorityAndUpgrade() (gas: 5071250)
+[PASS] test_E21_StrategyAndRouterRevisionExpireOnlyAffectedUsers() (gas: 1027348)
+[PASS] test_E22_ReplacementKeepsGiverPermissionButRequiresNewMapleSignature() (gas: 7373783)
+[PASS] test_E22_UupsKeepsRealGiverAndMapleAuthorizations() (gas: 6713773)
+[PASS] test_E22_UupsStorageAndFailureMatrix() (gas: 5685815)
+[PASS] test_E22_WholeProxyReplacementAndOldProxyRescue() (gas: 12009160)
+Logs:
+  replacement Proxy for Maple signer: 0x03A6a84cD762D9707A21605b548aaaB891562aAb
+
+[PASS] test_X05_FullConfigurationAndPreferenceAcrossUpgradeAndReplacement() (gas: 12253092)
+Suite result: ok. 14 passed; 0 failed; 0 skipped; finished in 1.01s (46.90ms CPU time)
+
+Ran 16 tests for test/fork-v2/mainnet/OneInchSwap.t.sol:OneInchSwapMainnetTest
+[PASS] test_E17_ForcedGhoBatch() (gas: 1483521)
+Logs:
+  1inch forced batch output: 100022933452064784724
+
+[PASS] test_E17_ForcedGhoManual() (gas: 936019)
+Logs:
+  1inch forced manual output: 100022933452064784724
+
+[PASS] test_E17_ForcedRouteRejectsInvalidFieldsAtomically() (gas: 2324434)
+[PASS] test_E17_ForcedUsdtBatch() (gas: 1476178)
+Logs:
+  1inch forced batch output: 99955657
+
+[PASS] test_E17_ForcedUsdtManual() (gas: 919852)
+Logs:
+  1inch forced manual output: 99955657
+
+[PASS] test_E17_ForcedWbtcBatch() (gas: 1453833)
+Logs:
+  1inch forced batch output: 119409
+
+[PASS] test_E17_ForcedWbtcManual() (gas: 905532)
+Logs:
+  1inch forced manual output: 119409
+
+[PASS] test_E17_ForcedXautBatch() (gas: 1478585)
+Logs:
+  1inch forced batch output: 24161
+
+[PASS] test_E17_ForcedXautManual() (gas: 919674)
+Logs:
+  1inch forced manual output: 24161
+
+[PASS] test_E17_SyrupOneInchBatchProRata() (gas: 1517905)
+Logs:
+  1inch syrup batch output: 84360341
+
+[PASS] test_E17_SyrupOneInchManualRealProxy() (gas: 1064944)
+Logs:
+  1inch syrup manual output: 84360341
+
+[PASS] test_OneInchFrontendGhoUnsupportedSelector() (gas: 464556)
+[PASS] test_OneInchFrontendUsdtEoaQuoteProxyReceiverCannotExecute() (gas: 1227615)
+[PASS] test_OneInchFrontendWbtcEoaQuoteProxyReceiverCannotExecute() (gas: 1320347)
+[PASS] test_OneInchFrontendXautUnsupportedSelector() (gas: 471220)
+[PASS] test_X02_OneInchWbtcZeroRoundedUserRollsBackBatch() (gas: 1129117)
+Suite result: ok. 16 passed; 0 failed; 0 skipped; finished in 1.01s (51.60ms CPU time)
+
+Ran 6 tests for test/fork-v2/mainnet/CrossSourcePaths.t.sol:CrossSourcePathsMainnetTest
+[PASS] test_X01_ContributorReachablePaths() (gas: 10708008)
+[PASS] test_X01_ExitedWithOldPendingReachablePaths() (gas: 7326593)
+[PASS] test_X01_MixedReachablePaths() (gas: 11315020)
+[PASS] test_X01_StakeReachablePaths() (gas: 10569374)
+[PASS] test_X01_ThorReachablePaths() (gas: 10745627)
+[PASS] test_X01_YThorReachablePaths() (gas: 11067164)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 1.01s (160.08ms CPU time)
+
+Ran 7 tests for test/fork-v2/mainnet/CommissionRouting.t.sol:CommissionRoutingMainnetTest
+[PASS] test_E16_ConfigAuthorityAndVaultValidation() (gas: 10574445)
+[PASS] test_E16_CoreFailureRollsBackVaultAndOperatorTransfer() (gas: 365401)
+[PASS] test_E16_DisableSplitBeforeUnbindAndBypassFaultyVault() (gas: 556416)
+[PASS] test_E16_DistributeAndFromBalanceSameRouting() (gas: 733496)
+[PASS] test_E16_MinOfCapAndShortfallFourBoundaries() (gas: 2120826)
+[PASS] test_E16_NewSourceVaultBindingAndInitialState() (gas: 51257)
+[PASS] test_E16_ZeroBpsBypassAndFullCommissionNoCoreDeposit() (gas: 21542941)
+Suite result: ok. 7 passed; 0 failed; 0 skipped; finished in 1.71s (744.84ms CPU time)
+
+Ran 9 test suites in 1.72s (9.65s CPU time): 67 tests passed, 0 failed, 0 skipped (67 total tests)
