@@ -1,5 +1,19 @@
 # Ethereum Mainnet Fork Functional Test Checklist
 
+## October 21 source acceptance
+
+The checked tables below are historical results for the previous revision. They do not certify this update. Current commands and results are recorded separately in [RESULTS.md](RESULTS.md).
+
+| Updated coverage | Acceptance source |
+| --- | --- |
+| E-10: repeated migrations, cumulative caps, independent position IDs and rollback | Local Escrow/Core tests and updated `MigrationExit.t.sol` |
+| E-12/E-13: indexed exits, per-position clocks, production 120 days + 4 * 365 days; 10/20/30/40/50% boundaries | Unit/fuzz tests and updated production fork suite |
+| E-05/E-07/E-14: F-01 precision, zero claims, transfer fractions, continuous compounding and multiple yTHOR positions | Unit/core/fuzz/invariant tests and updated production fork suite |
+
+The formal fork suite executes against production artifacts. The QA branch only compiles that suite; its own unit/core tests validate accelerated time constants. Historical five-year/once-flag results below are preserved as historical facts.
+
+## Historical execution record
+
 This checklist tracks tests that deploy the project contracts locally against an Ethereum mainnet fork. It is not an Ethereum mainnet deployment. Actual results, source/artifact provenance, commands, and logs are in [RESULTS.md](RESULTS.md). A checked group means its in-scope assertions ran successfully on the recorded version; an unchecked group has an outstanding assertion. Do not infer a pass from the presence of a test file or from a Base Mock transaction.
 
 The recorded fork uses chain ID `1`, block `26,077,998` (`0xb75cb3bedaa74adf79199d847c94bbca4724d092da355d3e13c354773e2eb2aa`). Project contracts, including METRO, xMETRO, Escrow, Distributor, Adapter implementation and Proxy, and a fresh Commission Vault are deployed with normal CREATE calls. Real mainnet USDC/THOR/yTHOR holders supply test balances by ordinary transfers on the local fork. METRO is newly minted by its authorized Minter. Rewards pass through the real Distributor. Successful external integrations use the fork's actual Uniswap, Aave, Maple, and 1inch contracts, not Mock protocol contracts. Time travel and account impersonation affect only the local fork.
@@ -74,4 +88,4 @@ See the receipt-level records in [RESULTS.md](RESULTS.md). Aave V4 still runs ea
 - Website-derived 1inch swaps prove ordinary routing for the recorded amounts/assets, not project Affiliate fee or referrer settlement. A separate Affiliate assessment would require real fee-bearing calldata; it is not a prerequisite for this source upload.
 - Aave V4 testing uses the official active Giver path; it does not claim that the project's Adapter itself received Aave governance activation.
 - Base TestUSDC and protocol Mock results are not substitutes for these Ethereum mainnet-fork integrations.
-- The F-01 reward-rounding failure remains an observed result. Under the current handoff scope, its previously reviewed behavior is not being changed or rerun for this upload. E-05, E-07 and E-14 remain unchecked in this execution record; the failure is not reclassified as a pass. The incomplete X-03 matrix is likewise recorded, not an upload prerequisite.
+- The F-01 reward-rounding failure remains an observed result. That earlier handoff did not change or rerun it. The October 21 source update includes the precision fix; see the current acceptance section above. E-05, E-07 and E-14 remain unchecked in this execution record; the failure is not reclassified as a pass. The incomplete X-03 matrix is likewise recorded, not an upload prerequisite.

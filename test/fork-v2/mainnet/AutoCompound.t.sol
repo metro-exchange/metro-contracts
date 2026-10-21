@@ -103,22 +103,29 @@ contract AutoCompoundMainnetTest is MainnetForkBase {
         assertFalse(core.autocompoundEnabled(alice));
         vm.prank(alice);
         core.enableAutocompound();
+        uint256 shares = core.balanceOf(alice);
+        uint256 secondScaled = shares * (20e6 * 1e24 / shares);
+        uint256 secondPending = secondScaled / 1e24;
         _distribute(20e6);
-        uint256 secondQuote = _quote(20e6);
+        assertEq(core.claimable(alice), secondPending);
+        uint256 secondQuote = _quote(secondPending);
         vm.prank(alice);
         assertEq(core.autocompound(secondQuote, block.timestamp + 1 hours, _route()), secondQuote);
         assertTrue(core.autocompoundEnabled(alice));
         vm.prank(alice);
         core.disableAutocompound();
+        shares = core.balanceOf(alice);
+        uint256 thirdPending = (secondScaled % 1e24 + shares * (10e6 * 1e24 / shares)) / 1e24;
         _distribute(10e6);
-        assertEq(core.claimable(alice), 10e6 + 1);
-        assertEq(IERC20(USDC).balanceOf(address(core)), 10e6);
-        emit log_named_uint("E07 observed claimable raw", core.claimable(alice));
-        emit log_named_uint("E07 observed Core USDC raw", IERC20(USDC).balanceOf(address(core)));
-        uint256 thirdQuote = _quote(10e6);
+        assertEq(core.claimable(alice), thirdPending);
+        assertEq(IERC20(USDC).balanceOf(address(core)), 30e6 - secondPending);
+        assertLe(thirdPending, IERC20(USDC).balanceOf(address(core)));
+        uint256 thirdQuote = _quote(thirdPending);
         vm.prank(alice);
         assertEq(core.autocompound(thirdQuote, block.timestamp + 1 hours, _route()), thirdQuote);
         assertFalse(core.autocompoundEnabled(alice));
+        assertEq(core.claimable(alice), 0);
+        assertEq(IERC20(USDC).balanceOf(address(core)), 30e6 - secondPending - thirdPending);
     }
 
     /// E-07.03: Tests enable disable and mutual preference.
@@ -127,7 +134,8 @@ contract AutoCompoundMainnetTest is MainnetForkBase {
         vm.prank(alice);
         core.enableAutocompound();
         assertTrue(core.autocompoundEnabled(alice));
-        bytes32 compoundId = keccak256(abi.encode(block.chainid, keccak256("XMETRO_DEFI_STRATEGY_V1"), uint8(1), address(metro)));
+        bytes32 compoundId =
+            keccak256(abi.encode(block.chainid, keccak256("XMETRO_DEFI_STRATEGY_V1"), uint8(1), address(metro)));
         assertEq(core.getAutoStrategyPreference(alice).strategyId, compoundId);
         vm.prank(alice);
         core.enableAutoStrategy(swapUsdt);
@@ -213,8 +221,14 @@ contract AutoCompoundMainnetTest is MainnetForkBase {
         uint256 pairSwapCount;
         uint256 autoEventCount;
         for (uint256 i; i < logs.length; ++i) {
-            if (logs[i].emitter == pair && logs[i].topics.length != 0 && logs[i].topics[0] == keccak256("Swap(address,uint256,uint256,uint256,uint256,address)")) ++pairSwapCount;
-            if (logs[i].emitter == address(core) && logs[i].topics.length != 0 && logs[i].topics[0] == AutoCompounded.selector) ++autoEventCount;
+            if (
+                logs[i].emitter == pair && logs[i].topics.length != 0
+                    && logs[i].topics[0] == keccak256("Swap(address,uint256,uint256,uint256,uint256,address)")
+            ) ++pairSwapCount;
+            if (
+                logs[i].emitter == address(core) && logs[i].topics.length != 0
+                    && logs[i].topics[0] == AutoCompounded.selector
+            ) ++autoEventCount;
         }
         assertEq(pairSwapCount, 1);
         assertEq(autoEventCount, 3);
@@ -336,7 +350,10 @@ contract AutoCompoundMainnetTest is MainnetForkBase {
 
     function _batchEventTotal(Vm.Log[] memory logs) private view returns (uint256) {
         for (uint256 i; i < logs.length; ++i) {
-            if (logs[i].emitter == address(core) && logs[i].topics.length != 0 && logs[i].topics[0] == AutocompoundBatchExecuted.selector) {
+            if (
+                logs[i].emitter == address(core) && logs[i].topics.length != 0
+                    && logs[i].topics[0] == AutocompoundBatchExecuted.selector
+            ) {
                 assertEq(address(uint160(uint256(logs[i].topics[1]))), address(this));
                 (uint256 totalUsdc, uint256 totalMetro) = abi.decode(logs[i].data, (uint256, uint256));
                 assertEq(totalUsdc, 100e6);

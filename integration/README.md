@@ -1,5 +1,11 @@
 # xMETRO Integration Guide
 
+## October 21 source update
+
+This source version supports repeated THOR and yTHOR migrations, independent position IDs, and reward debt at `1e24` internal precision. Production yTHOR pays 10% after 120 days, increasing linearly to 50% over the following `4 * 365 days`. Base QA keeps its 4-hour delay and 12-hour ramp. Each position settles its full principal once; it cannot claim an additional amount later.
+
+The existing Base QA deployment and its address/configuration records remain unchanged. Use the ABI and examples from that deployment's revision (QA baseline `60754e05436c6c8056b60eac481d0bdc96a89d4c`) with its existing addresses. This version's ABI/examples target newly created local instances or a future deployment requested by the project. Source changes do not update an immutable deployed Core or migrate its storage.
+
 This directory is the entry point for frontend, backend, and operations integration. The documentation does not imply that every external-protocol scenario has passed; use the linked execution records for actual status.
 
 ## Reading order
@@ -13,7 +19,7 @@ See the [project README](../README.md) for architecture and deployment, and the 
 
 ## Environments and evidence
 
-This source handoff does not require the project-facing Base functional checklist to be completed by the deployment team. The receiving project may execute those on-chain scenarios after handover. The previously reviewed F-01 behavior, a fee-bearing 1inch Affiliate transaction, and a new full-fork evidence package are not prerequisites for uploading these sources; the linked test records still show exactly what did and did not pass.
+This source handoff does not require the project-facing Base functional checklist to be completed by the deployment team. The receiving project may execute those on-chain scenarios after handover. The October 21 update includes the F-01 reward precision fix. See the latest results section for current local validation; previous fork results remain historical. Affiliate transactions and a new Base deployment are outside this update.
 
 The Base checklist tracks the **new project-facing deployment** separately from a historical rapid-QA run. The older run checked 36 of 37 groups; N-04 was executed but did not pass its historical-pending assertion. Its transaction hashes and short time constants are historical evidence only, not passing results for the new deployment.
 

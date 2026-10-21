@@ -18,7 +18,7 @@ The new system uses an immutable xMETRO user entrypoint and an upgradeable DeFi 
 
 Users do not approve the Adapter or Commission Vault for reward USDC. Keeper and reward operator are independent permissions even if one wallet holds both. Use integer smallest units: METRO/xMETRO have 18 decimals, USDC has 6, and output tokens use their on-chain `decimals()`. Time arguments are Unix seconds.
 
-## THOR: two old tranches become one position
+## THOR: one migration path with multiple positions
 
 | Previous API or data | Current API or data | Integration change |
 | --- | --- | --- |
@@ -26,20 +26,20 @@ Users do not approve the Adapter or Commission Vault for reward USDC. Keeper and
 | `cap10M`, `cap3M`; `minted10M`, `minted3M` | `capThor()`, `migratedThor()` | Display a single METRO-principal cap and used amount. |
 | `ratio10M`, `ratio3M` | `ratioThor()` | Quote one 18-decimal ratio. |
 | `deadline10M`, `deadline3M` | `deadlineThor()` | Use the unified THOR deadline. |
-| Multiple `thorLock*` records | `thorPositions(user)` | Read one principal, migration time, exit time, and exited flag. |
-| `requestWithdrawUnlockedThor(maxLocks)` | `requestThorExit()` | One-time exit enters the THOR cooldown queue. |
-| `claimAndStakeUnlockedThor(maxLocks)` | `exitAndStakeThor()` | One-time payout becomes transferable xMETRO. |
+| Multiple `thorLock*` records | `thorPositions(user, positionId)` | Read the selected position's principal, migration time, exit time, and exited flag. |
+| `requestWithdrawUnlockedThor(maxLocks)` | `requestThorExit(positionId)` | One-time exit enters the THOR cooldown queue. |
+| `claimAndStakeUnlockedThor(maxLocks)` | `exitAndStakeThor(positionId)` | One-time payout becomes transferable xMETRO. |
 | `creditLockedTHORFromMigration(...)` | `creditThorFromMigration(user,principal)` | Escrow-only; never called by the frontend. |
 
-Before migration, read `migrationStartTime`, `deadlineThor`, `ratioThor`, `capThor`, `migratedThor`, and `hasMigratedThor(user)`. Approve THOR to Escrow and call `migrateThor(amountIn)`. Principal is `floor(amountIn * ratioThor / 1e18)`. Each address migrates THOR at most once; migration creates locked principal, not immediately transferable xMETRO.
+Before migration, read `migrationStartTime`, `deadlineThor`, `ratioThor`, `capThor`, and `migratedThor`. Approve THOR to Escrow and call `migrateThor(amountIn)`. Principal is `floor(amountIn * ratioThor / 1e18)`. Each successful migration appends a new position and creates locked principal. Repeated migrations remain subject to the window, cumulative cap and ratio.
 
-`previewThorExit(user)` returns `eligible`, `rateBps`, `payout`, `forfeited`, and `eligibleAt`. Production payout is 50% at day 30 and increases linearly to 100% at day 90. `requestThorExit()` plus `withdrawThor(maxRequests)` is the liquid path; `exitAndStakeThor()` is the stake path. Either path closes the entire THOR position.
+`previewThorExit(user, positionId)` returns `eligible`, `rateBps`, `payout`, `forfeited`, and `eligibleAt`. Production payout is 50% at day 30 and increases linearly to 100% at day 90. `requestThorExit(positionId)` plus `withdrawThor(maxRequests)` is the liquid path; `exitAndStakeThor(positionId)` is the stake path. Either path closes only the selected THOR position in full.
 
 ## yTHOR migration and reward presentation
 
-`migrateYThor(amountIn)` keeps its name but now creates one position; check `hasMigratedYThor(user)` first. Read `yThorPositions(user)` instead of old multiple vesting entries. `exitYThor(0)` requests liquid exit and later `withdrawYThor(maxRequests)`; `exitYThor(1)` stakes the payout immediately. Both are one-time exits. `creditYThorFromMigration` is Escrow-only.
+`migrateYThor(amountIn)` appends a new position on every successful call. Read `yThorPositionCount(user)` and `yThorPositions(user, positionId)`. `exitYThor(positionId, 0)` requests a liquid exit followed by `withdrawYThor(maxRequests)`; `exitYThor(positionId, 1)` stakes the payout immediately. Each position exits only once; other positions remain independent. `creditYThorFromMigration` remains Escrow-only.
 
-Principal is `floor(amountIn * ratioYThor / 1e18)`; the reward multiplier does not increase redeemable principal. At day 120, the payout starts at 10% and grows to 50% during the following five years. Unreturned principal goes to `forfeitureRecipient`, not to a burn address. THOR and yTHOR migration markers are independent.
+Principal is `floor(amountIn * ratioYThor / 1e18)`; the reward multiplier does not increase redeemable principal. At day 120, the payout starts at 10% and grows to 50% during the following four years (4 * 365 days). Unreturned principal goes to `forfeitureRecipient`, not to a burn address. Position IDs are independent for each user and asset.
 
 For reward UI, read `rewardWeightOf(user)` and `totalRewardWeight()`. `totalSharesOf(user)` reports actual principal shares and must not be mistaken for weighted reward shares. Do not hardcode a 2x yTHOR multiplier: the current owner-set weight affects future rewards for all active yTHOR positions without repricing historical pending.
 
@@ -52,7 +52,7 @@ For reward UI, read `rewardWeightOf(user)` and `totalRewardWeight()`. `totalShar
 | `setRatios(ratio10M,ratio3M,ratioYThor)` | `setRatios(ratioThor,ratioYThor)` | Two 1e18-scaled nonzero values; callable once. |
 | `setYThorLimits(cap,deadline)` | `setCaps` plus `setDeadlines` | Supply both tokens' settings. |
 | `setSwapAdapter(address)` | `setDeFiAdapter(proxy)` | Bind the new Adapter **proxy**, not its implementation. |
-| `setDefaultMaxThorLocks(maxLocks)` | Removed | THOR is one position, not a scan. |
+| `setDefaultMaxThorLocks(maxLocks)` | Removed | Each exit selects a position ID; no scan limit is needed. |
 
 The current xMETRO uses original one-step ownership, allows renouncing, and starts unpaused; these are not new business features. Already-deployed historical QA contracts still follow their own deployed ABI and must not be silently treated as the new version.
 
@@ -70,7 +70,7 @@ The current xMETRO uses original one-step ownership, allows renouncing, and star
 | Keeper compound batch | `autocompoundBatch(users,minMetroOut,deadline,swapData)` | One swap; shares allocated in proportion to pending rewards. |
 | Reward injection | `distribute`, `distributeFromBalance` | Same operator entrypoints, now with optional commission diversion; Core receives net rewards. |
 
-V2/V3 compound data remains `abi.encode(uint8 dexType, bytes routeData)`. `previewWithdrawableNow(user)` still has four return fields, but its THOR/yTHOR components now mean the payout from a current one-time exit. It includes unlocked Contributor value and excludes all withdrawal queues, even matured ones. Read each queue through its `unstakeRequestCount*`, `unstakeRequest*`, and `unstakeCursor*` getters.
+V2/V3 compound data remains `abi.encode(uint8 dexType, bytes routeData)`. `previewWithdrawableNow(user)` still has four return fields, but its THOR/yTHOR components now mean the sum of payouts from all eligible, unexited positions. It includes unlocked Contributor value and excludes all withdrawal queues, even matured ones. Read each queue through its `unstakeRequestCount*`, `unstakeRequest*`, and `unstakeCursor*` getters.
 
 ## Events and indexing
 
@@ -87,4 +87,26 @@ Decode each log with the ABI of the contract version that emitted it. Do not rei
 
 ## Known integration boundaries
 
-`claimableMany` quotes each input element and does not deduplicate or filter strategy preferences. The backend must deduplicate before using its total as a batch economic estimate. Contributor scans with no claimable value can revert without advancing the cursor. A continuous-compound rounding issue remains recorded as F-01 in the [Ethereum fork results](../testing/ethereum-fork/RESULTS.md). None of those known issues should be described as fixed solely because the integration documentation changed.
+`claimableMany` quotes each input element and does not deduplicate or filter strategy preferences. The backend must deduplicate before using its total as a batch economic estimate. Contributor scans with no claimable value can revert without advancing the cursor. The historical F-01 reward-rounding failure and current precision regression results are kept separately in the [test results](../testing/ethereum-fork/RESULTS.md).
+
+| Time from this position's migration | Production payout | QA time |
+| --- | ---: | --- |
+| 120 days | 10% | 4 hours |
+| 120 days + 365 days | 20% | 7 hours |
+| 120 days + 2 * 365 days | 30% | 10 hours |
+| 120 days + 3 * 365 days | 40% | 13 hours |
+| 120 days + 4 * 365 days or later | 50% | 16 hours or later |
+
+Times use fixed seconds, not calendar/leap years. Intermediate payouts follow integer BPS rounding. At exit, unpaid principal goes to `forfeitureRecipient`; the position is fully closed. Liquid payouts are fixed when queued, with the existing 72-hour production / 30-minute QA cooldown. They do not increase during that cooldown.
+
+## Position queries and events
+
+Read `thorPositionCount(user)` / `yThorPositionCount(user)` before querying `thorPositions(user, positionId)` / `yThorPositions(user, positionId)`. Each returns `(principal, migratedAt, exitedAt, exited)`. IDs start at zero independently for each user and asset, are never reused, and counts include exited positions. Out-of-range queries and exits revert with array `Panic(0x32)`. A valid premature or exited position has an ineligible preview; attempting its exit reverts with `InvalidConfiguration`.
+
+`previewThorExit(user, positionId)` / `previewYThorExit(user, positionId)` return eligibility, rate in BPS, payout, forfeiture and eligibility timestamp. Exit calls select one of the caller's positions: `requestThorExit(positionId)`, `exitAndStakeThor(positionId)`, or `exitYThor(positionId, mode)` (`Liquid=0`, `Stake=1`). Only Liquid creates a withdrawal queue entry; queue indices are independent of position IDs. Counts and individual reads support client-side paging. `previewWithdrawableNow(user)` sums eligible open positions and Contributor value, excludes queues, and scans history; do not make claims or single-position exits depend on that aggregate call for large accounts.
+
+`ThorPositionCreated` and `YThorPositionCreated` carry `(indexed user, indexed positionId, principal, migratedAt)`. `ThorExited` and `YThorExited` carry `(indexed user, indexed positionId, principal, payout, forfeited, rateBps, mode, exitedAt, indexed forfeitureRecipient)`. Index positions by chain ID, Core address, user, asset and position ID. The Escrow's two `hasMigrated*` getters are removed; migration availability depends on the window, caps and permissions.
+
+## Reward accounting precision
+
+Core tracks signed reward debt at the existing `1e24` accumulator precision. Share changes retain the full debt product. Claims, emergency payments, manual actions, and automatic batches consume only whole USDC base units and retain the fractional remainder. Zero-value claims preserve that remainder. `rewardDebt(user)` keeps its ABI and displays USDC base units, truncating negative fractions toward zero; use `claimable` / `claimableMany` for payable amounts instead of reconstructing them from the display getter. Adapter inputs and event amounts remain in token base units.

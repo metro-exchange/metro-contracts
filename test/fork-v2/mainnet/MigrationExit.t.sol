@@ -13,11 +13,33 @@ contract MigrationExitMainnetTest is MainnetForkBase {
 
     event MigratedThor(address indexed user, uint256 amountIn, uint256 principal);
     event MigratedYThor(address indexed user, uint256 amountIn, uint256 principal);
-    event ThorPositionCreated(address indexed user, uint256 principal, uint64 migratedAt);
-    event YThorPositionCreated(address indexed user, uint256 principal, uint64 migratedAt);
-    event ThorExited(address indexed user, uint256 principal, uint256 payout, uint256 forfeited, uint256 rateBps, xMETRO.ExitMode mode, uint64 exitedAt, address indexed forfeitureRecipient);
-    event YThorExited(address indexed user, uint256 principal, uint256 payout, uint256 forfeited, uint256 rateBps, xMETRO.ExitMode mode, uint64 exitedAt, address indexed forfeitureRecipient);
-    event UnstakeRequested(address indexed user, xMETRO.UnstakeSource indexed source, uint256 amount, uint64 unlockTime);
+    event ThorPositionCreated(address indexed user, uint256 indexed positionId, uint256 principal, uint64 migratedAt);
+    event YThorPositionCreated(address indexed user, uint256 indexed positionId, uint256 principal, uint64 migratedAt);
+    event ThorExited(
+        address indexed user,
+        uint256 indexed positionId,
+        uint256 principal,
+        uint256 payout,
+        uint256 forfeited,
+        uint256 rateBps,
+        xMETRO.ExitMode mode,
+        uint64 exitedAt,
+        address indexed forfeitureRecipient
+    );
+    event YThorExited(
+        address indexed user,
+        uint256 indexed positionId,
+        uint256 principal,
+        uint256 payout,
+        uint256 forfeited,
+        uint256 rateBps,
+        xMETRO.ExitMode mode,
+        uint64 exitedAt,
+        address indexed forfeitureRecipient
+    );
+    event UnstakeRequested(
+        address indexed user, xMETRO.UnstakeSource indexed source, uint256 amount, uint64 unlockTime
+    );
     event Withdrawn(address indexed user, xMETRO.UnstakeSource indexed source, uint256 amount);
 
     function setUp() public {
@@ -29,7 +51,9 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         carol = makeAddr("migration-carol");
     }
 
-    function _fundAndApprove(address token, address holder, address user, address destination, uint256 amount) internal {
+    function _fundAndApprove(address token, address holder, address user, address destination, uint256 amount)
+        internal
+    {
         _fundMigrationToken(token, holder, user, amount);
         vm.prank(user);
         IERC20(token).approve(destination, amount);
@@ -48,37 +72,41 @@ contract MigrationExitMainnetTest is MainnetForkBase {
     }
 
     function _newEscrow(uint256 start) internal returns (ThorMigrationEscrow fresh) {
-        fresh = ThorMigrationEscrow(_create(abi.encodePacked(
-            _artifact("out-core/ThorMigrationEscrow.sol/ThorMigrationEscrow.json"),
-            abi.encode(address(this), address(core), THOR, YTHOR, start)
-        )));
+        fresh = ThorMigrationEscrow(
+            _create(
+                abi.encodePacked(
+                    _artifact("out-core/ThorMigrationEscrow.sol/ThorMigrationEscrow.json"),
+                    abi.encode(address(this), address(core), THOR, YTHOR, start)
+                )
+            )
+        );
     }
 
     function _thorPrincipal(address user) internal view returns (uint256 principal) {
-        (uint128 amount,,,) = core.thorPositions(user);
+        (uint128 amount,,,) = core.thorPositions(user, 0);
         return amount;
     }
 
     function _yThorPrincipal(address user) internal view returns (uint256 principal) {
-        (uint128 amount,,,) = core.yThorPositions(user);
+        (uint128 amount,,,) = core.yThorPositions(user, 0);
         return amount;
     }
 
     /// E-10.01/.02: Tests real THOR migration custody mint position.
     function test_E10_RealThorMigrationCustodyMintPosition() public {
         _fundAndApprove(THOR, THOR_HOLDER, alice, address(escrow), 100 ether);
-        vm.expectEmit(true, false, false, true, address(core));
-        emit ThorPositionCreated(alice, 100 ether, uint64(block.timestamp));
+        vm.expectEmit(true, true, false, true, address(core));
+        emit ThorPositionCreated(alice, 0, 100 ether, uint64(block.timestamp));
         vm.expectEmit(true, false, false, true, address(escrow));
         emit MigratedThor(alice, 100 ether, 100 ether);
         vm.prank(alice);
         escrow.migrateThor(100 ether);
-        (uint128 principal, uint64 migratedAt, uint64 exitedAt, bool exited) = core.thorPositions(alice);
+        (uint128 principal, uint64 migratedAt, uint64 exitedAt, bool exited) = core.thorPositions(alice, 0);
         assertEq(principal, 100 ether);
         assertEq(migratedAt, block.timestamp);
         assertEq(exitedAt, 0);
         assertFalse(exited);
-        assertTrue(escrow.hasMigratedThor(alice));
+        assertEq(core.thorPositionCount(alice), 1);
         assertEq(escrow.migratedThor(), 100 ether);
         assertEq(IERC20(THOR).balanceOf(address(escrow)), 100 ether);
         assertEq(metro.balanceOf(address(core)), 100 ether);
@@ -91,13 +119,13 @@ contract MigrationExitMainnetTest is MainnetForkBase {
     /// E-10.03: Tests real yTHOR migration and reward weight.
     function test_E10_RealYThorMigrationAndRewardWeight() public {
         _fundAndApprove(YTHOR, YTHOR_HOLDER, alice, address(escrow), 100 ether);
-        vm.expectEmit(true, false, false, true, address(core));
-        emit YThorPositionCreated(alice, 100 ether, uint64(block.timestamp));
+        vm.expectEmit(true, true, false, true, address(core));
+        emit YThorPositionCreated(alice, 0, 100 ether, uint64(block.timestamp));
         vm.expectEmit(true, false, false, true, address(escrow));
         emit MigratedYThor(alice, 100 ether, 100 ether);
         vm.prank(alice);
         escrow.migrateYThor(100 ether);
-        (uint128 principal, uint64 migratedAt,, bool exited) = core.yThorPositions(alice);
+        (uint128 principal, uint64 migratedAt,, bool exited) = core.yThorPositions(alice, 0);
         assertEq(principal, 100 ether);
         assertEq(migratedAt, block.timestamp);
         assertFalse(exited);
@@ -110,21 +138,26 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         assertEq(core.claimable(alice), 20e6);
     }
 
-    /// E-10.04: Tests independent THOR yTHOR once flags.
-    function test_E10_IndependentThorYThorOnceFlags() public {
+    /// E-10.04: Tests repeated THOR and yTHOR migrations create independent positions.
+    function test_E10_IndependentRepeatedThorYThorMigrations() public {
         _migrateThor(alice, 10 ether);
         _migrateYThor(alice, 20 ether);
-        assertTrue(escrow.hasMigratedThor(alice));
-        assertTrue(escrow.hasMigratedYThor(alice));
+        assertEq(core.thorPositionCount(alice), 1);
+        assertEq(core.yThorPositionCount(alice), 1);
         assertEq(core.lockedShares(alice), 30 ether);
-        vm.prank(alice);
-        vm.expectRevert("ThorEscrow: thor already migrated");
-        escrow.migrateThor(1);
-        vm.prank(alice);
-        vm.expectRevert("ThorEscrow: ythor already migrated");
-        escrow.migrateYThor(1);
-        assertEq(escrow.migratedThor(), 10 ether);
-        assertEq(escrow.migratedYThor(), 20 ether);
+        vm.warp(block.timestamp + 1);
+        _migrateThor(alice, 1 ether);
+        _migrateYThor(alice, 2 ether);
+        assertEq(core.thorPositionCount(alice), 2);
+        assertEq(core.yThorPositionCount(alice), 2);
+        (uint128 thorLater, uint64 thorTime,,) = core.thorPositions(alice, 1);
+        (uint128 yThorLater, uint64 yThorTime,,) = core.yThorPositions(alice, 1);
+        assertEq(thorLater, 1 ether);
+        assertEq(yThorLater, 2 ether);
+        assertEq(thorTime, block.timestamp);
+        assertEq(yThorTime, block.timestamp);
+        assertEq(escrow.migratedThor(), 11 ether);
+        assertEq(escrow.migratedYThor(), 22 ether);
     }
 
     /// E-10.05: Tests start deadline ratio rounding and principal cap.
@@ -203,16 +236,16 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         vm.prank(bob);
         vm.expectRevert();
         escrow.migrateYThor(1 ether);
-        assertFalse(escrow.hasMigratedThor(alice));
-        assertFalse(escrow.hasMigratedYThor(bob));
+        assertEq(core.thorPositionCount(alice), 0);
+        assertEq(core.yThorPositionCount(bob), 0);
         assertEq(escrow.migratedThor(), 0);
         assertEq(escrow.migratedYThor(), 0);
         assertEq(IERC20(THOR).balanceOf(address(escrow)), 0);
         assertEq(IERC20(YTHOR).balanceOf(address(escrow)), 0);
         assertEq(IERC20(THOR).balanceOf(alice), 1 ether);
         assertEq(IERC20(YTHOR).balanceOf(bob), 1 ether);
-        assertEq(_thorPrincipal(alice), 0);
-        assertEq(_yThorPrincipal(bob), 0);
+        assertEq(core.thorPositionCount(alice), 0);
+        assertEq(core.yThorPositionCount(bob), 0);
         assertEq(core.lockedShares(alice), 0);
         assertEq(metro.balanceOf(address(core)), 0);
     }
@@ -234,7 +267,7 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         vm.prank(alice);
         vm.expectRevert();
         escrow.migrateThor(1 ether);
-        assertFalse(escrow.hasMigratedThor(alice));
+        assertEq(core.thorPositionCount(alice), 0);
         assertEq(IERC20(THOR).balanceOf(address(escrow)), 0);
         assertEq(core.lockedShares(alice), 0);
         _fundAndApprove(THOR, THOR_HOLDER, bob, address(fresh), 1 ether);
@@ -314,11 +347,12 @@ contract MigrationExitMainnetTest is MainnetForkBase {
     /// E-12.01: Tests THOR exit curve independent snapshots.
     function test_E12_ThorExitCurveIndependentSnapshots() public {
         _migrateThor(alice, 100 ether);
-        (uint128 principal, uint64 migratedAt,,) = core.thorPositions(alice);
+        (uint128 principal, uint64 migratedAt,,) = core.thorPositions(alice, 0);
         assertEq(principal, 100 ether);
         uint256 snapshot = vm.snapshotState();
         vm.warp(uint256(migratedAt) + 30 days - 1);
-        (bool eligible, uint256 rate, uint256 payout, uint256 forfeited, uint256 eligibleAt) = core.previewThorExit(alice);
+        (bool eligible, uint256 rate, uint256 payout, uint256 forfeited, uint256 eligibleAt) =
+            core.previewThorExit(alice, 0);
         assertFalse(eligible);
         assertEq(rate, 0);
         assertEq(payout, 0);
@@ -326,7 +360,7 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         assertEq(eligibleAt, uint256(migratedAt) + 30 days);
         vm.prank(alice);
         vm.expectRevert();
-        core.requestThorExit();
+        core.requestThorExit(0);
         assertTrue(vm.revertToState(snapshot));
         _assertThorExitAt(alice, migratedAt, 30 days, 5_000, 50 ether);
         assertTrue(vm.revertToState(snapshot));
@@ -337,16 +371,23 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         _assertThorExitAt(alice, migratedAt, 91 days, 10_000, 100 ether);
     }
 
-    function _assertThorExitAt(address user, uint64 migratedAt, uint256 elapsed, uint256 expectedRate, uint256 expectedPayout) internal {
+    function _assertThorExitAt(
+        address user,
+        uint64 migratedAt,
+        uint256 elapsed,
+        uint256 expectedRate,
+        uint256 expectedPayout
+    ) internal {
         vm.warp(uint256(migratedAt) + elapsed);
-        (bool eligible, uint256 rate, uint256 payout, uint256 forfeited, uint256 eligibleAt) = core.previewThorExit(user);
+        (bool eligible, uint256 rate, uint256 payout, uint256 forfeited, uint256 eligibleAt) =
+            core.previewThorExit(user, 0);
         assertTrue(eligible);
         assertEq(rate, expectedRate);
         assertEq(payout, expectedPayout);
         assertEq(forfeited, 100 ether - expectedPayout);
         assertEq(eligibleAt, uint256(migratedAt) + 30 days);
         vm.prank(user);
-        (uint256 actualPayout, uint256 actualForfeited) = core.requestThorExit();
+        (uint256 actualPayout, uint256 actualForfeited) = core.requestThorExit(0);
         assertEq(actualPayout, expectedPayout);
         assertEq(actualForfeited, forfeited);
     }
@@ -357,9 +398,9 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         _migrateThor(bob, 100 ether);
         vm.warp(block.timestamp + 60 days);
         vm.prank(alice);
-        (uint256 liquid, uint256 liquidForfeited) = core.requestThorExit();
+        (uint256 liquid, uint256 liquidForfeited) = core.requestThorExit(0);
         vm.prank(bob);
-        (uint256 staked, uint256 stakeForfeited) = core.exitAndStakeThor();
+        (uint256 staked, uint256 stakeForfeited) = core.exitAndStakeThor(0);
         assertEq(liquid, 75 ether);
         assertEq(staked, 75 ether);
         assertEq(liquidForfeited + stakeForfeited, 50 ether);
@@ -383,7 +424,7 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         uint256 supply = metro.totalSupply();
         vm.warp(block.timestamp + 30 days);
         vm.prank(alice);
-        (uint256 payout, uint256 forfeited) = core.requestThorExit();
+        (uint256 payout, uint256 forfeited) = core.requestThorExit(0);
         assertEq(payout + forfeited, 100 ether);
         assertEq(payout, 50 ether);
         assertEq(forfeited, 50 ether);
@@ -401,15 +442,15 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         assertEq(core.claimable(alice), 100e6);
         vm.warp(block.timestamp + 30 days);
         vm.prank(alice);
-        core.exitAndStakeThor();
+        core.exitAndStakeThor(0);
         assertEq(core.claimable(alice), 100e6);
         assertEq(core.balanceOf(alice), 50 ether);
-        (,, uint64 exitedAt, bool exited) = core.thorPositions(alice);
+        (,, uint64 exitedAt, bool exited) = core.thorPositions(alice, 0);
         assertTrue(exited);
         assertEq(exitedAt, block.timestamp);
         vm.prank(alice);
         vm.expectRevert();
-        core.requestThorExit();
+        core.requestThorExit(0);
         _distribute(150e6);
         assertEq(core.claimable(alice), 150e6);
         assertEq(core.claimable(bob), 200e6);
@@ -426,10 +467,20 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         vm.warp(block.timestamp + 30 days);
         vm.expectEmit(true, true, false, true, address(core));
         emit UnstakeRequested(alice, xMETRO.UnstakeSource.Thor, 50 ether, uint64(block.timestamp + 72 hours));
-        vm.expectEmit(true, true, false, true, address(core));
-        emit ThorExited(alice, 100 ether, 50 ether, 50 ether, 5_000, xMETRO.ExitMode.Liquid, uint64(block.timestamp), forfeitureRecipient);
+        vm.expectEmit(true, true, true, true, address(core));
+        emit ThorExited(
+            alice,
+            0,
+            100 ether,
+            50 ether,
+            50 ether,
+            5_000,
+            xMETRO.ExitMode.Liquid,
+            uint64(block.timestamp),
+            forfeitureRecipient
+        );
         vm.prank(alice);
-        core.requestThorExit();
+        core.requestThorExit(0);
         assertEq(core.unstakeRequestCountThor(alice), 1);
         assertEq(core.unstakeRequestCountYThor(alice), 0);
         assertEq(core.unstakeRequestCountContributor(alice), 0);
@@ -447,44 +498,58 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         assertEq(core.unstakeCursorThor(alice), 1);
         vm.prank(alice);
         assertEq(core.withdrawThor(0), 0);
-        (uint256 thorAmount, uint256 yThorAmount, uint256 contributorAmount, uint256 totalAmount) = core.previewWithdrawableNow(alice);
+        (uint256 thorAmount, uint256 yThorAmount, uint256 contributorAmount, uint256 totalAmount) =
+            core.previewWithdrawableNow(alice);
         assertEq(thorAmount + yThorAmount + contributorAmount + totalAmount, 0);
     }
 
     /// E-13.01: Tests yTHOR exit curve independent snapshots.
     function test_E13_YThorExitCurveIndependentSnapshots() public {
         _migrateYThor(alice, 1_000 ether);
-        (, uint64 migratedAt,,) = core.yThorPositions(alice);
+        (, uint64 migratedAt,,) = core.yThorPositions(alice, 0);
         uint256 snapshot = vm.snapshotState();
         vm.warp(uint256(migratedAt) + 120 days - 1);
-        (bool eligible, uint256 rate, uint256 payout,, uint256 eligibleAt) = core.previewYThorExit(alice);
+        (bool eligible, uint256 rate, uint256 payout,, uint256 eligibleAt) = core.previewYThorExit(alice, 0);
         assertFalse(eligible);
         assertEq(rate, 0);
         assertEq(payout, 0);
         assertEq(eligibleAt, uint256(migratedAt) + 120 days);
         vm.prank(alice);
         vm.expectRevert();
-        core.exitYThor(xMETRO.ExitMode.Liquid);
+        core.exitYThor(0, xMETRO.ExitMode.Liquid);
         assertTrue(vm.revertToState(snapshot));
         _assertYThorExitAt(alice, migratedAt, 120 days, 1_000, 100 ether);
         assertTrue(vm.revertToState(snapshot));
-        _assertYThorExitAt(alice, migratedAt, 120 days + (5 * 365 days) / 2, 3_000, 300 ether);
+        _assertYThorExitAt(alice, migratedAt, 120 days + 365 days, 2_000, 200 ether);
         assertTrue(vm.revertToState(snapshot));
-        _assertYThorExitAt(alice, migratedAt, 120 days + 5 * 365 days, 5_000, 500 ether);
+        _assertYThorExitAt(alice, migratedAt, 120 days + 2 * 365 days, 3_000, 300 ether);
         assertTrue(vm.revertToState(snapshot));
-        _assertYThorExitAt(alice, migratedAt, 120 days + 5 * 365 days + 1, 5_000, 500 ether);
+        _assertYThorExitAt(alice, migratedAt, 120 days + 3 * 365 days, 4_000, 400 ether);
+        assertTrue(vm.revertToState(snapshot));
+        _assertYThorExitAt(alice, migratedAt, 120 days + 4 * 365 days - 1, 4_999, 499.9 ether);
+        assertTrue(vm.revertToState(snapshot));
+        _assertYThorExitAt(alice, migratedAt, 120 days + 4 * 365 days, 5_000, 500 ether);
+        assertTrue(vm.revertToState(snapshot));
+        _assertYThorExitAt(alice, migratedAt, 120 days + 4 * 365 days + 1, 5_000, 500 ether);
     }
 
-    function _assertYThorExitAt(address user, uint64 migratedAt, uint256 elapsed, uint256 expectedRate, uint256 expectedPayout) internal {
+    function _assertYThorExitAt(
+        address user,
+        uint64 migratedAt,
+        uint256 elapsed,
+        uint256 expectedRate,
+        uint256 expectedPayout
+    ) internal {
         vm.warp(uint256(migratedAt) + elapsed);
-        (bool eligible, uint256 rate, uint256 payout, uint256 forfeited, uint256 eligibleAt) = core.previewYThorExit(user);
+        (bool eligible, uint256 rate, uint256 payout, uint256 forfeited, uint256 eligibleAt) =
+            core.previewYThorExit(user, 0);
         assertTrue(eligible);
         assertEq(rate, expectedRate);
         assertEq(payout, expectedPayout);
         assertEq(forfeited, 1_000 ether - expectedPayout);
         assertEq(eligibleAt, uint256(migratedAt) + 120 days);
         vm.prank(user);
-        (uint256 actualPayout, uint256 actualForfeited) = core.exitYThor(xMETRO.ExitMode.Liquid);
+        (uint256 actualPayout, uint256 actualForfeited) = core.exitYThor(0, xMETRO.ExitMode.Liquid);
         assertEq(actualPayout, expectedPayout);
         assertEq(actualForfeited, forfeited);
     }
@@ -495,9 +560,9 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         _migrateYThor(bob, 100 ether);
         vm.warp(block.timestamp + 120 days);
         vm.prank(alice);
-        (uint256 liquid, uint256 liquidForfeited) = core.exitYThor(xMETRO.ExitMode.Liquid);
+        (uint256 liquid, uint256 liquidForfeited) = core.exitYThor(0, xMETRO.ExitMode.Liquid);
         vm.prank(bob);
-        (uint256 stake, uint256 stakeForfeited) = core.exitYThor(xMETRO.ExitMode.Stake);
+        (uint256 stake, uint256 stakeForfeited) = core.exitYThor(0, xMETRO.ExitMode.Stake);
         assertEq(liquid, 10 ether);
         assertEq(stake, 10 ether);
         assertEq(liquidForfeited + stakeForfeited, 180 ether);
@@ -519,7 +584,7 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         uint256 supply = metro.totalSupply();
         vm.warp(block.timestamp + 120 days);
         vm.prank(alice);
-        (uint256 payout, uint256 forfeited) = core.exitYThor(xMETRO.ExitMode.Liquid);
+        (uint256 payout, uint256 forfeited) = core.exitYThor(0, xMETRO.ExitMode.Liquid);
         assertEq(payout + forfeited, 100 ether);
         assertEq(core.rewardWeightOf(alice), 0);
         assertEq(core.totalRewardWeight(), 0);
@@ -539,13 +604,13 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         assertEq(core.claimable(alice), 200e6);
         vm.warp(block.timestamp + 120 days);
         vm.prank(alice);
-        core.exitYThor(xMETRO.ExitMode.Liquid);
+        core.exitYThor(0, xMETRO.ExitMode.Liquid);
         _distribute(100e6);
         assertEq(core.claimable(alice), 200e6);
         assertEq(core.claimable(bob), 200e6);
         vm.prank(alice);
         vm.expectRevert();
-        core.exitYThor(xMETRO.ExitMode.Stake);
+        core.exitYThor(0, xMETRO.ExitMode.Stake);
         uint256 snapshot = vm.snapshotState();
         vm.prank(alice);
         assertEq(core.claimRewards(), 200e6);
@@ -573,11 +638,21 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         vm.warp(block.timestamp + 120 days);
         vm.expectEmit(true, true, false, true, address(core));
         emit UnstakeRequested(alice, xMETRO.UnstakeSource.YThor, 10 ether, uint64(block.timestamp + 72 hours));
-        vm.expectEmit(true, true, false, true, address(core));
-        emit YThorExited(alice, 100 ether, 10 ether, 90 ether, 1_000, xMETRO.ExitMode.Liquid, uint64(block.timestamp), forfeitureRecipient);
+        vm.expectEmit(true, true, true, true, address(core));
+        emit YThorExited(
+            alice,
+            0,
+            100 ether,
+            10 ether,
+            90 ether,
+            1_000,
+            xMETRO.ExitMode.Liquid,
+            uint64(block.timestamp),
+            forfeitureRecipient
+        );
         vm.prank(alice);
-        core.exitYThor(xMETRO.ExitMode.Liquid);
-        (uint128 principal, uint64 migratedAt, uint64 exitedAt, bool exited) = core.yThorPositions(alice);
+        core.exitYThor(0, xMETRO.ExitMode.Liquid);
+        (uint128 principal, uint64 migratedAt, uint64 exitedAt, bool exited) = core.yThorPositions(alice, 0);
         assertEq(principal, 100 ether);
         assertEq(exitedAt, block.timestamp);
         assertGt(exitedAt, migratedAt);
@@ -612,11 +687,12 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         vm.stopPrank();
         xMETRO.VestingSchedule memory schedule = core.contributorVesting(alice, 0);
         vm.warp(uint256(schedule.startTime) + schedule.duration / 2);
-        (bool thorEligible,, uint256 thorPreview,,) = core.previewThorExit(alice);
-        (bool yEligible,, uint256 yPreview,,) = core.previewYThorExit(alice);
+        (bool thorEligible,, uint256 thorPreview,,) = core.previewThorExit(alice, 0);
+        (bool yEligible,, uint256 yPreview,,) = core.previewYThorExit(alice, 0);
         assertTrue(thorEligible);
         assertTrue(yEligible);
-        (uint256 thorAmount, uint256 yAmount, uint256 contributorAmount, uint256 total) = core.previewWithdrawableNow(alice);
+        (uint256 thorAmount, uint256 yAmount, uint256 contributorAmount, uint256 total) =
+            core.previewWithdrawableNow(alice);
         assertEq(thorAmount, thorPreview);
         assertEq(yAmount, yPreview);
         assertEq(contributorAmount, 50 ether);
@@ -638,15 +714,16 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         xMETRO.VestingSchedule memory schedule = core.contributorVesting(alice, 0);
         vm.warp(uint256(schedule.startTime) + schedule.duration);
         vm.startPrank(alice);
-        core.requestThorExit();
-        core.exitYThor(xMETRO.ExitMode.Liquid);
+        core.requestThorExit(0);
+        core.exitYThor(0, xMETRO.ExitMode.Liquid);
         core.requestWithdrawUnlockedContributor(0);
         vm.stopPrank();
         assertEq(core.unstakeRequestCountFree(alice), 1);
         assertEq(core.unstakeRequestCountThor(alice), 1);
         assertEq(core.unstakeRequestCountYThor(alice), 1);
         assertEq(core.unstakeRequestCountContributor(alice), 1);
-        (uint256 thorAmount, uint256 yAmount, uint256 contributorAmount, uint256 total) = core.previewWithdrawableNow(alice);
+        (uint256 thorAmount, uint256 yAmount, uint256 contributorAmount, uint256 total) =
+            core.previewWithdrawableNow(alice);
         assertEq(thorAmount + yAmount + contributorAmount + total, 0);
         vm.warp(block.timestamp + 72 hours);
         (thorAmount, yAmount, contributorAmount, total) = core.previewWithdrawableNow(alice);
@@ -660,7 +737,8 @@ contract MigrationExitMainnetTest is MainnetForkBase {
     /// E-15.03: Tests empty partially consumed and closed preview.
     function test_E15_EmptyPartiallyConsumedAndClosedPreview() public {
         address empty = makeAddr("empty-preview");
-        (uint256 thorAmount, uint256 yAmount, uint256 contributorAmount, uint256 total) = core.previewWithdrawableNow(empty);
+        (uint256 thorAmount, uint256 yAmount, uint256 contributorAmount, uint256 total) =
+            core.previewWithdrawableNow(empty);
         assertEq(thorAmount + yAmount + contributorAmount + total, 0);
         _migrateThor(alice, 100 ether);
         _migrateYThor(alice, 100 ether);
@@ -689,8 +767,8 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         (thorAmount, yAmount, contributorAmount, total) = core.previewWithdrawableNow(alice);
         assertEq(contributorAmount, 50 ether);
         vm.startPrank(alice);
-        core.requestThorExit();
-        core.exitYThor(xMETRO.ExitMode.Liquid);
+        core.requestThorExit(0);
+        core.exitYThor(0, xMETRO.ExitMode.Liquid);
         core.claimAndStakeUnlockedContributor(0);
         vm.stopPrank();
         (thorAmount, yAmount, contributorAmount, total) = core.previewWithdrawableNow(alice);

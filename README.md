@@ -1,5 +1,11 @@
 # THOR/yTHOR Migration to METRO
 
+## October 21 source update
+
+This source version supports repeated THOR and yTHOR migrations, independent position IDs, and reward debt at `1e24` internal precision. Production yTHOR pays 10% after 120 days, increasing linearly to 50% over the following `4 * 365 days`. Base QA keeps its 4-hour delay and 12-hour ramp. Each position settles its full principal once; it cannot claim an additional amount later.
+
+The existing Base QA deployment and its address/configuration records remain unchanged. Use the ABI and examples from that deployment's revision (QA baseline `60754e05436c6c8056b60eac481d0bdc96a89d4c`) with its existing addresses. This version's ABI/examples target newly created local instances or a future deployment requested by the project. Source changes do not update an immutable deployed Core or migrate its storage.
+
 This Foundry project implements THOR/yTHOR migration, METRO staking, USDC rewards, automated reward actions, commission routing, and upgradeable DeFi integrations.
 
 ## Contract architecture
@@ -8,7 +14,7 @@ This Foundry project implements THOR/yTHOR migration, METRO staking, USDC reward
 - `src/xMETRO.sol`: immutable user-facing core for staking, migration positions, vesting, reward accounting, actions, and emergency reward distribution.
 - `src/XMetroCoreLogic.sol`: internal code compiled into xMETRO; it is not separately deployed or linked as an external library.
 - `src/XMetroDeFiAdapter.sol`: UUPS implementation behind an ERC1967 proxy for swaps and DeFi deposits. It does not write xMETRO storage.
-- `src/ThorMigrationEscrow.sol`: THOR/yTHOR migration, ratios, caps, deadlines, and independent one-time migration markers.
+- `src/ThorMigrationEscrow.sol`: THOR/yTHOR migration, ratios, caps, deadlines, and repeated migrations within cumulative caps.
 - `src/RewardDistributor.sol`: operator-triggered USDC reward distribution and optional commission routing.
 
 “Two-contract reward architecture” refers to xMETRO and its DeFi Adapter, not to the total number of deployed addresses. METRO, Escrow, Distributor, the Adapter implementation, and its proxy have separate addresses. Users and Keepers call xMETRO; only the currently bound xMETRO may invoke the Adapter execution functions.
@@ -51,9 +57,9 @@ Maple configuration stores a SyrupRouter and `bytes32 depositData`; syrupUSDC is
 
 ## Migration and exits
 
-- Each address may migrate THOR once and yTHOR once; the markers are independent.
+- Each address may migrate THOR and yTHOR repeatedly within the migration window and cumulative caps. Each call creates an independently timed position.
 - THOR cannot exit before day 30; the payout rises linearly from 50% on day 30 to 100% on day 90.
-- yTHOR principal uses the configured `ratioYThor`. Reward weight starts at the constructor's `YTHOR_REWARD_WEIGHT_BPS` (`10,000 = 1x`) and may be changed by the xMETRO owner without pausing. The current weight applies to future reward deposits for all active yTHOR positions; accrued rewards are not repriced. yTHOR cannot exit before day 120; its payout rises from 10% then to 50% over five years.
+- yTHOR principal uses the configured `ratioYThor`. Reward weight starts at the constructor's `YTHOR_REWARD_WEIGHT_BPS` (`10,000 = 1x`) and may be changed by the xMETRO owner without pausing. The current weight applies to future reward deposits for all active yTHOR positions; accrued rewards are not repriced. yTHOR cannot exit before day 120; its payout rises from 10% then to 50% over the following four years (4 * 365 days after the initial 120 days).
 - Forfeited principal goes to the immutable `forfeitureRecipient`.
 - Liquid exits for free stake, THOR, yTHOR, and Contributor positions have separate 72-hour withdrawal queues. Exit-to-stake produces transferable xMETRO immediately.
 - Contributor vesting has a 180-day cliff followed by 2.5 years of linear release.
@@ -98,3 +104,7 @@ FOUNDRY_PROFILE=deploy forge script script/Deploy.s.sol:Deploy --rpc-url "$ETH_R
 # Base
 FOUNDRY_PROFILE=deploy forge script script/Deploy.s.sol:Deploy --rpc-url "$BASE_RPC_URL" --broadcast
 ```
+
+## Reward accounting precision
+
+Core tracks signed reward debt at the existing `1e24` accumulator precision. Share changes retain the full debt product. Claims, emergency payments, manual actions, and automatic batches consume only whole USDC base units and retain the fractional remainder. Zero-value claims preserve that remainder. `rewardDebt(user)` keeps its ABI and displays USDC base units, truncating negative fractions toward zero; use `claimable` / `claimableMany` for payable amounts instead of reconstructing them from the display getter. Adapter inputs and event amounts remain in token base units.

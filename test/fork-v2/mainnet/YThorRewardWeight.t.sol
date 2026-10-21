@@ -159,7 +159,7 @@ contract YThorRewardWeightMainnetTest is MainnetForkBase {
         assertEq(core.claimable(bob), 100e6);
         vm.warp(block.timestamp + 120 days);
         vm.prank(alice);
-        (uint256 payout,) = core.exitYThor(xMETRO.ExitMode.Stake);
+        (uint256 payout,) = core.exitYThor(0, xMETRO.ExitMode.Stake);
         assertEq(payout, 10 ether);
         assertEq(core.rewardWeightOf(alice), 10 ether);
         assertEq(core.totalRewardWeight(), 110 ether);
@@ -181,12 +181,20 @@ contract YThorRewardWeightMainnetTest is MainnetForkBase {
 
     /// E-14.07: Tests small principal fractional bps and dust.
     function test_E14_SmallPrincipalFractionalBpsAndDust() public {
-        _migrateY(alice, 1e12);
+        _migrateY(alice, 5e11);
+        _migrateY(alice, 5e11);
+        assertEq(core.yThorPositionCount(alice), 2);
         _mintAndStake(bob, 1e12);
         core.setYThorRewardWeightBps(3_333);
         assertEq(core.rewardWeightOf(alice), 333_300_000_000);
         assertEq(core.totalRewardWeight(), 1_333_300_000_000);
         _distribute(1);
+        vm.prank(alice);
+        assertEq(core.claimRewards(), 0);
+        uint256 beforeWeightChange = core.claimable(alice);
+        core.setYThorRewardWeightBps(0);
+        assertEq(core.claimable(alice), beforeWeightChange);
+        core.setYThorRewardWeightBps(3_333);
         _distribute(1);
         _distribute(1);
         _distribute(1);

@@ -118,7 +118,7 @@ contract ThorMigrationEscrowUnitTest is Test {
         fresh.setMigrationStartTime(block.timestamp + 1);
     }
 
-    function test_MigrateThorUsesUnifiedRatioAndCreatesOnePosition() public {
+    function test_MigrateThorUsesUnifiedRatioAndCreatesIndependentCredits() public {
         uint256 amountIn = 100 ether;
         uint256 principal = amountIn * RATIO_THOR / 1e18;
         _approveAndFund(user, thor, amountIn * 2);
@@ -130,14 +130,15 @@ contract ThorMigrationEscrowUnitTest is Test {
 
         assertEq(thor.balanceOf(address(escrow)), amountIn);
         assertEq(escrow.migratedThor(), principal);
-        assertTrue(escrow.hasMigratedThor(user));
         assertEq(xmetro.lastThorUser(), user);
         assertEq(xmetro.lastThorPrincipal(), principal);
         assertEq(xmetro.thorCredits(), 1);
 
         vm.prank(user);
-        vm.expectRevert(bytes("ThorEscrow: thor already migrated"));
         escrow.migrateThor(amountIn);
+        assertEq(escrow.migratedThor(), principal * 2);
+        assertEq(thor.balanceOf(address(escrow)), amountIn * 2);
+        assertEq(xmetro.thorCredits(), 2);
     }
 
     function test_MigrateYThorUsesPrincipalCapAndCreditsPrincipal() public {
@@ -153,31 +154,31 @@ contract ThorMigrationEscrowUnitTest is Test {
 
         assertEq(escrow.migratedYThor(), principal);
         assertEq(escrow.capYThor(), principal);
-        assertTrue(escrow.hasMigratedYThor(user));
         assertEq(xmetro.lastYThorUser(), user);
         assertEq(xmetro.lastYThorPrincipal(), principal);
 
         vm.prank(user);
-        vm.expectRevert(bytes("ThorEscrow: ythor already migrated"));
-        escrow.migrateYThor(1);
-    }
-
-    function test_ThorAndYThorOnceFlagsAreIndependent() public {
-        _approveAndFund(user, thor, 10 ether);
-        _approveAndFund(user, yThor, 10 ether);
-
-        vm.prank(user);
-        escrow.migrateThor(10 ether);
-        vm.prank(user);
-        escrow.migrateYThor(10 ether);
-
-        assertTrue(escrow.hasMigratedThor(user));
-        assertTrue(escrow.hasMigratedYThor(user));
-        assertEq(xmetro.thorCredits(), 1);
+        vm.expectRevert(bytes("ThorEscrow: ythor cap"));
+        escrow.migrateYThor(1 ether);
         assertEq(xmetro.yThorCredits(), 1);
     }
 
-    function test_DifferentAddressesCanEachMigrateOnce() public {
+    function test_ThorAndYThorRepeatedMigrationsAreIndependent() public {
+        _approveAndFund(user, thor, 20 ether);
+        _approveAndFund(user, yThor, 20 ether);
+        for (uint256 i; i < 2; ++i) {
+            vm.prank(user);
+            escrow.migrateThor(10 ether);
+            vm.prank(user);
+            escrow.migrateYThor(10 ether);
+        }
+        assertEq(xmetro.thorCredits(), 2);
+        assertEq(xmetro.yThorCredits(), 2);
+        assertEq(escrow.migratedThor(), 22 ether);
+        assertEq(escrow.migratedYThor(), 16 ether);
+    }
+
+    function test_DifferentAddressesHaveIndependentCredits() public {
         _approveAndFund(user, thor, 1 ether);
         _approveAndFund(user2, thor, 2 ether);
 
@@ -186,8 +187,6 @@ contract ThorMigrationEscrowUnitTest is Test {
         vm.prank(user2);
         escrow.migrateThor(2 ether);
 
-        assertTrue(escrow.hasMigratedThor(user));
-        assertTrue(escrow.hasMigratedThor(user2));
         assertEq(xmetro.thorCredits(), 2);
     }
 
@@ -210,27 +209,27 @@ contract ThorMigrationEscrowUnitTest is Test {
         vm.warp(startTime);
         vm.prank(user);
         bounded.migrateThor(1 ether);
-        assertTrue(bounded.hasMigratedThor(user));
+        assertEq(bounded.migratedThor(), 1 ether);
 
         vm.warp(deadline);
         vm.prank(user2);
         bounded.migrateYThor(1 ether);
-        assertTrue(bounded.hasMigratedYThor(user2));
+        assertEq(bounded.migratedYThor(), 1 ether);
     }
 
-    function test_FailedTokenTransferDoesNotConsumeOnceFlagOrCap() public {
+    function test_FailedTokenTransferDoesNotConsumeCreditOrCap() public {
         thor.mint(user, 10 ether);
 
         vm.prank(user);
         vm.expectRevert();
         escrow.migrateThor(10 ether);
 
-        assertFalse(escrow.hasMigratedThor(user));
+        assertEq(xmetro.thorCredits(), 0);
         assertEq(escrow.migratedThor(), 0);
         assertEq(thor.balanceOf(address(escrow)), 0);
     }
 
-    function test_FailedXMetroCreditRollsBackTokensFlagAndCap() public {
+    function test_FailedXMetroCreditRollsBackTokensCreditAndCap() public {
         _approveAndFund(user, yThor, 10 ether);
         xmetro.setRevertCredits(true);
 
@@ -238,7 +237,7 @@ contract ThorMigrationEscrowUnitTest is Test {
         vm.expectRevert(bytes("MockXMetro: rejected"));
         escrow.migrateYThor(10 ether);
 
-        assertFalse(escrow.hasMigratedYThor(user));
+        assertEq(xmetro.yThorCredits(), 0);
         assertEq(escrow.migratedYThor(), 0);
         assertEq(yThor.balanceOf(user), 10 ether);
         assertEq(yThor.balanceOf(address(escrow)), 0);
@@ -291,6 +290,7 @@ contract ThorMigrationEscrowUnitTest is Test {
         vm.prank(user2);
         vm.expectRevert(bytes("ThorEscrow: ythor expired"));
         escrow.migrateYThor(1);
+        assertEq(xmetro.yThorCredits(), 0);
     }
 
     function test_CapsRemainOwnerConfigurableAfterMigration() public {
@@ -328,5 +328,19 @@ contract ThorMigrationEscrowUnitTest is Test {
         emit ThorMigrationEscrow.TokensRescued(address(other), user, 40);
         escrow.rescueTokens(address(other), user, 40);
         assertEq(other.balanceOf(user), 40);
+    }
+
+    function test_FailedLaterCreditPreservesEarlierMigration() public {
+        _approveAndFund(user, thor, 20 ether);
+        vm.prank(user);
+        escrow.migrateThor(10 ether);
+        xmetro.setRevertCredits(true);
+        vm.prank(user);
+        vm.expectRevert(bytes("MockXMetro: rejected"));
+        escrow.migrateThor(10 ether);
+        assertEq(xmetro.thorCredits(), 1);
+        assertEq(escrow.migratedThor(), 11 ether);
+        assertEq(thor.balanceOf(user), 10 ether);
+        assertEq(thor.balanceOf(address(escrow)), 10 ether);
     }
 }

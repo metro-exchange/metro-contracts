@@ -148,8 +148,8 @@ contract CoreRewardSource {
 contract XMetroCoreSizeTest is Test {
     uint256 internal constant EIP170_LIMIT = 24_576;
     uint256 internal constant PROJECT_LIMIT = 23_552;
-    uint256 internal constant EXPECTED_RUNTIME = 22_514;
-    uint256 internal constant EXPECTED_INITCODE = 24_093;
+    uint256 internal constant EXPECTED_RUNTIME = 22_921;
+    uint256 internal constant EXPECTED_INITCODE = 24_500;
     uint256 internal constant ETHEREUM_PINNED_BLOCK = 25_838_112;
     uint256 internal constant BASE_PINNED_BLOCK = 50_555_256;
 
@@ -647,6 +647,56 @@ contract XMetroCoreAdapterFlowTest is Test {
         assertEq(spoke.getUserSuppliedShares(reserveId, skipped), 0);
         assertEq(usdc.allowance(address(adapter), address(spoke)), 0);
         assertEq(usdc.allowance(address(adapter), address(giver)), 0);
+    }
+
+    function testFuzz_StrategySettlementPreservesFractionAcrossAllExecutionPaths(bool compound, bool automatic) public {
+        address alice = makeAddr("fraction-alice");
+        address bob = makeAddr("fraction-bob");
+        _stake(alice, 2);
+        _stake(bob, 2);
+        _depositRewards(3);
+        vm.startPrank(alice);
+        if (compound) core.enableAutocompound();
+        else core.enableAutoStrategy(swapStrategy);
+        vm.stopPrank();
+        address[] memory candidates = new address[](3);
+        candidates[0] = alice;
+        candidates[1] = alice;
+        candidates[2] = address(0);
+        bytes memory route = _v2Data(compound ? address(metro) : address(output));
+        if (automatic) {
+            if (compound) {
+                assertEq(core.autocompoundBatch(candidates, 1, block.timestamp + 1, route), 1);
+            } else {
+                (uint256 consumed,) = core.executeAutoStrategyBatch(
+                    swapStrategy, candidates, 1, new uint256[](0), block.timestamp + 1, route
+                );
+                assertEq(consumed, 1);
+            }
+        } else {
+            vm.prank(alice);
+            if (compound) {
+                assertEq(core.autocompound(1, block.timestamp + 1, route), 1);
+            } else {
+                (uint256 consumed,) = core.claimAndExecute(swapStrategy, 1, block.timestamp + 1, route);
+                assertEq(consumed, 1);
+            }
+        }
+        assertEq(core.claimable(alice), 0);
+        assertEq(usdc.balanceOf(address(core)), 2);
+        // Compound adds one share: remove it so the next exact split exposes the retained half unit.
+        if (compound) {
+            vm.prank(alice);
+            core.requestUnstake(1);
+        }
+        _depositRewards(1);
+        assertEq(core.claimable(alice), 1);
+        assertEq(core.claimable(bob), 2);
+        vm.prank(alice);
+        assertEq(core.claimRewards(), 1);
+        vm.prank(bob);
+        assertEq(core.claimRewards(), 2);
+        assertEq(usdc.balanceOf(address(core)), 0);
     }
 
     function _deployCore() private returns (xMETRO deployed) {

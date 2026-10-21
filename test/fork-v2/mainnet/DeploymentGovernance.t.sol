@@ -30,10 +30,13 @@ contract DeploymentGovernanceMainnetTest is MainnetForkBase {
 
     /// E-01.01/.02/.03: Tests normal CREATE deployment and all initial bindings.
     function test_E01_FormalCreateAndReadback() public {
+        assertEq(core.YTHOR_EXIT_RAMP(), 126_144_000);
+        assertEq(core.thorPositionCount(address(this)), 0);
+        assertEq(core.yThorPositionCount(address(this)), 0);
         assertEq(block.chainid, 1);
         assertEq(block.number, FORK_BLOCK);
         assertGt(address(metro).code.length, 0);
-        assertEq(address(core).code.length, 22_514);
+        assertEq(address(core).code.length, 22_921);
         assertEq(implementation.code.length, 20_487);
         assertEq(proxy.code.length, 76);
         assertGt(address(distributor).code.length, 0);
@@ -310,7 +313,8 @@ contract DeploymentGovernanceMainnetTest is MainnetForkBase {
         vm.expectRevert();
         distributor.setOperator(address(this), false);
         MetroToken spareToken = new MetroToken("Spare", "SPARE", address(this));
-        ThorMigrationEscrow spareEscrow = new ThorMigrationEscrow(address(this), address(core), THOR, YTHOR, block.timestamp);
+        ThorMigrationEscrow spareEscrow =
+            new ThorMigrationEscrow(address(this), address(core), THOR, YTHOR, block.timestamp);
         RewardDistributor spareDistributor = new RewardDistributor(address(core), address(this));
         spareToken.renounceOwnership();
         spareEscrow.renounceOwnership();
@@ -369,7 +373,9 @@ contract DeploymentGovernanceMainnetTest is MainnetForkBase {
         core.emergencyDistribute(empty);
         address[] memory candidates = new address[](103);
         candidates[0] = address(0);
-        for (uint256 i; i < 101; ++i) candidates[i + 1] = accounts[i];
+        for (uint256 i; i < 101; ++i) {
+            candidates[i + 1] = accounts[i];
+        }
         candidates[102] = accounts[0];
         uint256 gasBefore = gasleft();
         uint256 paid = core.emergencyDistribute(candidates);
@@ -442,8 +448,8 @@ contract DeploymentGovernanceMainnetTest is MainnetForkBase {
         assertEq(metro.balanceOf(address(core)), metroBacking);
         assertEq(core.totalShares(), totalSharesBefore);
         assertEq(core.totalRewardWeight(), totalWeightBefore);
-        (uint128 thorPrincipal,, uint64 thorExitedAt, bool thorExited) = core.thorPositions(user);
-        (uint128 yPrincipal,, uint64 yExitedAt, bool yExited) = core.yThorPositions(user);
+        (uint128 thorPrincipal,, uint64 thorExitedAt, bool thorExited) = core.thorPositions(user, 0);
+        (uint128 yPrincipal,, uint64 yExitedAt, bool yExited) = core.yThorPositions(user, 0);
         assertEq(thorPrincipal, 10 ether);
         assertEq(yPrincipal, 10 ether);
         assertEq(thorExitedAt, 0);
@@ -481,7 +487,7 @@ contract DeploymentGovernanceMainnetTest is MainnetForkBase {
         IERC20(THOR).approve(address(nextEscrow), 1 ether);
         vm.prank(user);
         nextEscrow.migrateThor(1 ether);
-        (uint128 principal,,,) = core.thorPositions(user);
+        (uint128 principal,,,) = core.thorPositions(user, 0);
         assertEq(principal, 1 ether);
         assertEq(IERC20(THOR).balanceOf(address(nextEscrow)), 1 ether);
         RewardDistributor nextDistributor = new RewardDistributor(address(core), address(this));

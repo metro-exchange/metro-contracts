@@ -738,7 +738,13 @@
   {
     "type": "function",
     "name": "exitAndStakeThor",
-    "inputs": [],
+    "inputs": [
+      {
+        "name": "positionId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
     "outputs": [
       {
         "name": "payout",
@@ -757,6 +763,11 @@
     "type": "function",
     "name": "exitYThor",
     "inputs": [
+      {
+        "name": "positionId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
       {
         "name": "mode",
         "type": "uint8",
@@ -922,6 +933,11 @@
         "name": "user",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "positionId",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [
@@ -995,6 +1011,11 @@
         "name": "user",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "positionId",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [
@@ -1036,7 +1057,13 @@
   {
     "type": "function",
     "name": "requestThorExit",
-    "inputs": [],
+    "inputs": [
+      {
+        "name": "positionId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
     "outputs": [
       {
         "name": "payout",
@@ -1111,7 +1138,7 @@
     "name": "rewardDebt",
     "inputs": [
       {
-        "name": "",
+        "name": "user",
         "type": "address",
         "internalType": "address"
       }
@@ -1342,12 +1369,36 @@
   },
   {
     "type": "function",
+    "name": "thorPositionCount",
+    "inputs": [
+      {
+        "name": "user",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "thorPositions",
     "inputs": [
       {
         "name": "user",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "positionId",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [
@@ -1892,12 +1943,36 @@
   },
   {
     "type": "function",
+    "name": "yThorPositionCount",
+    "inputs": [
+      {
+        "name": "user",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "yThorPositions",
     "inputs": [
       {
         "name": "user",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "positionId",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [
@@ -2425,6 +2500,12 @@
         "internalType": "address"
       },
       {
+        "name": "positionId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
         "name": "principal",
         "type": "uint256",
         "indexed": false,
@@ -2478,6 +2559,12 @@
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      },
+      {
+        "name": "positionId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
       },
       {
         "name": "principal",
@@ -2649,6 +2736,12 @@
         "internalType": "address"
       },
       {
+        "name": "positionId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
         "name": "principal",
         "type": "uint256",
         "indexed": false,
@@ -2702,6 +2795,12 @@
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      },
+      {
+        "name": "positionId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
       },
       {
         "name": "principal",

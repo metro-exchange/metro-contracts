@@ -69,10 +69,10 @@ contract xMETROFuzzTest is Test {
         uint256 principal = bound(uint256(principalSeed), 1, metro.MAX_SUPPLY());
         uint256 elapsed = bound(uint256(elapsedSeed), 0, 200 days);
         xmetro.creditThorFromMigration(userA, principal);
-        (, uint64 migratedAt,,) = xmetro.thorPositions(userA);
+        (, uint64 migratedAt,,) = xmetro.thorPositions(userA, 0);
         vm.warp(uint256(migratedAt) + elapsed);
 
-        (bool eligible, uint256 rate, uint256 payout, uint256 forfeited,) = xmetro.previewThorExit(userA);
+        (bool eligible, uint256 rate, uint256 payout, uint256 forfeited,) = xmetro.previewThorExit(userA, 0);
         if (elapsed < 30 days) {
             assertFalse(eligible);
             assertEq(rate, 0);
@@ -86,8 +86,8 @@ contract xMETROFuzzTest is Test {
         assertEq(payout + forfeited, principal);
 
         vm.prank(userA);
-        if (stakeMode) xmetro.exitAndStakeThor();
-        else xmetro.requestThorExit();
+        if (stakeMode) xmetro.exitAndStakeThor(0);
+        else xmetro.requestThorExit(0);
         assertEq(metro.balanceOf(forfeiture), forfeited);
         assertEq(metro.balanceOf(address(xmetro)), payout);
         assertEq(xmetro.lockedShares(userA), 0);
@@ -102,10 +102,10 @@ contract xMETROFuzzTest is Test {
         uint256 maxElapsed = 120 days + 10 * 365 days;
         uint256 elapsed = bound(uint256(elapsedSeed), 0, maxElapsed);
         xmetro.creditYThorFromMigration(userA, principal);
-        (, uint64 migratedAt,,) = xmetro.yThorPositions(userA);
+        (, uint64 migratedAt,,) = xmetro.yThorPositions(userA, 0);
         vm.warp(uint256(migratedAt) + elapsed);
 
-        (bool eligible, uint256 rate, uint256 payout, uint256 forfeited,) = xmetro.previewYThorExit(userA);
+        (bool eligible, uint256 rate, uint256 payout, uint256 forfeited,) = xmetro.previewYThorExit(userA, 0);
         if (elapsed < 120 days) {
             assertFalse(eligible);
             assertEq(rate, 0);
@@ -114,7 +114,7 @@ contract xMETROFuzzTest is Test {
 
         uint256 sinceEligible = elapsed - 120 days;
         uint256 expectedRate =
-            sinceEligible >= 5 * 365 days ? 5_000 : 1_000 + Math.mulDiv(sinceEligible, 4_000, 5 * 365 days);
+            sinceEligible >= 4 * 365 days ? 5_000 : 1_000 + Math.mulDiv(sinceEligible, 4_000, 4 * 365 days);
         assertEq(rate, expectedRate);
         assertGe(rate, 1_000);
         assertLe(rate, 5_000);
@@ -122,7 +122,7 @@ contract xMETROFuzzTest is Test {
         assertEq(payout + forfeited, principal);
 
         vm.prank(userA);
-        xmetro.exitYThor(stakeMode ? XMetroCore.ExitMode.Stake : XMetroCore.ExitMode.Liquid);
+        xmetro.exitYThor(0, stakeMode ? XMetroCore.ExitMode.Stake : XMetroCore.ExitMode.Liquid);
         assertEq(metro.balanceOf(forfeiture), forfeited);
         assertEq(metro.balanceOf(address(xmetro)), payout);
         assertEq(xmetro.lockedShares(userA), 0);
@@ -137,12 +137,12 @@ contract xMETROFuzzTest is Test {
         uint256 second = bound(uint256(secondSeed), 120 days, 120 days + 10 * 365 days);
         if (first > second) (first, second) = (second, first);
         xmetro.creditYThorFromMigration(userA, 100_000 ether);
-        (, uint64 migratedAt,,) = xmetro.yThorPositions(userA);
+        (, uint64 migratedAt,,) = xmetro.yThorPositions(userA, 0);
 
         vm.warp(uint256(migratedAt) + first);
-        (, uint256 firstRate,,,) = xmetro.previewYThorExit(userA);
+        (, uint256 firstRate,,,) = xmetro.previewYThorExit(userA, 0);
         vm.warp(uint256(migratedAt) + second);
-        (, uint256 secondRate,,,) = xmetro.previewYThorExit(userA);
+        (, uint256 secondRate,,,) = xmetro.previewYThorExit(userA, 0);
         assertLe(firstRate, secondRate);
         assertLe(secondRate, 5_000);
     }
@@ -154,21 +154,21 @@ contract xMETROFuzzTest is Test {
     ) public {
         uint256 principal = bound(uint256(principalSeed), 1e6, 1e24);
         uint256 rewards = bound(uint256(rewardsSeed), 10, 1e24);
-        uint256 elapsed = bound(uint256(eligibleElapsedSeed), 120 days, 120 days + 5 * 365 days);
+        uint256 elapsed = bound(uint256(eligibleElapsedSeed), 120 days, 120 days + 4 * 365 days);
         xmetro.creditYThorFromMigration(userA, principal);
         _stake(userB, principal);
         _deposit(rewards);
         uint256 pendingBefore = xmetro.claimable(userA);
-        (, uint64 migratedAt,,) = xmetro.yThorPositions(userA);
+        (, uint64 migratedAt,,) = xmetro.yThorPositions(userA, 0);
         vm.warp(uint256(migratedAt) + elapsed);
 
         vm.prank(userA);
-        xmetro.exitYThor(XMetroCore.ExitMode.Liquid);
-        assertApproxEqAbs(xmetro.claimable(userA), pendingBefore, 1);
+        xmetro.exitYThor(0, XMetroCore.ExitMode.Liquid);
+        assertEq(xmetro.claimable(userA), pendingBefore);
 
         uint256 afterExit = xmetro.claimable(userA);
         _deposit(rewards);
-        assertApproxEqAbs(xmetro.claimable(userA), afterExit, 1);
+        assertEq(xmetro.claimable(userA), afterExit);
         assertGt(xmetro.claimable(userB), 0);
     }
 
@@ -183,15 +183,15 @@ contract xMETROFuzzTest is Test {
         _stake(userA, freeAmount);
         xmetro.creditThorFromMigration(userA, thorAmount);
         xmetro.creditYThorFromMigration(userA, yThorAmount);
-        (, uint64 migratedAt,,) = xmetro.yThorPositions(userA);
+        (, uint64 migratedAt,,) = xmetro.yThorPositions(userA, 0);
         vm.warp(uint256(migratedAt) + 120 days);
 
         vm.prank(userA);
-        xmetro.exitYThor(XMetroCore.ExitMode.Liquid);
+        xmetro.exitYThor(0, XMetroCore.ExitMode.Liquid);
         assertEq(xmetro.balanceOf(userA), freeAmount);
         assertEq(xmetro.lockedShares(userA), thorAmount);
         assertEq(xmetro.rewardWeightOf(userA), freeAmount + thorAmount);
-        (uint128 storedThor,,, bool thorExited) = xmetro.thorPositions(userA);
+        (uint128 storedThor,,, bool thorExited) = xmetro.thorPositions(userA, 0);
         assertEq(storedThor, thorAmount);
         assertFalse(thorExited);
     }
@@ -205,7 +205,7 @@ contract xMETROFuzzTest is Test {
         uint256 principal = bound(uint256(principalSeed), 1 ether, 1e24);
         uint256 rewardUnits = bound(uint256(rewardUnitsSeed), 1, 1e12);
         uint256 rewards = rewardUnits * 3;
-        uint256 elapsed = bound(uint256(elapsedSeed), 120 days, 120 days + 5 * 365 days);
+        uint256 elapsed = bound(uint256(elapsedSeed), 120 days, 120 days + 4 * 365 days);
         xmetro.creditYThorFromMigration(userA, principal);
         _stake(userB, principal);
         _deposit(rewards);
@@ -223,11 +223,11 @@ contract xMETROFuzzTest is Test {
         xmetro.autocompound(compounded, block.timestamp + 1 days, "");
         assertEq(xmetro.balanceOf(userA), compounded);
 
-        (, uint64 migratedAt,,) = xmetro.yThorPositions(userA);
+        (, uint64 migratedAt,,) = xmetro.yThorPositions(userA, 0);
         vm.warp(uint256(migratedAt) + elapsed);
-        (,, uint256 payout,,) = xmetro.previewYThorExit(userA);
+        (,, uint256 payout,,) = xmetro.previewYThorExit(userA, 0);
         vm.prank(userA);
-        xmetro.exitYThor(stakeExit ? XMetroCore.ExitMode.Stake : XMetroCore.ExitMode.Liquid);
+        xmetro.exitYThor(0, stakeExit ? XMetroCore.ExitMode.Stake : XMetroCore.ExitMode.Liquid);
 
         assertEq(xmetro.lockedShares(userA), 0);
         assertEq(_activeYThorPrincipal(userA), 0);
@@ -334,8 +334,69 @@ contract xMETROFuzzTest is Test {
         assertEq(usdc.balanceOf(address(xmetro)), firstUnit * 6 + secondUnit * 6 - firstExpected - secondExpected);
     }
 
-    function _activeYThorPrincipal(address user) private view returns (uint256) {
-        (uint128 principal,,, bool exited) = xmetro.yThorPositions(user);
-        return exited ? 0 : uint256(principal);
+    function _activeYThorPrincipal(address user) private view returns (uint256 total) {
+        for (uint256 id; id < xmetro.yThorPositionCount(user); ++id) {
+            (uint128 principal,,, bool exited) = xmetro.yThorPositions(user, id);
+            if (!exited) total += principal;
+        }
+    }
+
+    function testFuzz_RewardSequenceMatchesAccrualModel(uint256 seed) public {
+        address[2] memory accounts = [userA, userB];
+        uint256[2] memory free = [uint256(2 ether), uint256(3 ether)];
+        uint256[2] memory yPrincipal;
+        uint256[2] memory earnedScaled;
+        _stake(userA, free[0]);
+        _stake(userB, free[1]);
+        uint256 weightBps = 20_000;
+        uint256 deposited;
+        uint256 paid;
+        for (uint256 step; step < 32; ++step) {
+            seed = uint256(keccak256(abi.encode(seed, step)));
+            uint256 actor = (seed >> 8) % 2;
+            uint256 other = 1 - actor;
+            uint256 amount = (seed >> 16) % 1e18 + 1;
+            uint256 action = seed % 6;
+            if (action == 0) {
+                uint256 reward = (seed >> 32) % 1e6 + 1;
+                uint256 activeY = yPrincipal[0] + yPrincipal[1];
+                uint256 yWeight = activeY * weightBps / 10_000;
+                uint256 weight = free[0] + free[1] + yWeight;
+                if (weight != 0) {
+                    uint256 delta = reward * 1e24 / weight;
+                    uint256 yDelta = activeY == 0 ? 0 : delta * yWeight / activeY;
+                    for (uint256 j; j < 2; ++j) {
+                        earnedScaled[j] += free[j] * delta + yPrincipal[j] * yDelta;
+                    }
+                    _deposit(reward);
+                    deposited += reward;
+                }
+            } else if (action == 1) {
+                xmetro.creditYThorFromMigration(accounts[actor], amount);
+                yPrincipal[actor] += amount;
+            } else if (action == 2) {
+                _stake(accounts[actor], amount);
+                free[actor] += amount;
+            } else if (action == 3) {
+                amount = free[actor] == 0 ? 0 : amount % (free[actor] + 1);
+                vm.prank(accounts[actor]);
+                xmetro.transfer(accounts[other], amount);
+                free[actor] -= amount;
+                free[other] += amount;
+            } else if (action == 4) {
+                uint256 expected = earnedScaled[actor] / 1e24;
+                vm.prank(accounts[actor]);
+                assertEq(xmetro.claimRewards(), expected);
+                earnedScaled[actor] -= expected * 1e24;
+                paid += expected;
+            } else {
+                weightBps = (seed >> 24) % 50_001;
+                xmetro.setYThorRewardWeightBps(weightBps);
+            }
+            assertEq(xmetro.claimable(userA), earnedScaled[0] / 1e24);
+            assertEq(xmetro.claimable(userB), earnedScaled[1] / 1e24);
+            assertLe(xmetro.claimable(userA) + xmetro.claimable(userB), usdc.balanceOf(address(xmetro)));
+            assertEq(paid + usdc.balanceOf(address(xmetro)), deposited);
+        }
     }
 }
