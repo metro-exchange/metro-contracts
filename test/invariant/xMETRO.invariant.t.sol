@@ -78,11 +78,11 @@ contract xMETROInvariantTest is StdInvariant, Test {
         );
     }
 
-    function invariant_ActiveYThorPrincipalMatchesOpenPositionAndIsZeroAfterExit() public view {
+    function invariant_PositionCountsMatchSuccessfulCredits() public view {
         for (uint256 i; i < handler.actorsLength(); i++) {
             address actor = handler.actorAt(i);
-            (uint128 principal,,, bool exited) = xmetro.yThorPositions(actor);
-            assertEq(_activeYThorPrincipal(actor), principal == 0 || exited ? 0 : uint256(principal));
+            assertEq(xmetro.thorPositionCount(actor), handler.thorCredits(actor));
+            assertEq(xmetro.yThorPositionCount(actor), handler.yThorCredits(actor));
         }
     }
 
@@ -103,6 +103,12 @@ contract xMETROInvariantTest is StdInvariant, Test {
     }
 
     function invariant_ClaimedRewardsAndContractBalanceMatchDeposits() public view {
+        uint256 payableRewards;
+        for (uint256 i; i < handler.actorsLength(); ++i) {
+            payableRewards += xmetro.claimable(handler.actorAt(i));
+        }
+        assertLe(payableRewards, usdc.balanceOf(address(xmetro)));
+        assertEq(handler.unexpectedClaimFailures(), 0);
         assertLe(handler.totalRewardsClaimed(), handler.totalRewardsDeposited());
         assertEq(handler.totalRewardsDeposited(), handler.totalRewardsClaimed() + usdc.balanceOf(address(xmetro)));
     }
@@ -110,14 +116,23 @@ contract xMETROInvariantTest is StdInvariant, Test {
     function invariant_EachMigrationPositionCanExitAtMostOnce() public view {
         for (uint256 i; i < handler.actorsLength(); i++) {
             address actor = handler.actorAt(i);
-            assertLe(handler.thorExitSuccesses(actor), 1);
-            assertLe(handler.yThorExitSuccesses(actor), 1);
+            for (uint256 j; j < xmetro.thorPositionCount(actor); ++j) {
+                (,,, bool exited) = xmetro.thorPositions(actor, j);
+                assertEq(handler.thorExitSuccesses(actor, j), exited ? 1 : 0);
+            }
+            for (uint256 j; j < xmetro.yThorPositionCount(actor); ++j) {
+                (,,, bool exited) = xmetro.yThorPositions(actor, j);
+                assertEq(handler.yThorExitSuccesses(actor, j), exited ? 1 : 0);
+            }
         }
+        assertEq(handler.unexpectedExitFailures(), 0);
     }
 
-    function _activeYThorPrincipal(address actor) internal view returns (uint256) {
-        (uint128 principal,,, bool exited) = xmetro.yThorPositions(actor);
-        return exited ? 0 : uint256(principal);
+    function _activeYThorPrincipal(address actor) internal view returns (uint256 total) {
+        for (uint256 i; i < xmetro.yThorPositionCount(actor); ++i) {
+            (uint128 principal,,, bool exited) = xmetro.yThorPositions(actor, i);
+            if (!exited) total += principal;
+        }
     }
 
     function _outstandingFree(address actor) internal view returns (uint256 amount) {
@@ -152,8 +167,12 @@ contract xMETROHandlerV2 is Test {
     address[] internal actors;
     uint256 public totalRewardsDeposited;
     uint256 public totalRewardsClaimed;
-    mapping(address => uint256) public thorExitSuccesses;
-    mapping(address => uint256) public yThorExitSuccesses;
+    mapping(address => mapping(uint256 => uint256)) public thorExitSuccesses;
+    mapping(address => mapping(uint256 => uint256)) public yThorExitSuccesses;
+    mapping(address => uint256) public thorCredits;
+    mapping(address => uint256) public yThorCredits;
+    uint256 public unexpectedClaimFailures;
+    uint256 public unexpectedExitFailures;
 
     constructor(XMetroCore xmetro_, MetroToken metro_, ERC20Mintable usdc_, address[] memory actors_) {
         xmetro = xmetro_;
@@ -196,15 +215,15 @@ contract xMETROHandlerV2 is Test {
 
     function creditThor(uint256 actorSeed, uint96 amountSeed) external {
         address actor = _actor(actorSeed);
-        (uint128 principal,,,) = xmetro.thorPositions(actor);
-        if (principal != 0) return;
+        if (xmetro.thorPositionCount(actor) >= 20) return;
+        thorCredits[actor]++;
         xmetro.creditThorFromMigration(actor, bound(uint256(amountSeed), 1, 1_000 ether));
     }
 
     function creditYThor(uint256 actorSeed, uint96 amountSeed) external {
         address actor = _actor(actorSeed);
-        (uint128 principal,,,) = xmetro.yThorPositions(actor);
-        if (principal != 0) return;
+        if (xmetro.yThorPositionCount(actor) >= 20) return;
+        yThorCredits[actor]++;
         uint256 amount = bound(uint256(amountSeed), 1, 1_000 ether);
         xmetro.creditYThorFromMigration(actor, amount);
     }
@@ -237,29 +256,38 @@ contract xMETROHandlerV2 is Test {
         xmetro.requestUnstake(amount);
     }
 
-    function exitThor(uint256 actorSeed, bool stakeMode) external {
+    function exitThor(uint256 actorSeed, uint256 positionSeed, bool stakeMode) external {
         address actor = _actor(actorSeed);
-        (uint128 principal,, uint64 exitedAt,) = xmetro.thorPositions(actor);
-        if (principal == 0 || exitedAt != 0 || xmetro.unstakeRequestCountThor(actor) >= 2) return;
+        uint256 count = xmetro.thorPositionCount(actor);
+        if (count == 0) return;
+        uint256 id = positionSeed % count;
+        (bool eligible,,,,) = xmetro.previewThorExit(actor, id);
+        if (!eligible) return;
         vm.prank(actor);
         bool ok;
-        if (stakeMode) (ok,) = address(xmetro).call(abi.encodeCall(XMetroCore.exitAndStakeThor, ()));
-        else (ok,) = address(xmetro).call(abi.encodeCall(XMetroCore.requestThorExit, ()));
-        if (ok) thorExitSuccesses[actor]++;
+        if (stakeMode) (ok,) = address(xmetro).call(abi.encodeCall(XMetroCore.exitAndStakeThor, (id)));
+        else (ok,) = address(xmetro).call(abi.encodeCall(XMetroCore.requestThorExit, (id)));
+        if (ok) thorExitSuccesses[actor][id]++;
+        else unexpectedExitFailures++;
     }
 
-    function exitYThor(uint256 actorSeed, bool stakeMode) external {
+    function exitYThor(uint256 actorSeed, uint256 positionSeed, bool stakeMode) external {
         address actor = _actor(actorSeed);
-        (uint128 principal,, uint64 exitedAt,) = xmetro.yThorPositions(actor);
-        if (principal == 0 || exitedAt != 0 || xmetro.unstakeRequestCountYThor(actor) >= 2) return;
+        uint256 count = xmetro.yThorPositionCount(actor);
+        if (count == 0) return;
+        uint256 id = positionSeed % count;
+        (bool eligible,,,,) = xmetro.previewYThorExit(actor, id);
+        if (!eligible) return;
         vm.prank(actor);
-        (bool ok,) = address(xmetro)
+        bool ok;
+        (ok,) = address(xmetro)
             .call(
                 abi.encodeCall(
-                    XMetroCore.exitYThor, (stakeMode ? XMetroCore.ExitMode.Stake : XMetroCore.ExitMode.Liquid)
+                    XMetroCore.exitYThor, (id, stakeMode ? XMetroCore.ExitMode.Stake : XMetroCore.ExitMode.Liquid)
                 )
             );
-        if (ok) yThorExitSuccesses[actor]++;
+        if (ok) yThorExitSuccesses[actor][id]++;
+        else unexpectedExitFailures++;
     }
 
     function claimContributorAsShares(uint256 actorSeed) external {
@@ -288,6 +316,7 @@ contract xMETROHandlerV2 is Test {
     function depositRewards(uint96 amountSeed) external {
         if (xmetro.totalRewardWeight() == 0) return;
         uint256 amount = bound(uint256(amountSeed), 1, 1_000_000e6);
+        if (amount * 1e24 < xmetro.totalRewardWeight()) return;
         usdc.mint(address(this), amount);
         xmetro.depositRewards(amount);
         totalRewardsDeposited += amount;
@@ -298,7 +327,9 @@ contract xMETROHandlerV2 is Test {
         vm.prank(actor);
         try xmetro.claimRewards() returns (uint256 paid) {
             totalRewardsClaimed += paid;
-        } catch {}
+        } catch {
+            unexpectedClaimFailures++;
+        }
     }
 
     function setYThorRewardWeight(uint16 weightSeed) external {

@@ -1,0 +1,157 @@
+{
+  "date": "2026-10-21",
+  "variant": "base-qa",
+  "baselineCommit": "60754e05436c6c8056b60eac481d0bdc96a89d4c",
+  "workingTreeUpdate": "uncommitted local changes",
+  "compiler": "0.8.30",
+  "fuzzRuns": 256,
+  "invariantRuns": 128,
+  "invariantDepth": 100,
+  "tests": {
+    "regression": {
+      "passed": 133,
+      "failed": 0,
+      "skipped": 0,
+      "command": "env -u ETH_RPC_URL -u BASE_RPC_URL FOUNDRY_PROFILE=regression forge test --offline"
+    },
+    "core": {
+      "passed": 53,
+      "failed": 0,
+      "skipped": 2,
+      "command": "env -u ETH_RPC_URL -u BASE_RPC_URL FOUNDRY_PROFILE=core forge test --offline"
+    },
+    "adapter": {
+      "passed": 43,
+      "failed": 0,
+      "skipped": 2,
+      "command": "env -u ETH_RPC_URL -u BASE_RPC_URL FOUNDRY_PROFILE=adapter forge test --offline"
+    },
+    "deployment": {
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "command": "env -u ETH_RPC_URL -u BASE_RPC_URL FOUNDRY_PROFILE=deployment-test forge test --offline"
+    }
+  },
+  "sourceSHA256": {
+    "src/RewardDistributor.sol": "011c986a295fc06b9c85a64bab85d92b5c9b6387892f94d3ba364201613f8309",
+    "src/ThorMigrationEscrow.sol": "9a81e7272449ea6ee534411b2f087e7be6973d1c4e52f02b0b57c3389e2a989b",
+    "src/XMetroCoreLogic.sol": "c3bb4ac7c6745efb22c355c4e9ab84247a875200a265b5789ef01647e5caf19f",
+    "src/XMetroDeFiAdapter.sol": "d58def990e7a19824742a0735b9ac4bdd3d7cf96787ea2a169b0db6180771645",
+    "src/interfaces/IXMetroAdapterCore.sol": "408aeec984b9e886e6a16233fe51cc9f68867e2a95822d334dfcec02a0a9b87f",
+    "src/interfaces/IXMetroDeFiAdapter.sol": "af5211cba59cd104ec55c7775d1c49f5d945fcb11c71740c6b788a888c975d7c",
+    "src/metro.sol": "c3050951e2fb3f3cef9d130f66ce81015f5cb8eb035d2765b57872df99542bf1",
+    "src/xMETRO.sol": "256be583b30007f4aa64ebc303953e177c47f2b314418629f762ef4d865f98a2"
+  },
+  "artifacts": {
+    "Core": {
+      "artifactSHA256": "2e393c7ad139df734395f38d3f8574c2fb6ba359150c682773703025c0cad1e7",
+      "runtimeTemplateBytes": 22805,
+      "initcodeBytesWithoutConstructorArguments": 24353,
+      "runtimeTemplateSHA256": "1567d2d1c199351704bc4fee872fc27f7c673f022ae2c99adbc1e41c4d79899a",
+      "initcodeSHA256": "2c95715cdfba9e97fa74a40c13217ee94965d5003f8fa2e5a0b767d2dac4ac11",
+      "runtimeTemplateKeccak256": "0x9c50f6a240d2282eeb6f447eb6d62f689fd7898a8c2ffc932b328d54626f9061",
+      "initcodeKeccak256": "0xde83d689d3e4a607ee9a596555b1b139fe91c8357fb3e58806f93cb3e6899b5d"
+    },
+    "Escrow": {
+      "artifactSHA256": "59f2aa581b0c99fd05c44e0dc06f3000b57a6c14283a1ed6620280067c1ee786",
+      "runtimeTemplateBytes": 4565,
+      "initcodeBytesWithoutConstructorArguments": 5273,
+      "runtimeTemplateSHA256": "b0ff272b028ab5eea020136f50ba700f80ffe1815a26c8a8fe744ae05310eca6",
+      "initcodeSHA256": "a1d23d1ac82116464da4d60f60c1e9f5e6259eecb0d703eac6fc541310ce8030",
+      "runtimeTemplateKeccak256": "0x25d5cc3fc678cd862c3ada612f4bd47df329639e4390d3882a22c9218adc6764",
+      "initcodeKeccak256": "0xf9304c63aabb6379c0bfcaa32004d96c46594d45f1235bd7bca63244632f9c59"
+    },
+    "Adapter": {
+      "artifactSHA256": "b8b759db26ae590dcaf6e820b6bd3e5e2573ad45df441c0e2885e014c27a2642",
+      "runtimeTemplateBytes": 20487,
+      "initcodeBytesWithoutConstructorArguments": 20690,
+      "runtimeTemplateSHA256": "79551c35d1c57a7fb8e096da759860ad771ce085451c92ae9124bcfbd70305b0",
+      "initcodeSHA256": "019f06dddcbf26f51bfd268a6d402d6280527144d3acc7f1ea7c4bd39ee9122d",
+      "runtimeTemplateKeccak256": "0x66579e3fbe076c88103c57f7946fdf3c83a048241ad0ac2859a4d41120002379",
+      "initcodeKeccak256": "0xf2b8d0ce11c2e217ade72fa4f99483bd46b99ec71b5bf616979c3b1ab893133e"
+    }
+  },
+  "integrationChecks": {
+    "xMETROABI": {
+      "added": [
+        "exitAndStakeThor(uint256)",
+        "exitYThor(uint256,uint8)",
+        "previewThorExit(address,uint256)",
+        "previewYThorExit(address,uint256)",
+        "requestThorExit(uint256)",
+        "thorPositionCount(address)",
+        "thorPositions(address,uint256)",
+        "yThorPositionCount(address)",
+        "yThorPositions(address,uint256)"
+      ],
+      "removed": [
+        "exitAndStakeThor()",
+        "exitYThor(uint8)",
+        "previewThorExit(address)",
+        "previewYThorExit(address)",
+        "requestThorExit()",
+        "thorPositions(address)",
+        "yThorPositions(address)"
+      ]
+    },
+    "ThorMigrationEscrowABI": {
+      "added": [],
+      "removed": [
+        "hasMigratedThor(address)",
+        "hasMigratedYThor(address)"
+      ]
+    },
+    "changedTrackedFiles": [
+      ".github/workflows/test.yml",
+      "CONTRACT_FUNCTION_REFERENCE.md",
+      "README.md",
+      "integration/README.md",
+      "integration/abi/ThorMigrationEscrow.json",
+      "integration/abi/xMETRO.json",
+      "integration/docs/contract-api.md",
+      "integration/docs/existing-features.md",
+      "integration/docs/new-features.md",
+      "integration/examples/README.md",
+      "integration/examples/user-actions.mjs",
+      "integration/testing/base/BASE_ONCHAIN_FUNCTIONAL_TEST_CHECKLIST.md",
+      "integration/testing/ethereum-fork/CHECKLIST.md",
+      "integration/testing/ethereum-fork/RESULTS.md",
+      "script/base-qa/deploy.mjs",
+      "src/ThorMigrationEscrow.sol",
+      "src/XMetroCoreLogic.sol",
+      "src/xMETRO.sol",
+      "test/core/XMetroCore.adapter.invariant.t.sol",
+      "test/core/XMetroCore.adapter.t.sol",
+      "test/deployment/DeployScript.t.sol",
+      "test/fork-v2/XMetroForkBase.sol",
+      "test/fork-v2/mainnet/AutoCompound.t.sol",
+      "test/fork-v2/mainnet/DeploymentGovernance.t.sol",
+      "test/fork-v2/mainnet/MigrationExit.t.sol",
+      "test/fork-v2/mainnet/TokenStakeRewards.t.sol",
+      "test/fork-v2/mainnet/YThorRewardWeight.t.sol",
+      "test/fuzz/ThorMigrationEscrow.fuzz.t.sol",
+      "test/fuzz/xMETRO.fuzz.t.sol",
+      "test/invariant/xMETRO.invariant.t.sol",
+      "test/mock/XChainAndCore.t.sol",
+      "test/unit/ThorMigrationEscrow.unit.t.sol",
+      "test/unit/YThorWeight.integration.t.sol",
+      "test/unit/xMETRO.unit.t.sol"
+    ],
+    "chineseContentMatches": 0,
+    "formatCheck": "passed",
+    "exampleSyntaxCheck": "passed"
+  },
+  "forkValidation": {
+    "status": "compile only; production time tests not executed on QA artifacts",
+    "chainId": 1,
+    "block": 26077998,
+    "publicRPC": null
+  },
+  "limitations": [
+    "Four optional ETH/Base pinned deployment checks skipped in local profiles because RPC environment variables were unset. Local CREATE and size gates passed.",
+    "No new Base deployment or on-chain acceptance. Existing addresses and permissions unchanged.",
+    "Historical protocol fixtures were reused; no fresh full gas matrix or Affiliate fee acceptance."
+  ],
+  "storageNote": "The Core and namespaced migration storage require new instances. This update is not storage-compatible with deployed legacy Core contracts."
+}

@@ -1,0 +1,478 @@
+Compiling 11 files with Solc 0.8.30
+Solc 0.8.30 finished in 26.12s
+Compiler run successful with warnings:
+Warning (9302): Return value of low-level calls not used.
+   --> test/invariant/xMETRO.invariant.t.sol:296:9:
+    |
+296 |         address(xmetro).call(abi.encodeCall(XMetroCore.claimAndStakeUnlockedContributor, (uint256(0))));
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (9302): Return value of low-level calls not used.
+   --> test/invariant/xMETRO.invariant.t.sol:303:9:
+    |
+303 |         address(xmetro).call(abi.encodeCall(XMetroCore.requestWithdrawUnlockedContributor, (uint256(0))));
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (9302): Return value of low-level calls not used.
+   --> test/invariant/xMETRO.invariant.t.sol:309:9:
+    |
+309 |         address(xmetro).call(abi.encodeCall(XMetroCore.withdrawFree, (uint256(0))));
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (9302): Return value of low-level calls not used.
+   --> test/invariant/xMETRO.invariant.t.sol:310:9:
+    |
+310 |         address(xmetro).call(abi.encodeCall(XMetroCore.withdrawThor, (uint256(0))));
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (9302): Return value of low-level calls not used.
+   --> test/invariant/xMETRO.invariant.t.sol:311:9:
+    |
+311 |         address(xmetro).call(abi.encodeCall(XMetroCore.withdrawYThor, (uint256(0))));
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (9302): Return value of low-level calls not used.
+   --> test/invariant/xMETRO.invariant.t.sol:312:9:
+    |
+312 |         address(xmetro).call(abi.encodeCall(XMetroCore.withdrawContributor, (uint256(0))));
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+Ran 1 test for test/unit/YThorWeight.integration.t.sol:YThorWeightIntegrationTest
+[PASS] test_WeightChangeAffectsEveryActivePositionProspectivelyAndExitStopsFutureRewards() (gas: 769554)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 2.61ms (238.79µs CPU time)
+
+Ran 15 tests for test/unit/RewardDistributor.t.sol:RewardDistributorTest
+[PASS] test_ChangingVaultRoutesOnlyFutureDistributionsToReplacement() (gas: 573828)
+[PASS] test_CommissionConfigurationValidationAndMigration() (gas: 1576294)
+[PASS] test_ConstructorAndOperatorPermissions() (gas: 116720)
+[PASS] test_DistributeFromBalanceUsesSameRouting() (gas: 238118)
+[PASS] test_OneHundredPercentSplitCanProduceZeroNetWithoutCallingDepositRewardsZero() (gas: 163437)
+[PASS] test_PartialCoverageRollsOverThroughVaultBalanceWithoutDistributorState() (gas: 402672)
+[PASS] test_RequiredTopUpFailureRollsBackPulledFunds() (gas: 162408)
+[PASS] test_RescueOnlyOwnerAndBadRecipient() (gas: 68923)
+[PASS] test_ShortfallAboveCapSendsOnlyConfiguredSlice() (gas: 230407)
+[PASS] test_ShortfallBelowCapSendsOnlyNeedAndEmitsGrossCommissionNet() (gas: 242876)
+[PASS] test_SourceCompatibleVaultSettlementTopUpClaimAndSurplusRoundTrip() (gas: 1567553)
+[PASS] test_VaultTokenTransferFailureRollsBackPulledFundsAtomically() (gas: 6799547)
+[PASS] test_XMetroFailureRollsBackVaultTransferAndPullAtomically() (gas: 207390)
+[PASS] test_ZeroBpsBypassesVaultCompletely() (gas: 201913)
+[PASS] test_ZeroBpsIsRecoveryPathWhenConfiguredVaultLaterPauses() (gas: 232966)
+Suite result: ok. 15 passed; 0 failed; 0 skipped; finished in 6.67ms (3.13ms CPU time)
+
+Ran 3 tests for test/fuzz/MetroToken.fuzz.t.sol:MetroTokenFuzzTest
+[PASS] testFuzz_ImmutableCapAndMultipleMintersNeverExceedIt(uint128) (runs: 256, μ: 1108916, ~: 1108851)
+[PASS] testFuzz_MintRespectsAllowlist(address,address,uint96,bool) (runs: 256, μ: 1030104, ~: 997712)
+[PASS] test_DeadAddressTransferNeverRestoresMintCapacity() (gas: 1094047)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 31.95ms (45.40ms CPU time)
+
+Ran 14 tests for test/unit/ThorMigrationEscrow.unit.t.sol:ThorMigrationEscrowUnitTest
+[PASS] test_BaseQaZeroStartUsesDeploymentTimestamp() (gas: 1074990)
+[PASS] test_CapsRemainOwnerConfigurableAfterMigration() (gas: 195803)
+[PASS] test_ConfigurationPermissionsValidationAndEvents() (gas: 1193644)
+[PASS] test_ConstructorRejectsInvalidInputs() (gas: 254533)
+[PASS] test_DifferentAddressesHaveIndependentCredits() (gas: 233552)
+[PASS] test_FailedLaterCreditPreservesEarlierMigration() (gas: 224345)
+[PASS] test_FailedTokenTransferDoesNotConsumeCreditOrCap() (gas: 120627)
+[PASS] test_FailedXMetroCreditRollsBackTokensCreditAndCap() (gas: 154572)
+[PASS] test_MigrateThorUsesUnifiedRatioAndCreatesIndependentCredits() (gas: 208117)
+[PASS] test_MigrateYThorUsesPrincipalCapAndCreditsPrincipal() (gas: 209721)
+[PASS] test_MigrationIsAllowedExactlyAtStartAndDeadline() (gas: 1494750)
+[PASS] test_MigrationValidationStartDeadlineCapZeroAndZeroMint() (gas: 3562876)
+[PASS] test_PauseAndRescueProtections() (gas: 203729)
+[PASS] test_ThorAndYThorRepeatedMigrationsAreIndependent() (gas: 378689)
+Suite result: ok. 14 passed; 0 failed; 0 skipped; finished in 1.37ms (1.07ms CPU time)
+
+Ran 3 tests for test/mock/XChainAndCore.t.sol:CoreIntegrationTest
+[PASS] test_ContributorPathRemainsSixMonthCliffAndTwoPointFiveYears() (gas: 254081)
+[PASS] test_EndToEndMigrationsRewardsCommissionAndLiquidExits() (gas: 1034394)
+[PASS] test_RepeatedMigrationAfterExitPreservesCapsAndRollback() (gas: 1111942)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 1.16ms (509.67µs CPU time)
+
+Ran 53 tests for test/unit/xMETRO.unit.t.sol:xMETROUnitTest
+[PASS] testFuzz_RepeatedCreditsCannotClaimHistoricalRewards(bool) (runs: 256, μ: 818622, ~: 775137)
+[PASS] test_AddingYThorWeightCannotClaimHistoricalRewards() (gas: 435743)
+[PASS] test_BaseQaForfeitureRecipientCanFollowOwnerHandover() (gas: 478604)
+[PASS] test_BatchAutocompoundRequiresOperatorAndSkipsDisabledUsers() (gas: 1352144)
+[PASS] test_BatchAutocompoundUsesYThorTwoXPendingAndMintsProRata() (gas: 1450879)
+[PASS] test_ConstructorAndConfigurationValidation() (gas: 9780786)
+[PASS] test_ContributorSixMonthCliffTwoPointFiveYearLinearAndBothExitModes() (gas: 392443)
+[PASS] test_CoreCriticalSettingsCanBeChangedWhileUnpaused() (gas: 906868)
+[PASS] test_DefaultUnpausedAllowsStakeAndClaim() (gas: 281138)
+[PASS] test_DepositRevertsInsteadOfTrappingRewardsWhenConfiguredWeightRoundsDeltaToZero() (gas: 301439)
+[PASS] test_EmergencyDistributeCalculatesOnchainSkipsInvalidAndPaysDuplicateOnce() (gas: 411664)
+[PASS] test_EmergencyDistributeGuardsAndTransferFailureAreAtomic() (gas: 501279)
+[PASS] test_EmergencyDistributeHasNoFixedCandidateLimit() (gas: 319100)
+[PASS] test_EmptyAndOutOfRangePositionQueries() (gas: 200043)
+[PASS] test_FractionalYThorWeightRoundingCannotCreateUnbackedRewards() (gas: 343297)
+[PASS] test_FreeQueueBatchStopsAtMaxRequests() (gas: 295752)
+[PASS] test_GlobalFractionalWeightRoundingAcrossMultipleYThorUsersCannotOverclaim() (gas: 543596)
+[PASS] test_LaterMintFailureRollsBackPositionCacheDebtAndShares() (gas: 417192)
+[PASS] test_MigrationCreditOnlyEscrowAndAmountBounds() (gas: 49341)
+[PASS] test_MigrationCreditsMultiplePositionsAndTracksActiveYThorPrincipalWithoutVirtualMint() (gas: 433620)
+[PASS] test_MixedAccumulatorsCombineFractionsAndEmergencyPreservesRemainder() (gas: 586978)
+[PASS] test_MixedSourcesRemainIsolatedWhenYThorExits() (gas: 554267)
+[PASS] test_MultiplePositionsUseIndependentClocksAndStableIds() (gas: 912268)
+[PASS] test_OnlyOwnerCanRenounceAndCannotRecoverOwnership() (gas: 33078)
+[PASS] test_PauseCoversCreditsExitsRewardsWithdrawalsAndAutocompound() (gas: 434465)
+[PASS] test_PreviewWithdrawableNowTracksThorAndYThorSchedules() (gas: 289698)
+[PASS] test_RenouncePreservesPendingAndUserWithdrawal() (gas: 379991)
+[PASS] test_RenounceWhilePausedCannotBeUnpausedByFormerOwner() (gas: 25916)
+[PASS] test_RescueCannotRemoveBackingMETRO() (gas: 705012)
+[PASS] test_RewardDebtFollowsFreeShareTransfers() (gas: 362985)
+[PASS] test_ScaledDebtRejectsSignedOverflowAndRollsBack() (gas: 375354)
+[PASS] test_SingleStepOwnershipRejectsZeroAndRevokesOldOwner() (gas: 49994)
+[PASS] test_StakeAndFreeUnstakeUseExact72HourQueue() (gas: 280843)
+[PASS] test_StakeRewardContributorAndOwnerConfigurationGuards() (gas: 920477)
+[PASS] test_ThorAndYThorLiquidQueuesEnforceExact72HourBoundaryForSameUser() (gas: 494667)
+[PASS] test_ThorCannotExitBeforeDay30OrWhenNoPosition() (gas: 190366)
+[PASS] test_ThorClaimAndStakeAtDay30HasNoLiquidQueue() (gas: 258650)
+[PASS] test_ThorExitPreviewBoundariesAreLinearFromDay30ToDay90() (gas: 192184)
+[PASS] test_ThorLiquidExitClosesPositionPreservesPendingAndUsesQueue() (gas: 443260)
+[PASS] test_YThorAutocompoundUsesTwoXPendingAndKeepsLockedPosition() (gas: 1249808)
+[PASS] test_YThorCannotExitBeforeDay120OrWithoutPosition() (gas: 236065)
+[PASS] test_YThorClaimAndStakeClosesPositionAndHasNoQueue() (gas: 284322)
+[PASS] test_YThorClaimAndStakePreservesEarnedRewardsAndUsesOnlyPayoutAsFutureWeight() (gas: 545775)
+[PASS] test_YThorExitPreviewStartsDay120ThenRunsQATwelveHours() (gas: 245871)
+[PASS] test_YThorExitRemovesActivePrincipalAfterWeightChange() (gas: 295527)
+[PASS] test_YThorGetsTwoThirdsOfRewardsAgainstEqualNormalPrincipal() (gas: 428103)
+[PASS] test_YThorLiquidExitRemovesPrincipalAndBonusAndPreservesPending() (gas: 597174)
+[PASS] test_YThorPrincipalUsesIndependentAccumulator() (gas: 426006)
+[PASS] test_YThorQuarterBoundariesAndActualOneTimePayouts() (gas: 646024)
+[PASS] test_YThorRewardWeightSupportsSubOneXAndZeroWithoutPause() (gas: 37867)
+[PASS] test_ZeroAndSubOneXWeightsUseIndependentYThorAccumulator() (gas: 442639)
+[PASS] test_ZeroClaimsAndTransfersPreserveFractionsAndNegativeDebt() (gas: 685390)
+[PASS] test_ZeroWeightWithOnlyYThorRejectsRewardDepositAtomically() (gas: 292803)
+Suite result: ok. 53 passed; 0 failed; 0 skipped; finished in 72.99ms (76.09ms CPU time)
+
+Ran 15 tests for test/unit/MetroToken.t.sol:MetroTokenTest
+[PASS] test_Constructor_SetsImmutableCap() (gas: 6696)
+[PASS] test_Constructor_SetsOwnerAndNoDefaultMinter() (gas: 25918)
+[PASS] test_DomainSeparator_NotZero() (gas: 5607)
+[PASS] test_Mint_CrossingCapRevertsAtomically() (gas: 93010)
+[PASS] test_Mint_MultipleMintersShareOneCap() (gas: 124986)
+[PASS] test_Mint_OnlyMinter() (gas: 130502)
+[PASS] test_Permit_Expired_Reverts() (gas: 13969)
+[PASS] test_Permit_ReplaySignature_RevertsInvalidSigner() (gas: 159435)
+[PASS] test_Permit_Success_SetsAllowance_AndIncrementsNonce() (gas: 161562)
+[PASS] test_RenounceOwnership_DisablesOnlyOwner_ButDoesNotRevokeMinter() (gas: 96414)
+[PASS] test_SetMinter_EmitsEvent_AndToggle() (gas: 33756)
+[PASS] test_SetMinter_OnlyOwner() (gas: 45043)
+[PASS] test_TransferOwnership_ChangesOnlyOwnerPermissions() (gas: 50394)
+[PASS] test_TransferOwnership_DoesNotAutoGrantMinterToNewOwner() (gas: 99045)
+[PASS] test_TransferToDeadAddressDoesNotBurnOrRestoreCap() (gas: 119381)
+Suite result: ok. 15 passed; 0 failed; 0 skipped; finished in 2.26ms (1.62ms CPU time)
+
+Ran 3 tests for test/fuzz/RewardDistributor.fuzz.t.sol:RewardDistributorFuzzTest
+[PASS] testFuzz_DistributeFromBalanceUsesIdenticalFormula(uint128,uint16,uint128) (runs: 256, μ: 211943, ~: 217071)
+[PASS] testFuzz_GrossAlwaysEqualsCommissionPlusNetAndObeysBothBounds(uint128,uint16,uint128) (runs: 256, μ: 243289, ~: 247411)
+[PASS] testFuzz_RolloverAcrossManyDistributionsNeedsNoDistributorAccounting(uint96,uint16,uint96,uint8) (runs: 256, μ: 643229, ~: 557313)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 271.32ms (270.67ms CPU time)
+
+Ran 4 tests for test/fuzz/ThorMigrationEscrow.fuzz.t.sol:ThorMigrationEscrowFuzzTest
+[PASS] testFuzz_CapFailureLeavesBalanceCountersAndCreditsUnchanged(uint96,uint96) (runs: 256, μ: 136268, ~: 136194)
+[PASS] testFuzz_RandomAmountAndRatioUseFullPrecisionMath(uint128,uint128,bool) (runs: 256, μ: 1334870, ~: 1334746)
+[PASS] testFuzz_RepeatedMigrationCreditsAndCumulativeCaps(uint96,uint8,bool) (runs: 256, μ: 301571, ~: 294072)
+[PASS] testFuzz_YThorCapCountsPrincipal(uint96) (runs: 256, μ: 200185, ~: 200151)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 1.31s (98.33ms CPU time)
+
+Ran 3 tests for test/invariant/RewardDistributor.invariant.t.sol:RewardDistributorInvariantTest
+[PASS] invariant_GrossAlwaysEqualsCommissionPlusNet() (runs: 128, calls: 12800, reverts: 4338)
+
+╭--------------------------+---------------------+-------+---------+----------╮
+| Contract                 | Selector            | Calls | Reverts | Discards |
++=============================================================================+
+| RewardDistributorHandler | distribute          | 4338  | 4338    | 0        |
+|--------------------------+---------------------+-------+---------+----------|
+| RewardDistributorHandler | increaseVaultTarget | 4245  | 0       | 0        |
+|--------------------------+---------------------+-------+---------+----------|
+| RewardDistributorHandler | setBps              | 4217  | 0       | 0        |
+╰--------------------------+---------------------+-------+---------+----------╯
+
+[PASS] invariant_RoutedTokenBalancesMatchAccountingAndDistributorRetainsNothing() (runs: 128, calls: 12800, reverts: 4338)
+
+╭--------------------------+---------------------+-------+---------+----------╮
+| Contract                 | Selector            | Calls | Reverts | Discards |
++=============================================================================+
+| RewardDistributorHandler | distribute          | 4338  | 4338    | 0        |
+|--------------------------+---------------------+-------+---------+----------|
+| RewardDistributorHandler | increaseVaultTarget | 4245  | 0       | 0        |
+|--------------------------+---------------------+-------+---------+----------|
+| RewardDistributorHandler | setBps              | 4217  | 0       | 0        |
+╰--------------------------+---------------------+-------+---------+----------╯
+
+[PASS] invariant_VaultIsNeverFundedAboveItsNondecreasingTarget() (runs: 128, calls: 12800, reverts: 4338)
+
+╭--------------------------+---------------------+-------+---------+----------╮
+| Contract                 | Selector            | Calls | Reverts | Discards |
++=============================================================================+
+| RewardDistributorHandler | distribute          | 4338  | 4338    | 0        |
+|--------------------------+---------------------+-------+---------+----------|
+| RewardDistributorHandler | increaseVaultTarget | 4245  | 0       | 0        |
+|--------------------------+---------------------+-------+---------+----------|
+| RewardDistributorHandler | setBps              | 4217  | 0       | 0        |
+╰--------------------------+---------------------+-------+---------+----------╯
+
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 1.50s (4.02s CPU time)
+
+Ran 2 tests for test/invariant/MetroToken.invariant.t.sol:MetroTokenInvariantTest
+[PASS] invariant_TotalSupplyEqualsTrackedActorBalances() (runs: 128, calls: 12800, reverts: 0)
+
+╭-------------------+----------------+-------+---------+----------╮
+| Contract          | Selector       | Calls | Reverts | Discards |
++=================================================================+
+| MetroTokenHandler | mint           | 4320  | 0       | 0        |
+|-------------------+----------------+-------+---------+----------|
+| MetroTokenHandler | setMinter      | 4232  | 0       | 0        |
+|-------------------+----------------+-------+---------+----------|
+| MetroTokenHandler | transferTokens | 4248  | 0       | 0        |
+╰-------------------+----------------+-------+---------+----------╯
+
+[PASS] invariant_TotalSupplyNeverExceedsImmutableCap() (runs: 128, calls: 12800, reverts: 0)
+
+╭-------------------+----------------+-------+---------+----------╮
+| Contract          | Selector       | Calls | Reverts | Discards |
++=================================================================+
+| MetroTokenHandler | mint           | 4320  | 0       | 0        |
+|-------------------+----------------+-------+---------+----------|
+| MetroTokenHandler | setMinter      | 4232  | 0       | 0        |
+|-------------------+----------------+-------+---------+----------|
+| MetroTokenHandler | transferTokens | 4248  | 0       | 0        |
+╰-------------------+----------------+-------+---------+----------╯
+
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 1.91s (3.06s CPU time)
+
+Ran 6 tests for test/invariant/xMETRO.invariant.t.sol:xMETROInvariantTest
+[PASS] invariant_ClaimedRewardsAndContractBalanceMatchDeposits() (runs: 128, calls: 12800, reverts: 853)
+
+╭-----------------+--------------------------+-------+---------+----------╮
+| Contract        | Selector                 | Calls | Reverts | Discards |
++=========================================================================+
+| xMETROHandlerV2 | advanceTime              | 836   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | claimContributorAsShares | 869   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | claimRewards             | 860   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | creditThor               | 873   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | creditYThor              | 833   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | depositRewards           | 887   | 853     | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | exitThor                 | 880   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | exitYThor                | 803   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | requestContributor       | 858   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | requestFreeUnstake       | 827   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | setYThorRewardWeight     | 872   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | stake                    | 826   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | stakeContributor         | 855   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | transferShares           | 841   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | withdrawQueues           | 880   | 0       | 0        |
+╰-----------------+--------------------------+-------+---------+----------╯
+
+[PASS] invariant_EachMigrationPositionCanExitAtMostOnce() (runs: 128, calls: 12800, reverts: 853)
+
+╭-----------------+--------------------------+-------+---------+----------╮
+| Contract        | Selector                 | Calls | Reverts | Discards |
++=========================================================================+
+| xMETROHandlerV2 | advanceTime              | 836   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | claimContributorAsShares | 869   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | claimRewards             | 860   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | creditThor               | 873   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | creditYThor              | 833   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | depositRewards           | 887   | 853     | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | exitThor                 | 880   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | exitYThor                | 803   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | requestContributor       | 858   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | requestFreeUnstake       | 827   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | setYThorRewardWeight     | 872   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | stake                    | 826   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | stakeContributor         | 855   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | transferShares           | 841   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | withdrawQueues           | 880   | 0       | 0        |
+╰-----------------+--------------------------+-------+---------+----------╯
+
+[PASS] invariant_GlobalAndPerUserRewardWeightFormulaAlwaysHolds() (runs: 128, calls: 12800, reverts: 853)
+
+╭-----------------+--------------------------+-------+---------+----------╮
+| Contract        | Selector                 | Calls | Reverts | Discards |
++=========================================================================+
+| xMETROHandlerV2 | advanceTime              | 836   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | claimContributorAsShares | 869   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | claimRewards             | 860   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | creditThor               | 873   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | creditYThor              | 833   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | depositRewards           | 887   | 853     | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | exitThor                 | 880   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | exitYThor                | 803   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | requestContributor       | 858   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | requestFreeUnstake       | 827   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | setYThorRewardWeight     | 872   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | stake                    | 826   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | stakeContributor         | 855   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | transferShares           | 841   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | withdrawQueues           | 880   | 0       | 0        |
+╰-----------------+--------------------------+-------+---------+----------╯
+
+[PASS] invariant_MetroSupplyNeverExceedsCap() (runs: 128, calls: 12800, reverts: 853)
+
+╭-----------------+--------------------------+-------+---------+----------╮
+| Contract        | Selector                 | Calls | Reverts | Discards |
++=========================================================================+
+| xMETROHandlerV2 | advanceTime              | 836   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | claimContributorAsShares | 869   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | claimRewards             | 860   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | creditThor               | 873   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | creditYThor              | 833   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | depositRewards           | 887   | 853     | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | exitThor                 | 880   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | exitYThor                | 803   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | requestContributor       | 858   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | requestFreeUnstake       | 827   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | setYThorRewardWeight     | 872   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | stake                    | 826   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | stakeContributor         | 855   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | transferShares           | 841   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | withdrawQueues           | 880   | 0       | 0        |
+╰-----------------+--------------------------+-------+---------+----------╯
+
+[PASS] invariant_PositionCountsMatchSuccessfulCredits() (runs: 128, calls: 12800, reverts: 853)
+
+╭-----------------+--------------------------+-------+---------+----------╮
+| Contract        | Selector                 | Calls | Reverts | Discards |
++=========================================================================+
+| xMETROHandlerV2 | advanceTime              | 836   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | claimContributorAsShares | 869   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | claimRewards             | 860   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | creditThor               | 873   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | creditYThor              | 833   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | depositRewards           | 887   | 853     | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | exitThor                 | 880   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | exitYThor                | 803   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | requestContributor       | 858   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | requestFreeUnstake       | 827   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | setYThorRewardWeight     | 872   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | stake                    | 826   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | stakeContributor         | 855   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | transferShares           | 841   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | withdrawQueues           | 880   | 0       | 0        |
+╰-----------------+--------------------------+-------+---------+----------╯
+
+[PASS] invariant_RealMetroBackingEqualsSharesPlusOutstandingCooldowns() (runs: 128, calls: 12800, reverts: 853)
+
+╭-----------------+--------------------------+-------+---------+----------╮
+| Contract        | Selector                 | Calls | Reverts | Discards |
++=========================================================================+
+| xMETROHandlerV2 | advanceTime              | 836   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | claimContributorAsShares | 869   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | claimRewards             | 860   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | creditThor               | 873   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | creditYThor              | 833   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | depositRewards           | 887   | 853     | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | exitThor                 | 880   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | exitYThor                | 803   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | requestContributor       | 858   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | requestFreeUnstake       | 827   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | setYThorRewardWeight     | 872   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | stake                    | 826   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | stakeContributor         | 855   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | transferShares           | 841   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | withdrawQueues           | 880   | 0       | 0        |
+╰-----------------+--------------------------+-------+---------+----------╯
+
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 6.06s (21.01s CPU time)
+
+Ran 11 tests for test/fuzz/xMETRO.fuzz.t.sol:xMETROFuzzTest
+[PASS] testFuzz_EmergencyDistributionDeduplicatesAcrossTwoBatches(uint96,uint96,uint8,uint256) (runs: 256, μ: 611230, ~: 631569)
+[PASS] testFuzz_ExitPreservesPastPendingAndStopsFutureYThorRewards(uint128,uint128,uint32) (runs: 256, μ: 527386, ~: 527425)
+[PASS] testFuzz_MixedPositionYThorExitOnlyRemovesItsOwnPrincipal(uint96,uint96,uint96) (runs: 256, μ: 430422, ~: 433457)
+[PASS] testFuzz_RewardSequenceMatchesAccrualModel(uint256) (runs: 256, μ: 1563892, ~: 1557884)
+[PASS] testFuzz_RoundedYThorWeightNeverCreatesUnbackedClaimable(uint16,uint16,uint96) (runs: 256, μ: 417958, ~: 425889)
+[PASS] testFuzz_ThorExitCurveAndFundsConservation(uint128,uint32,bool) (runs: 256, μ: 218732, ~: 242868)
+[PASS] testFuzz_WeightChangesOnlyFutureRewardsForAllActiveYThor(uint16,uint16) (runs: 256, μ: 452458, ~: 453238)
+[PASS] testFuzz_YThorExitCurveAndFundsConservation(uint128,uint32,bool) (runs: 256, μ: 257239, ~: 229191)
+[PASS] testFuzz_YThorPrincipalCreatesConfiguredRewardWeight(uint128) (runs: 256, μ: 244772, ~: 244701)
+[PASS] testFuzz_YThorRateIsMonotonic(uint32,uint32) (runs: 256, μ: 230850, ~: 230852)
+[PASS] testFuzz_YThorRewardAutocompoundThenExitSequence(uint96,uint64,uint32,bool) (runs: 256, μ: 1272366, ~: 1293039)
+Suite result: ok. 11 passed; 0 failed; 0 skipped; finished in 6.06s (11.19s CPU time)
+
+Ran 13 test suites in 6.07s (17.23s CPU time): 133 tests passed, 0 failed, 0 skipped (133 total tests)

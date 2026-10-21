@@ -8,17 +8,21 @@ import {ThorMigrationEscrow} from "../../src/ThorMigrationEscrow.sol";
 import {ERC20Mintable} from "../mocks/ERC20Mintable.sol";
 
 contract MockXMetroMigrationFuzzV2 {
+    uint256 public thorCredits;
+    uint256 public yThorCredits;
     address public thorUser;
     uint256 public thorPrincipal;
     address public yThorUser;
     uint256 public yThorPrincipal;
 
     function creditThorFromMigration(address user, uint256 principal) external {
+        thorCredits++;
         thorUser = user;
         thorPrincipal = principal;
     }
 
     function creditYThorFromMigration(address user, uint256 principal) external {
+        yThorCredits++;
         yThorUser = user;
         yThorPrincipal = principal;
     }
@@ -41,22 +45,30 @@ contract ThorMigrationEscrowFuzzTest is Test {
         escrow.setDeadlines(block.timestamp + 365 days, block.timestamp + 365 days);
     }
 
-    function testFuzz_UnifiedThorMigrationPrincipalAndOnce(uint96 rawAmount) public {
-        uint256 amount = bound(uint256(rawAmount), 1, 1_000_000 ether);
-        thor.mint(user, amount * 2);
+    function testFuzz_RepeatedMigrationCreditsAndCumulativeCaps(uint96 rawAmount, uint8 countSeed, bool migrateY)
+        public
+    {
+        uint256 count = bound(uint256(countSeed), 2, 12);
+        uint256 amount = bound(uint256(rawAmount), 1, 1_000_000 ether / count);
+        ERC20Mintable token = migrateY ? yThor : thor;
+        token.mint(user, amount * (count + 1));
         vm.prank(user);
-        thor.approve(address(escrow), type(uint256).max);
-
+        token.approve(address(escrow), type(uint256).max);
+        escrow.setCaps(amount * count, amount * count);
+        for (uint256 i; i < count; ++i) {
+            vm.prank(user);
+            if (migrateY) escrow.migrateYThor(amount);
+            else escrow.migrateThor(amount);
+        }
+        assertEq(migrateY ? escrow.migratedYThor() : escrow.migratedThor(), amount * count);
+        assertEq(migrateY ? xmetro.yThorCredits() : xmetro.thorCredits(), count);
+        assertEq(token.balanceOf(address(escrow)), amount * count);
         vm.prank(user);
-        escrow.migrateThor(amount);
-        assertEq(escrow.migratedThor(), amount);
-        assertEq(xmetro.thorUser(), user);
-        assertEq(xmetro.thorPrincipal(), amount);
-        assertTrue(escrow.hasMigratedThor(user));
-
-        vm.prank(user);
-        vm.expectRevert(bytes("ThorEscrow: thor already migrated"));
-        escrow.migrateThor(amount);
+        vm.expectRevert(migrateY ? bytes("ThorEscrow: ythor cap") : bytes("ThorEscrow: thor cap"));
+        if (migrateY) escrow.migrateYThor(amount);
+        else escrow.migrateThor(amount);
+        assertEq(token.balanceOf(user), amount);
+        assertEq(migrateY ? xmetro.yThorCredits() : xmetro.thorCredits(), count);
     }
 
     function testFuzz_RandomAmountAndRatioUseFullPrecisionMath(uint128 amountSeed, uint128 ratioSeed, bool migrateY)
@@ -104,7 +116,7 @@ contract ThorMigrationEscrowFuzzTest is Test {
         assertEq(xmetro.yThorPrincipal(), principal);
     }
 
-    function testFuzz_CapFailureLeavesBalanceCountersAndOnceFlagUnchanged(uint96 capSeed, uint96 extraSeed) public {
+    function testFuzz_CapFailureLeavesBalanceCountersAndCreditsUnchanged(uint96 capSeed, uint96 extraSeed) public {
         uint256 cap = bound(uint256(capSeed), 1, 1_000_000 ether);
         uint256 extra = bound(uint256(extraSeed), 1, 1_000_000 ether);
         escrow.setCaps(cap, 1_000_000 ether);
@@ -117,7 +129,7 @@ contract ThorMigrationEscrowFuzzTest is Test {
         vm.expectRevert(bytes("ThorEscrow: thor cap"));
         escrow.migrateThor(amount);
         assertEq(escrow.migratedThor(), 0);
-        assertFalse(escrow.hasMigratedThor(user));
+        assertEq(xmetro.thorCredits(), 0);
         assertEq(thor.balanceOf(user), amount);
         assertEq(thor.balanceOf(address(escrow)), 0);
     }

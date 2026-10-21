@@ -241,9 +241,9 @@ async function configStage() {
   const deposit = ethers.utils.formatBytes32String('P:deposit');
   const transfer = ethers.utils.formatBytes32String('P:transfer');
   const transferFrom = ethers.utils.formatBytes32String('P:transferFrom');
-  for (const [key, value] of [['deposit', deposit], ['transfer', transfer], ['transferFrom', transferFrom]]) {
+  for (const [key, value, bitmap] of [['deposit', deposit, 16], ['transfer', transfer, 0], ['transferFrom', transferFrom, 0]]) {
     await call('maple-bitmap-' + key, 'MockPoolPermissionManager', 'MockPoolPermissionManager',
-      'setPoolBitmap', [c('MockSyrupRouter'), value, 16]);
+      'setPoolBitmap', [c('MockSyrupRouter'), value, bitmap]);
   }
   await call('maple-lender-bitmap', 'MockPoolPermissionManager', 'MockPoolPermissionManager',
     'setLenderBitmap', [c('MockSyrupRouter'), 16]);

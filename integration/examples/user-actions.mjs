@@ -99,11 +99,11 @@ export async function requestAndWithdrawFree(signer, config, metroBaseUnits, max
   return { requestHash: request.hash, withdraw: () => core.withdrawFree(maxRequests) };
 }
 
-export async function exitYThor(signer, config, mode) {
+export async function exitYThor(signer, config, positionId, mode) {
   await assertChain(signer, config);
   if (mode !== 'liquid' && mode !== 'stake') throw new Error('mode must be liquid or stake');
   const core = new ethers.Contract(address(config.contracts.xMETRO, 'xMETRO'), coreAbi, signer);
-  return (await core.exitYThor(mode === 'liquid' ? 0 : 1)).wait();
+  return (await core.exitYThor(ethers.BigNumber.from(positionId), mode === 'liquid' ? 0 : 1)).wait();
 }
 
 export async function authorizeAaveV4Giver(signer, config) {

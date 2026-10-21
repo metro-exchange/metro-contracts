@@ -1,0 +1,105 @@
+No files changed, compilation skipped
+
+Ran 4 tests for test/adapter/XMetroDeFiAdapter.flows.t.sol:CompactAaveFlowTest
+[PASS] test_AaveV3ManualAndBatchExactScaledDistribution() (gas: 1234483)
+[PASS] test_AaveV4AuthorizationErrorIsTyped() (gas: 984099)
+[PASS] test_AaveV4PerUserSupplyAndMinima() (gas: 1202554)
+[PASS] test_DisableBrokenAaveV3NeverCallsOldProtocolAndRevisionAdvances() (gas: 992914)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 1.42ms (934.42µs CPU time)
+
+Ran 2 tests for test/adapter/XMetroDeFiAdapter.flows.t.sol:CompactMapleFlowTest
+[PASS] test_MapleAuthorizationErrorIsTyped() (gas: 1145856)
+[PASS] test_MapleOneDepositAndProportionalDistribution() (gas: 1309126)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 1.48ms (944.62µs CPU time)
+
+Ran 4 tests for test/adapter/XMetroDeFiAdapter.flows.t.sol:CompactAdapterConfigurationSecurityTest
+[PASS] test_AllConfigurationSettersSucceedWhileCoreIsUnpaused() (gas: 4046493)
+[PASS] test_ImplementationIsUninitializedAndCannotBeInitializedDirectly() (gas: 4192674)
+[PASS] test_ReplacedProxyCannotConfigureButPausedOwnerCanRescueIt() (gas: 5077775)
+[PASS] test_RevisionsAreMonotonicAndIdenticalConfigurationIsRejected() (gas: 1464421)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 2.28ms (1.55ms CPU time)
+
+Ran 2 tests for test/adapter/XMetroDeFiAdapter.flows.t.sol:CompactERC20ReturnShapeTest
+[PASS] test_NoReturnTransferSucceedsWhileFalseOrOversizedReturnRollsBack() (gas: 1484676)
+[PASS] test_ZeroFirstApprovalFallbackAndFailedClearAreAtomic() (gas: 6934618)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 2.37ms (1.82ms CPU time)
+
+Ran 1 test for test/adapter/XMetroDeFiAdapter.storage.t.sol:XMetroDeFiAdapterStorageTest
+[PASS] test_Erc7201NamespaceFormulaAndHeaderCanaryAreFrozen() (gas: 5651123)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 543.75µs (309.92µs CPU time)
+
+Ran 6 tests for test/adapter/XMetroDeFiAdapter.giver.t.sol:XMetroGiverSecurityTest
+[PASS] test_ConfigRequiresRegisteredActiveGiverAndCannotUseProxy() (gas: 593232)
+[PASS] test_DisableDoesNotCallBrokenGiverAndRetainsConfiguration() (gas: 58970)
+[PASS] test_DonationIsolationAndReentryGuardPreserved() (gas: 339567)
+[PASS] test_GiverAppendDoesNotMoveMapleOrExistingStorageAndSurvivesUpgrade() (gas: 6702765)
+[PASS] test_PartialConsumptionWrongReturnAndWrongSharesAreAtomic() (gas: 1238386)
+[PASS] test_RuntimeRechecksBothProtocolPermissionsAndUserApproval() (gas: 281336)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 1.99ms (1.49ms CPU time)
+
+Ran 4 tests for test/adapter/XMetroDeFiAdapter.uups.t.sol:CompactUUPSDeploymentTest
+[SKIP] test_BasePinned_CreateProxyInitializeAndUpgrade() (gas: 0)
+[SKIP] test_EthereumPinned_CreateProxyInitializeAndUpgrade() (gas: 0)
+[PASS] test_FailedUpgradeMatrixRollsBackSlotAndLogicEpoch() (gas: 9638710)
+[PASS] test_Local_CreateProxyInitializeAndUpgrade() (gas: 5222466)
+Suite result: ok. 2 passed; 0 failed; 2 skipped; finished in 1.22ms (1.15ms CPU time)
+
+Ran 6 tests for test/adapter/XMetroDeFiAdapter.fuzz.t.sol:CompactAdapterFuzzTest
+[PASS] testFuzz_BatchDistributionPreservesDonationsAndConservesEveryUnit(uint96,uint96,uint96,uint64,uint64) (runs: 256, μ: 336289, ~: 337320)
+[PASS] testFuzz_BatchUnequalQuoteDistributesEveryOutputUnit(uint64,uint8,uint16,uint8) (runs: 256, μ: 897043, ~: 881605)
+[PASS] testFuzz_OneInchOverflowingDynamicOffsetNeverReachesRouter(uint64,bool) (runs: 256, μ: 364939, ~: 364984)
+[PASS] testFuzz_OneInchTruncatedHeaderNeverReachesRouter(uint16) (runs: 256, μ: 366619, ~: 366786)
+[PASS] testFuzz_StrategyRevisionAdvancesExactlyOncePerSemanticToggle(uint8) (runs: 256, μ: 134108, ~: 110646)
+[PASS] test_BatchRejectsZeroOutputForDustUserAtomically() (gas: 303722)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 99.11ms (401.47ms CPU time)
+
+Ran 3 tests for test/adapter/XMetroDeFiAdapter.invariant.t.sol:CompactAdapterInvariantTest
+[PASS] invariant_AdapterBalancesAndAllowanceReturnToTheirPreexistingBaselines() (runs: 128, calls: 12800, reverts: 0)
+
+╭--------------------------------+----------+-------+---------+----------╮
+| Contract                       | Selector | Calls | Reverts | Discards |
++========================================================================+
+| CompactAdapterInvariantHandler | batch    | 6296  | 0       | 0        |
+|--------------------------------+----------+-------+---------+----------|
+| CompactAdapterInvariantHandler | manual   | 6504  | 0       | 0        |
+╰--------------------------------+----------+-------+---------+----------╯
+
+[PASS] invariant_AllSuccessfulInputAndOutputUnitsAreConserved() (runs: 128, calls: 12800, reverts: 0)
+
+╭--------------------------------+----------+-------+---------+----------╮
+| Contract                       | Selector | Calls | Reverts | Discards |
++========================================================================+
+| CompactAdapterInvariantHandler | batch    | 6296  | 0       | 0        |
+|--------------------------------+----------+-------+---------+----------|
+| CompactAdapterInvariantHandler | manual   | 6504  | 0       | 0        |
+╰--------------------------------+----------+-------+---------+----------╯
+
+[PASS] invariant_BindingsAndStrategyVersionNeverDriftDuringExecution() (runs: 128, calls: 12800, reverts: 0)
+
+╭--------------------------------+----------+-------+---------+----------╮
+| Contract                       | Selector | Calls | Reverts | Discards |
++========================================================================+
+| CompactAdapterInvariantHandler | batch    | 6296  | 0       | 0        |
+|--------------------------------+----------+-------+---------+----------|
+| CompactAdapterInvariantHandler | manual   | 6504  | 0       | 0        |
+╰--------------------------------+----------+-------+---------+----------╯
+
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 4.96s (13.72s CPU time)
+
+Ran 13 tests for test/adapter/XMetroDeFiAdapter.flows.t.sol:CompactSwapFlowTest
+[PASS] test_AccessAndConfigurationErrorsAreTyped() (gas: 44336)
+[PASS] test_OneInchAccountingUsesActualBalancesAndExactSpend() (gas: 835666)
+[PASS] test_OneInchBatchDistributesActualOutputProRata() (gas: 267743)
+[PASS] test_OneInchLargeReturnAndRevertDataAreBoundedAndAtomic() (gas: 614682)
+[PASS] test_OneInchMalformedSelectorOffsetAndLengthAreAtomic() (gas: 437085)
+[PASS] test_OneInchRejectsWrongCriticalFieldsAndForbiddenFlags() (gas: 708472)
+[PASS] test_ReentrantRouterIsRejectedBeforeNestedRequestValidation() (gas: 544879)
+[PASS] test_SlippageAndAccountingErrorsAreTyped() (gas: 634432)
+[PASS] test_UnderfundedCoreRequestUsesTypedAccountingFailureInsteadOfPanic() (gas: 51606)
+[PASS] test_UnknownDexAndMalformedPathsAreTypedAndAtomic() (gas: 210267)
+[PASS] test_V2AndFixedOneInchFundEnvelopes() (gas: 386212)
+[PASS] test_V2BatchEmitsOneVerifiedSettlementPerUser() (gas: 272262)
+[PASS] test_V3SingleAndMultiHopFundEnvelopes() (gas: 710701)
+Suite result: ok. 13 passed; 0 failed; 0 skipped; finished in 4.96s (4.71ms CPU time)
+
+Ran 10 test suites in 4.96s (10.04s CPU time): 43 tests passed, 0 failed, 2 skipped (45 total tests)

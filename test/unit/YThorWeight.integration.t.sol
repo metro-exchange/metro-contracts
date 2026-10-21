@@ -85,16 +85,16 @@ contract YThorWeightIntegrationTest is Test {
         assertEq(xmetro.claimable(userA), 400e6);
         assertEq(xmetro.claimable(userB), 200e6);
 
-        (, uint64 migratedAtA,,) = xmetro.yThorPositions(userA);
+        (, uint64 migratedAtA,,) = xmetro.yThorPositions(userA, 0);
         vm.warp(uint256(migratedAtA) + 120 days);
         vm.prank(userA);
-        xmetro.exitYThor(XMetroCore.ExitMode.Liquid);
+        xmetro.exitYThor(0, XMetroCore.ExitMode.Liquid);
         assertEq(_activeYThorPrincipal(userA), 0);
         assertEq(_activeYThorPrincipal(userB), 100 ether);
         assertEq(xmetro.totalRewardWeight(), 50 ether);
 
         vm.prank(userB);
-        xmetro.exitYThor(XMetroCore.ExitMode.Liquid);
+        xmetro.exitYThor(0, XMetroCore.ExitMode.Liquid);
         assertEq(_activeYThorPrincipal(userB), 0);
         assertEq(xmetro.totalRewardWeight(), 0);
         assertEq(xmetro.claimable(userA), 400e6);
@@ -117,7 +117,7 @@ contract YThorWeightIntegrationTest is Test {
     }
 
     function _activeYThorPrincipal(address user) private view returns (uint256) {
-        (uint128 principal,,, bool exited) = xmetro.yThorPositions(user);
+        (uint128 principal,,, bool exited) = xmetro.yThorPositions(user, 0);
         return exited ? 0 : uint256(principal);
     }
 }

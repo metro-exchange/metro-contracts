@@ -1,5 +1,46 @@
 # Ethereum Mainnet Fork Results and Evidence
 
+## October 21 update: multi-position migration and precision
+
+Baseline: `60754e05436c6c8056b60eac481d0bdc96a89d4c` plus the local uncommitted changes recorded in the [manifest](evidence/2026-10-21-multi-migration/manifest.json). The three changed business sources are `ThorMigrationEscrow.sol`, `XMetroCoreLogic.sol`, and `xMETRO.sol`. Production yTHOR now reaches 50% at migration + 120 days + 4 * 365 days. QA retains its 4-hour delay and 12-hour ramp. Both variants preserve fractional reward debt and use indexed migration positions.
+
+| Suite | Passed | Failed | Skipped | Evidence |
+| --- | ---: | ---: | ---: | --- |
+| regression | 133 | 0 | 0 | [Log](evidence/2026-10-21-multi-migration/regression.log) |
+| core | 53 | 0 | 2 | [Log](evidence/2026-10-21-multi-migration/core.log) |
+| adapter | 43 | 0 | 2 | [Log](evidence/2026-10-21-multi-migration/adapter.log) |
+| deployment | 1 | 0 | 0 | [Log](evidence/2026-10-21-multi-migration/deployment.log) |
+
+The formal Ethereum fork suite compiled successfully in this QA tree. It was not executed with QA artifacts because its expected time constants are production values. The corresponding production tree passed all 156 fork tests; this QA tree uses its own local unit/core tests for accelerated timing.
+
+Core runtime is **22,805 bytes**, under the unchanged **23,552-byte** project limit; constructor bytecode is 24,353 bytes before arguments. Adapter runtime remains 20,487 bytes. Local CREATE/deployment-script tests passed. Four optional pinned ETH/Base deployment tests were skipped because RPC variables were explicitly unset in local profiles; these are not represented as passing tests.
+
+Coverage added to existing test files includes repeated migrations and cap rollback, stable IDs and independent clocks, out-of-order exits and queues, exact yTHOR quarter/boundary payouts, reward fractions in all four settlement helpers, transfers and negative debt, mixed accumulators, an independent accrual reference model, and funded-liability invariants. Fuzz tests use 256 runs; invariant campaigns use 128 runs at depth 100. The former balance-shortfall exceptions were removed from the Adapter invariant handler.
+
+ABI export/signature checks, changed-file formatting, example syntax, zero/large position ID encoding, all four indexed events, and English-only changed-file checks passed. QA Maple script arguments are `16/0/0`; the current deployed addresses, token balances and permissions were not changed. Old F-01 and Base N-04 evidence below remains historical; no new Base acceptance is claimed.
+
+Reproduction from the matching tree after dependencies are installed:
+
+```sh
+FOUNDRY_PROFILE=adapter forge build --offline
+FOUNDRY_PROFILE=core forge build --offline
+FOUNDRY_PROFILE=regression forge test --offline
+FOUNDRY_PROFILE=core forge test --offline
+FOUNDRY_PROFILE=adapter forge test --offline
+FOUNDRY_PROFILE=deployment-test forge test --offline
+FOUNDRY_PROFILE=fork-v2 forge build --offline
+```
+
+Production fork execution only:
+
+```sh
+ETH_RPC_URL=https://eth.drpc.org FOUNDRY_PROFILE=fork-v2 forge test --offline --match-path 'test/fork-v2/mainnet/*.t.sol' -vv
+```
+
+These commands execute locally. They do not broadcast transactions. Historical gas studies and Affiliate coverage were not repeated.
+
+## Historical execution record
+
 This file reports the recorded execution for the [functional checklist](CHECKLIST.md). All transactions occurred on a **local fork**, never on Ethereum mainnet. Check the source/artifact manifest when comparing these results with a later build; a changed source tree is not automatically covered by an older log.
 
 These Ethereum results belong to the production-time source identified in the manifest, not to this Base QA branch's shortened-time bytecode. They must not be counted as a fork run of the Base QA deployment.

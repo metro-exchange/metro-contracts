@@ -1,5 +1,11 @@
 # xMETRO Integration Guide
 
+## October 21 source update
+
+This source version supports repeated THOR and yTHOR migrations, independent position IDs, and reward debt at `1e24` internal precision. Production yTHOR pays 10% after 120 days, increasing linearly to 50% over the following `4 * 365 days`. Base QA keeps its 4-hour delay and 12-hour ramp. Each position settles its full principal once; it cannot claim an additional amount later.
+
+The existing Base QA deployment and its address/configuration records remain unchanged. Use the ABI and examples from that deployment's revision (QA baseline `60754e05436c6c8056b60eac481d0bdc96a89d4c`) with its existing addresses. This version's ABI/examples target newly created local instances or a future deployment requested by the project. Source changes do not update an immutable deployed Core or migrate its storage.
+
 This directory is the entry point for frontend, backend, and operations integration. The documentation does not imply that every external-protocol scenario has passed; use the linked execution records for actual status.
 
 This Base QA branch changes seven waiting periods. The linked Ethereum fork results were recorded on the production-time build and must not be presented as test results for this QA bytecode.
@@ -15,7 +21,7 @@ See the [project README](../README.md) for architecture and deployment, and the 
 
 ## Environments and evidence
 
-This Base deployment is intended for the receiving project to run the O/N functional scenarios after handover; unchecked scenarios are not prerequisites for uploading the source and deployment information. The previously reviewed F-01 behavior, a fee-bearing 1inch Affiliate transaction, and a new full-fork evidence package are outside this upload scope. The recorded results remain unchanged and must not be represented as passes.
+This Base deployment is intended for the receiving project to run the O/N functional scenarios after handover; unchecked scenarios are not prerequisites for uploading the source and deployment information. The October 21 source update includes the F-01 reward precision fix, with local QA regression results and separate production fork results in the latest RESULTS.md section. Earlier test records remain historical. A fee-bearing 1inch Affiliate transaction and a new Base deployment are outside this update.
 
 The Base checklist tracks the **new project-facing deployment** separately from a historical rapid-QA run. The older run checked 36 of 37 groups; N-04 was executed but did not pass its historical-pending assertion. Its transaction hashes and short time constants are historical evidence only, not passing results for the new deployment.
 

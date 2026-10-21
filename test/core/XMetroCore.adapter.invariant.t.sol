@@ -25,9 +25,6 @@ contract XMetroCoreAdapterInvariantHandler is Test {
     uint256 public claimAttempts;
     uint256 public claimSuccesses;
     uint256 public unexpectedFailures;
-    uint256 public knownSwapShortfalls;
-    uint256 public knownCompoundShortfalls;
-    uint256 public knownClaimShortfalls;
 
     constructor(xMETRO core_, CoreFlowToken usdc_, CoreFlowToken output_, bytes32 swapStrategy_) {
         core = core_;
@@ -89,12 +86,8 @@ contract XMetroCoreAdapterInvariantHandler is Test {
             totalConsumed += rewardIn;
             ++swapSuccesses;
         } catch (bytes memory reason) {
-            if (_isCoreBalanceShortfall(reason)) {
-                ++knownSwapShortfalls;
-            } else {
-                emit log_named_bytes("unexpected auto swap failure", reason);
-                ++unexpectedFailures;
-            }
+            emit log_named_bytes("unexpected auto swap failure", reason);
+            ++unexpectedFailures;
         }
     }
 
@@ -111,12 +104,8 @@ contract XMetroCoreAdapterInvariantHandler is Test {
             totalConsumed += beforeBalance - usdc.balanceOf(address(core));
             ++compoundSuccesses;
         } catch (bytes memory reason) {
-            if (_isCoreBalanceShortfall(reason)) {
-                ++knownCompoundShortfalls;
-            } else {
-                emit log_named_bytes("unexpected auto compound failure", reason);
-                ++unexpectedFailures;
-            }
+            emit log_named_bytes("unexpected auto compound failure", reason);
+            ++unexpectedFailures;
         }
     }
 
@@ -129,33 +118,9 @@ contract XMetroCoreAdapterInvariantHandler is Test {
             totalConsumed += paid;
             ++claimSuccesses;
         } catch (bytes memory reason) {
-            // Existing rewardDebt rounding can quote more USDC base units than Core holds.
-            // Record this known ledger limitation explicitly; every other failure remains unexpected.
-            if (_isCoreBalanceShortfall(reason)) {
-                ++knownClaimShortfalls;
-            } else {
-                emit log_named_bytes("unexpected claim failure", reason);
-                ++unexpectedFailures;
-            }
+            emit log_named_bytes("unexpected claim failure", reason);
+            ++unexpectedFailures;
         }
-    }
-
-    function _isCoreBalanceShortfall(bytes memory reason) private view returns (bool) {
-        if (
-            reason.length != 100
-                || bytes4(reason) != bytes4(keccak256("ERC20InsufficientBalance(address,uint256,uint256)"))
-        ) {
-            return false;
-        }
-        address holder;
-        uint256 available;
-        uint256 required;
-        assembly ("memory-safe") {
-            holder := mload(add(reason, 36))
-            available := mload(add(reason, 68))
-            required := mload(add(reason, 100))
-        }
-        return holder == address(core) && required > available;
     }
 
     function _actors() private view returns (address[] memory accounts) {
@@ -235,10 +200,15 @@ contract XMetroCoreAdapterInvariantTest is StdInvariant, Test {
         assertEq(handler.totalDeposited(), usdc.balanceOf(address(core)) + handler.totalConsumed());
         assertEq(usdc.balanceOf(address(adapter)), 0);
         assertEq(usdc.allowance(address(adapter), address(router)), 0);
+        uint256 payableRewards;
+        for (uint256 i; i < 3; ++i) {
+            payableRewards += core.claimable(handler.actor(i));
+        }
+        assertLe(payableRewards, usdc.balanceOf(address(core)));
         assertEq(handler.unexpectedFailures(), 0);
-        assertEq(handler.swapAttempts(), handler.swapSuccesses() + handler.knownSwapShortfalls());
-        assertEq(handler.compoundAttempts(), handler.compoundSuccesses() + handler.knownCompoundShortfalls());
-        assertEq(handler.claimAttempts(), handler.claimSuccesses() + handler.knownClaimShortfalls());
+        assertEq(handler.swapAttempts(), handler.swapSuccesses());
+        assertEq(handler.compoundAttempts(), handler.compoundSuccesses());
+        assertEq(handler.claimAttempts(), handler.claimSuccesses());
         assertGt(handler.swapSuccesses(), 0);
         assertGt(handler.compoundSuccesses(), 0);
         assertGt(handler.claimSuccesses(), 0);

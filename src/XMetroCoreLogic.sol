@@ -49,12 +49,13 @@ library XMetroCoreLogic {
 
     /// @custom:storage-location erc7201:xmetro.storage.migration.v1
     struct MigrationStorage {
-        mapping(address user => Position position) thorPositions;
-        mapping(address user => Position position) yThorPositions;
+        mapping(address user => Position[] positions) thorPositions;
+        mapping(address user => Position[] positions) yThorPositions;
         mapping(address user => ContributorVesting[] schedules) contributorVestings;
         mapping(address user => uint256 cursor) contributorVestCursor;
         mapping(address contributor => bool allowed) contributorWhitelist;
         uint256 defaultMaxVestingSchedules;
+        mapping(address user => uint256 principal) activeYThorPrincipals;
     }
 
     function migrationStorage() internal pure returns (MigrationStorage storage state) {
@@ -140,57 +141,74 @@ library XMetroCoreLogic {
         return (schedule.totalAmount, schedule.claimed, schedule.startTime, schedule.duration);
     }
 
-    function createThorPosition(address user, uint256 principal) internal returns (uint64 migratedAt) {
+    function createThorPosition(address user, uint256 principal)
+        internal
+        returns (uint256 positionId, uint64 migratedAt)
+    {
         return _createPosition(migrationStorage().thorPositions[user], user, principal);
     }
 
-    function createYThorPosition(address user, uint256 principal) internal returns (uint64 migratedAt) {
-        return _createPosition(migrationStorage().yThorPositions[user], user, principal);
+    function createYThorPosition(address user, uint256 principal)
+        internal
+        returns (uint256 positionId, uint64 migratedAt)
+    {
+        MigrationStorage storage state = migrationStorage();
+        (positionId, migratedAt) = _createPosition(state.yThorPositions[user], user, principal);
+        state.activeYThorPrincipals[user] += principal;
     }
 
-    function getThorPosition(address user)
+    function thorPositionCount(address user) internal view returns (uint256) {
+        return migrationStorage().thorPositions[user].length;
+    }
+
+    function yThorPositionCount(address user) internal view returns (uint256) {
+        return migrationStorage().yThorPositions[user].length;
+    }
+
+    function getThorPosition(address user, uint256 positionId)
         internal
         view
         returns (uint128 principal, uint64 migratedAt, uint64 exitedAt, bool exited)
     {
-        return _getPosition(migrationStorage().thorPositions[user]);
+        return _getPosition(migrationStorage().thorPositions[user][positionId]);
     }
 
-    function getYThorPosition(address user)
+    function getYThorPosition(address user, uint256 positionId)
         internal
         view
         returns (uint128 principal, uint64 migratedAt, uint64 exitedAt, bool exited)
     {
-        return _getPosition(migrationStorage().yThorPositions[user]);
+        return _getPosition(migrationStorage().yThorPositions[user][positionId]);
     }
 
     function activeYThorPrincipal(address user) internal view returns (uint256) {
-        Position storage position = migrationStorage().yThorPositions[user];
-        return position.exited ? 0 : uint256(position.principal);
+        return migrationStorage().activeYThorPrincipals[user];
     }
 
-    function previewThorExit(address user)
+    function previewThorExit(address user, uint256 positionId)
         internal
         view
         returns (bool eligible, uint256 rateBps, uint256 payout, uint256 forfeited, uint256 eligibleAt)
     {
-        return _previewExit(migrationStorage().thorPositions[user], false);
+        return _previewExit(migrationStorage().thorPositions[user][positionId], false);
     }
 
-    function previewYThorExit(address user)
+    function previewYThorExit(address user, uint256 positionId)
         internal
         view
         returns (bool eligible, uint256 rateBps, uint256 payout, uint256 forfeited, uint256 eligibleAt)
     {
-        return _previewExit(migrationStorage().yThorPositions[user], true);
+        return _previewExit(migrationStorage().yThorPositions[user][positionId], true);
     }
 
-    function consumeThorExit(address user) internal returns (ExitResult memory result) {
-        return _consumeExit(migrationStorage().thorPositions[user], false);
+    function consumeThorExit(address user, uint256 positionId) internal returns (ExitResult memory result) {
+        return _consumeExit(migrationStorage().thorPositions[user][positionId], false);
     }
 
-    function consumeYThorExit(address user) internal returns (ExitResult memory result) {
-        return _consumeExit(migrationStorage().yThorPositions[user], true);
+    function consumeYThorExit(address user, uint256 positionId) internal returns (ExitResult memory result) {
+        MigrationStorage storage state = migrationStorage();
+        result = _consumeExit(state.yThorPositions[user][positionId], true);
+        state.activeYThorPrincipals[user] -= result.principal;
     }
 
     function previewMigrationWithdrawableNow(address user)
@@ -204,10 +222,8 @@ library XMetroCoreLogic {
         )
     {
         MigrationStorage storage state = migrationStorage();
-        (bool thorEligible,, uint256 thorPayout,,) = _previewExit(state.thorPositions[user], false);
-        (bool yThorEligible,, uint256 yThorPayout,,) = _previewExit(state.yThorPositions[user], true);
-        if (thorEligible) thorUnlockable = thorPayout;
-        if (yThorEligible) yThorUnlockable = yThorPayout;
+        thorUnlockable = _previewPositions(state.thorPositions[user], false);
+        yThorUnlockable = _previewPositions(state.yThorPositions[user], true);
 
         ContributorVesting[] storage schedules = state.contributorVestings[user];
         uint64 timestamp = uint64(block.timestamp);
@@ -215,6 +231,13 @@ library XMetroCoreLogic {
             contributorUnlockable += _releasable(schedules[i], timestamp);
         }
         totalUnlockable = thorUnlockable + yThorUnlockable + contributorUnlockable;
+    }
+
+    function _previewPositions(Position[] storage positions, bool yThor) private view returns (uint256 total) {
+        for (uint256 i; i < positions.length; ++i) {
+            (bool eligible,, uint256 payout,,) = _previewExit(positions[i], yThor);
+            if (eligible) total += payout;
+        }
     }
 
     function _defaultMaxVestingSchedules(MigrationStorage storage state) private view returns (uint256) {
@@ -238,16 +261,15 @@ library XMetroCoreLogic {
         return (totalAllocation * (timestamp - startTime)) / duration;
     }
 
-    function _createPosition(Position storage position, address user, uint256 principal)
+    function _createPosition(Position[] storage positions, address user, uint256 principal)
         private
-        returns (uint64 migratedAt)
+        returns (uint256 positionId, uint64 migratedAt)
     {
         if (user == address(0)) revert InvalidAddress();
         if (principal == 0 || principal > type(uint128).max) revert InvalidAmount();
-        if (position.principal != 0) revert InvalidConfiguration();
+        positionId = positions.length;
         migratedAt = uint64(block.timestamp);
-        position.principal = uint128(principal);
-        position.migratedAt = migratedAt;
+        positions.push(Position(uint128(principal), migratedAt, 0, false));
     }
 
     function _getPosition(Position storage position)

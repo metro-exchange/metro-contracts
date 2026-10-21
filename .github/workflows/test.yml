@@ -32,13 +32,33 @@ jobs:
         run: |
           forge fmt --check \
             src/xMETRO.sol \
+            src/ThorMigrationEscrow.sol \
             src/XMetroCoreLogic.sol \
             src/XMetroDeFiAdapter.sol \
             src/interfaces \
             script/DeFiAdapterScriptBase.sol \
             script/Deploy.s.sol \
             script/UpgradeDeFiAdapter.s.sol \
-            script/ReplaceDeFiAdapter.s.sol
+            script/ReplaceDeFiAdapter.s.sol \
+            test/core/XMetroCore.adapter.invariant.t.sol \
+            test/core/XMetroCore.adapter.t.sol \
+            test/deployment/DeployScript.t.sol \
+            test/fork-v2/XMetroForkBase.sol \
+            test/fork-v2/mainnet/AutoCompound.t.sol \
+            test/fork-v2/mainnet/DeploymentGovernance.t.sol \
+            test/fork-v2/mainnet/MigrationExit.t.sol \
+            test/fork-v2/mainnet/TokenStakeRewards.t.sol \
+            test/fork-v2/mainnet/YThorRewardWeight.t.sol \
+            test/fuzz/ThorMigrationEscrow.fuzz.t.sol \
+            test/fuzz/xMETRO.fuzz.t.sol \
+            test/invariant/xMETRO.invariant.t.sol \
+            test/mock/XChainAndCore.t.sol \
+            test/unit/ThorMigrationEscrow.unit.t.sol \
+            test/unit/YThorWeight.integration.t.sol \
+            test/unit/xMETRO.unit.t.sol
+
+      - name: Check QA deployment script syntax
+        run: node --check script/base-qa/deploy.mjs
 
       - name: Build Base QA xMETRO artifact
         run: FOUNDRY_PROFILE=core forge build --sizes

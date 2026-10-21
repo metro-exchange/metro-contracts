@@ -77,7 +77,7 @@ The new Base QA deployment uses owner-only `mint` for TestUSDC, TestTHOR, TestYT
 
 QA protocol administration is also owner-controlled: Aave V3 Pool, V4 Spoke, Giver, Maple Router, and PermissionManager expose transferable ownership for their test controls. Aave V3 aUSDC can be minted by the mock Pool on supply; its test-only `donateScaled` permission follows the Pool owner. Aave V4 supplies are internal Spoke shares, not a freely mintable ERC-20. Maple protocol deposits mint syrupUSDC shares through the mock Pool. These mock-only controls do not describe production Aave/Maple governance.
 
-The Base QA Maple mock enforces share-transfer permissions. Its owner must call `MockPoolPermissionManager.setLenderBitmap(tester,16)` for any new test wallet that will receive TestSyrupUSDC through a V2 swap or a Maple deposit. The deployment prepares the included local QA wallets and the V2 pair, but it cannot pre-authorize unknown project test wallets. This bitmap is a mock test setting, not an ERC-20 approval.
+The Base QA Maple pool bitmaps are `P:deposit=16`, `P:transfer=0`, and `P:transferFrom=0`. This matches the Adapter's transferability check. Receiving TestSyrupUSDC no longer requires setting a bitmap of 16 for each recipient wallet. Deposit authorization for the actual Adapter proxy is a separate requirement and remains in effect. The pool bitmap correction was previously applied in transaction `0x21604b865a2824333c39dc471a856be5f750531c9f623f615489b9e1b9eb236c`; the October 20 readback at Base block 52,860,584 confirmed `16/0/0`. The QA deployment script now uses those same values. This source update performs no chain configuration transactions.
 
 Before project addresses are provided, the fresh QA deployment keeps these temporary owner/minter roles locally. `integration/config/base-qa.json` records each actual address and current role; transferring ownership later requires separate on-chain transactions and a new config readback. Historical Base QA addresses are not reusable.
 
@@ -106,3 +106,27 @@ The new xMETRO and the other project contracts use one-step ownership transfer; 
 ## Readback checklist
 
 After each confirmed transaction, read `owner()` from each contract; `METRO.isMinter`, `Distributor.operators`, `xMETRO.autoCompoundOperators`, `xMETRO.contributorWhitelist`, `xMETRO.yThorRewardWeightBps`, QA `xMETRO.forfeitureRecipient`, core bindings and pause status, Escrow start/deadline/ratio/cap getters, Distributor Vault/split getters, Adapter `configuration`/`strategyInfo`/`aaveV4Giver`, and each user's auto preference when relevant. For QA, also read each TestToken/Mock `owner()` and public mint rights. A local `.env` edit, UI status, or dry run does not change chain state.
+
+## Position queries and events
+
+Read `thorPositionCount(user)` / `yThorPositionCount(user)` before querying `thorPositions(user, positionId)` / `yThorPositions(user, positionId)`. Each returns `(principal, migratedAt, exitedAt, exited)`. IDs start at zero independently for each user and asset, are never reused, and counts include exited positions. Out-of-range queries and exits revert with array `Panic(0x32)`. A valid premature or exited position has an ineligible preview; attempting its exit reverts with `InvalidConfiguration`.
+
+`previewThorExit(user, positionId)` / `previewYThorExit(user, positionId)` return eligibility, rate in BPS, payout, forfeiture and eligibility timestamp. Exit calls select one of the caller's positions: `requestThorExit(positionId)`, `exitAndStakeThor(positionId)`, or `exitYThor(positionId, mode)` (`Liquid=0`, `Stake=1`). Only Liquid creates a withdrawal queue entry; queue indices are independent of position IDs. Counts and individual reads support client-side paging. `previewWithdrawableNow(user)` sums eligible open positions and Contributor value, excludes queues, and scans history; do not make claims or single-position exits depend on that aggregate call for large accounts.
+
+`ThorPositionCreated` and `YThorPositionCreated` carry `(indexed user, indexed positionId, principal, migratedAt)`. `ThorExited` and `YThorExited` carry `(indexed user, indexed positionId, principal, payout, forfeited, rateBps, mode, exitedAt, indexed forfeitureRecipient)`. Index positions by chain ID, Core address, user, asset and position ID. The Escrow's two `hasMigrated*` getters are removed; migration availability depends on the window, caps and permissions.
+
+## Reward accounting precision
+
+Core tracks signed reward debt at the existing `1e24` accumulator precision. Share changes retain the full debt product. Claims, emergency payments, manual actions, and automatic batches consume only whole USDC base units and retain the fractional remainder. Zero-value claims preserve that remainder. `rewardDebt(user)` keeps its ABI and displays USDC base units, truncating negative fractions toward zero; use `claimable` / `claimableMany` for payable amounts instead of reconstructing them from the display getter. Adapter inputs and event amounts remain in token base units.
+
+`YTHOR_EXIT_RAMP()` is a compiled duration in seconds with no Owner setter: production `126144000`, QA `43200`. Production reaches its 50% cap 1,580 days after each migration.
+
+| Time from this position's migration | Production payout | QA time |
+| --- | ---: | --- |
+| 120 days | 10% | 4 hours |
+| 120 days + 365 days | 20% | 7 hours |
+| 120 days + 2 * 365 days | 30% | 10 hours |
+| 120 days + 3 * 365 days | 40% | 13 hours |
+| 120 days + 4 * 365 days or later | 50% | 16 hours or later |
+
+Times use fixed seconds, not calendar/leap years. Intermediate payouts follow integer BPS rounding. At exit, unpaid principal goes to `forfeitureRecipient`; the position is fully closed. Liquid payouts are fixed when queued, with the existing 72-hour production / 30-minute QA cooldown. They do not increase during that cooldown.

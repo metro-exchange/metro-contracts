@@ -10,12 +10,21 @@ import {MainnetForkBase} from "./MainnetForkBase.sol";
 
 contract TokenStakeRewardsMainnetTest is MainnetForkBase {
     event Staked(address indexed user, uint256 amount, uint256 mintedShares);
-    event UnstakeRequested(address indexed user, xMETRO.UnstakeSource indexed source, uint256 amount, uint64 unlockTime);
+    event UnstakeRequested(
+        address indexed user, xMETRO.UnstakeSource indexed source, uint256 amount, uint64 unlockTime
+    );
     event Withdrawn(address indexed user, xMETRO.UnstakeSource indexed source, uint256 amount);
     event RewardsDeposited(address indexed payer, uint256 amount);
     event RewardClaimed(address indexed user, uint256 amount);
     event RewardsDistributed(address indexed caller, uint256 amount, uint64 timestamp);
-    event DistributionRouted(address indexed caller, address indexed commissionVault, uint256 grossAmount, uint256 commissionAmount, uint256 netReward, uint64 timestamp);
+    event DistributionRouted(
+        address indexed caller,
+        address indexed commissionVault,
+        uint256 grossAmount,
+        uint256 commissionAmount,
+        uint256 netReward,
+        uint64 timestamp
+    );
 
     address private alice;
     address private bob;
@@ -70,7 +79,8 @@ contract TokenStakeRewardsMainnetTest is MainnetForkBase {
         uint256 key = 0xA11CE;
         address signer = vm.addr(key);
         uint256 deadline = block.timestamp + 1 hours;
-        bytes32 typehash = keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+        bytes32 typehash =
+            keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
         bytes32 domain = metro.DOMAIN_SEPARATOR();
         assertNotEq(domain, bytes32(0));
         assertEq(metro.nonces(signer), 0);
@@ -83,7 +93,8 @@ contract TokenStakeRewardsMainnetTest is MainnetForkBase {
         vm.expectRevert();
         metro.permit(signer, spender, 123 ether, deadline, v, r, s);
         bytes32 laterHash = keccak256(abi.encode(typehash, signer, spender, 1 ether, uint256(1), deadline));
-        (uint8 badV, bytes32 badR, bytes32 badS) = vm.sign(0xB0B, keccak256(abi.encodePacked(hex"1901", domain, laterHash)));
+        (uint8 badV, bytes32 badR, bytes32 badS) =
+            vm.sign(0xB0B, keccak256(abi.encodePacked(hex"1901", domain, laterHash)));
         vm.expectRevert();
         metro.permit(signer, spender, 1 ether, deadline, badV, badR, badS);
         vm.warp(deadline + 1);
@@ -109,7 +120,13 @@ contract TokenStakeRewardsMainnetTest is MainnetForkBase {
 
     /// E-02.05: Tests isolated global cap and invalid mint.
     function test_E02_IsolatedGlobalCapAndInvalidMint() public {
-        MetroToken capped = MetroToken(_create(abi.encodePacked(_artifact("out-core/metro.sol/MetroToken.json"), abi.encode("Metro", "METRO", address(this)))));
+        MetroToken capped = MetroToken(
+            _create(
+                abi.encodePacked(
+                    _artifact("out-core/metro.sol/MetroToken.json"), abi.encode("Metro", "METRO", address(this))
+                )
+            )
+        );
         capped.setMinter(alice, true);
         capped.setMinter(bob, true);
         vm.prank(alice);
@@ -359,7 +376,8 @@ contract TokenStakeRewardsMainnetTest is MainnetForkBase {
         Vm.Log memory routedLog = _eventLog(logs, address(distributor), DistributionRouted.selector);
         assertEq(address(uint160(uint256(routedLog.topics[1]))), address(this));
         assertEq(address(uint160(uint256(routedLog.topics[2]))), address(0));
-        (uint256 gross, uint256 commission, uint256 net, uint64 timestamp) = abi.decode(routedLog.data, (uint256, uint256, uint256, uint64));
+        (uint256 gross, uint256 commission, uint256 net, uint64 timestamp) =
+            abi.decode(routedLog.data, (uint256, uint256, uint256, uint64));
         assertEq(gross, 100e6);
         assertEq(commission, 0);
         assertEq(net, 100e6);
@@ -517,6 +535,13 @@ contract TokenStakeRewardsMainnetTest is MainnetForkBase {
         assertEq(core.claimable(alice), 0);
         assertEq(core.claimable(bob), 0);
         assertEq(core.claimable(carol), 0);
+        vm.prank(alice);
+        assertEq(core.claimRewards(), 0);
+        vm.prank(alice);
+        core.transfer(bob, 1 ether);
+        assertEq(core.rewardDebt(alice), 0); // Fractional negative debt is truncated for display.
+        vm.prank(bob);
+        core.transfer(alice, 1 ether);
         _distribute(2);
         assertEq(core.claimable(alice), 1);
         assertEq(core.claimable(bob), 1);
@@ -534,7 +559,9 @@ contract TokenStakeRewardsMainnetTest is MainnetForkBase {
 
     function _eventLog(Vm.Log[] memory logs, address emitter, bytes32 signature) private pure returns (Vm.Log memory) {
         for (uint256 i; i < logs.length; ++i) {
-            if (logs[i].emitter == emitter && logs[i].topics.length != 0 && logs[i].topics[0] == signature) return logs[i];
+            if (logs[i].emitter == emitter && logs[i].topics.length != 0 && logs[i].topics[0] == signature) {
+                return logs[i];
+            }
         }
         revert("expected event absent");
     }

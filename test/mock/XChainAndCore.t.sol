@@ -72,9 +72,9 @@ contract CoreIntegrationTest is Test {
 
         vm.warp(block.timestamp + 14400 seconds);
         vm.prank(userA);
-        (uint256 thorPayout, uint256 thorForfeited) = xmetro.requestThorExit();
+        (uint256 thorPayout, uint256 thorForfeited) = xmetro.requestThorExit(0);
         vm.prank(userB);
-        (uint256 yPayout, uint256 yForfeited) = xmetro.exitYThor(xMETRO.ExitMode.Liquid);
+        (uint256 yPayout, uint256 yForfeited) = xmetro.exitYThor(0, xMETRO.ExitMode.Liquid);
 
         assertEq(thorPayout, 100 ether);
         assertEq(thorForfeited, 0);
@@ -101,5 +101,39 @@ contract CoreIntegrationTest is Test {
         xMETRO.VestingSchedule memory schedule = xmetro.contributorVesting(userA, 0);
         assertEq(schedule.startTime, block.timestamp + xmetro.CONTRIBUTOR_CLIFF());
         assertEq(schedule.duration, xmetro.CONTRIBUTOR_DURATION());
+    }
+
+    function test_RepeatedMigrationAfterExitPreservesCapsAndRollback() public {
+        _migrate(userA, thor, 100 ether, false);
+        _migrate(userA, thor, 50 ether, false);
+        _migrate(userA, yThor, 100 ether, true);
+        _migrate(userA, yThor, 50 ether, true);
+        assertEq(xmetro.thorPositionCount(userA), 2);
+        assertEq(xmetro.yThorPositionCount(userA), 2);
+        vm.warp(block.timestamp + 4 hours);
+        vm.startPrank(userA);
+        xmetro.exitAndStakeThor(1);
+        xmetro.exitAndStakeThor(0);
+        xmetro.exitYThor(1, xMETRO.ExitMode.Stake);
+        xmetro.exitYThor(0, xMETRO.ExitMode.Stake);
+        vm.stopPrank();
+        assertEq(xmetro.lockedShares(userA), 0);
+        assertEq(escrow.migratedThor(), 150 ether);
+        assertEq(escrow.migratedYThor(), 150 ether);
+        _migrate(userA, thor, 10 ether, false);
+        _migrate(userA, yThor, 10 ether, true);
+        assertEq(xmetro.thorPositionCount(userA), 3);
+        assertEq(xmetro.yThorPositionCount(userA), 3);
+        metro.setMinter(address(xmetro), false);
+        thor.mint(userA, 5 ether);
+        vm.startPrank(userA);
+        thor.approve(address(escrow), 5 ether);
+        vm.expectRevert(bytes("MetroToken: not minter"));
+        escrow.migrateThor(5 ether);
+        vm.stopPrank();
+        assertEq(xmetro.thorPositionCount(userA), 3);
+        assertEq(escrow.migratedThor(), 160 ether);
+        assertEq(thor.balanceOf(userA), 5 ether);
+        assertEq(xmetro.lockedShares(userA), 20 ether);
     }
 }

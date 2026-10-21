@@ -8,7 +8,7 @@ This index follows the current `src/` contracts. See [legacy integration](integr
 
 ## ThorMigrationEscrow
 
-Users call `migrateThor(uint256)` or `migrateYThor(uint256)`. Each input token has its own one-time marker per address. The owner configures `setMigrationStartTime(uint256)`, `setDeadlines(uint256,uint256)`, `setRatios(uint256,uint256)` (nonzero and one-time), and `setCaps(uint256,uint256)`. A zero constructor start time is a Base QA-only shortcut for the Escrow deployment block. The owner also has `pause()`, `unpause()`, and `rescueTokens(address,address,uint256)`; THOR and yTHOR cannot be rescued. Caps and migrated counters are measured in post-conversion METRO principal, not input-token units. yTHOR reward weight belongs to xMETRO, not Escrow.
+Users call `migrateThor(uint256)` or `migrateYThor(uint256)`. Each successful call appends an independent position; a wallet may migrate either token repeatedly within its window and cumulative cap. The owner configures `setMigrationStartTime(uint256)`, `setDeadlines(uint256,uint256)`, `setRatios(uint256,uint256)` (nonzero and one-time), and `setCaps(uint256,uint256)`. A zero constructor start time is a Base QA-only shortcut for the Escrow deployment block. The owner also has `pause()`, `unpause()`, and `rescueTokens(address,address,uint256)`; THOR and yTHOR cannot be rescued. Caps and migrated counters are measured in post-conversion METRO principal, not input-token units. yTHOR reward weight belongs to xMETRO, not Escrow.
 
 ## xMETRO
 
@@ -18,11 +18,11 @@ xMETRO is immutable. `XMetroCoreLogic.sol` is internal code compiled into it, no
 
 - `stake(uint256)`; `stakeAndEnableAutocompound(uint256)`
 - `requestUnstake(uint256)`; `withdrawFree(uint256)`
-- Escrow-only `creditThorFromMigration(address,uint256)`; user `previewThorExit(address)`, `requestThorExit()`, `exitAndStakeThor()`, `withdrawThor(uint256)`
-- Escrow-only `creditYThorFromMigration(address,uint256)`; user `previewYThorExit(address)`, `exitYThor(ExitMode)`, `withdrawYThor(uint256)`
+- Escrow-only `creditThorFromMigration(address,uint256)`; user `previewThorExit(address,uint256)`, `requestThorExit(uint256)`, `exitAndStakeThor(uint256)`, `withdrawThor(uint256)`
+- Escrow-only `creditYThorFromMigration(address,uint256)`; user `previewYThorExit(address,uint256)`, `exitYThor(uint256,ExitMode)`, `withdrawYThor(uint256)`
 - Contributor `stakeContributor(uint256,address)`, `requestWithdrawUnlockedContributor(uint256)`, `claimAndStakeUnlockedContributor(uint256)`, `withdrawContributor(uint256)`
 
-This Base QA build has `UNSTAKE_DELAY = 30 minutes`, THOR exit from 50% at 1 hour to 100% at 3 hours, and yTHOR exit from 10% at 4 hours to 50% over the next 12 hours. Production uses 72 hours, days 30–90, and day 120 plus five years respectively. `previewWithdrawableNow(address)` aggregates currently exit-eligible THOR/yTHOR payouts and unlocked Contributor value; it excludes every already-requested withdrawal queue. Queue information is available through the corresponding `unstakeRequestCount*`, `unstakeRequest*`, and `unstakeCursor*` getters.
+This Base QA build has `UNSTAKE_DELAY = 30 minutes`, THOR exit from 50% at 1 hour to 100% at 3 hours, and yTHOR exit from 10% at 4 hours to 50% over the next 12 hours. Production uses 72 hours, days 30–90, and day 120 plus four years (4 * 365 days) respectively. `previewWithdrawableNow(address)` aggregates currently exit-eligible THOR/yTHOR payouts and unlocked Contributor value; it excludes every already-requested withdrawal queue. Queue information is available through the corresponding `unstakeRequestCount*`, `unstakeRequest*`, and `unstakeCursor*` getters.
 
 ### Reward accounting
 
@@ -128,3 +128,17 @@ netReward  = grossAmount - commission
 ```
 
 The Distributor transfers commission USDC directly to the Vault, then deposits `netReward` into xMETRO. It does not approve the Vault, invoke a Vault deposit callback, or maintain a cross-batch commission debt ledger.
+
+## Position queries and events
+
+Read `thorPositionCount(user)` / `yThorPositionCount(user)` before querying `thorPositions(user, positionId)` / `yThorPositions(user, positionId)`. Each returns `(principal, migratedAt, exitedAt, exited)`. IDs start at zero independently for each user and asset, are never reused, and counts include exited positions. Out-of-range queries and exits revert with array `Panic(0x32)`. A valid premature or exited position has an ineligible preview; attempting its exit reverts with `InvalidConfiguration`.
+
+`previewThorExit(user, positionId)` / `previewYThorExit(user, positionId)` return eligibility, rate in BPS, payout, forfeiture and eligibility timestamp. Exit calls select one of the caller's positions: `requestThorExit(positionId)`, `exitAndStakeThor(positionId)`, or `exitYThor(positionId, mode)` (`Liquid=0`, `Stake=1`). Only Liquid creates a withdrawal queue entry; queue indices are independent of position IDs. Counts and individual reads support client-side paging. `previewWithdrawableNow(user)` sums eligible open positions and Contributor value, excludes queues, and scans history; do not make claims or single-position exits depend on that aggregate call for large accounts.
+
+`ThorPositionCreated` and `YThorPositionCreated` carry `(indexed user, indexed positionId, principal, migratedAt)`. `ThorExited` and `YThorExited` carry `(indexed user, indexed positionId, principal, payout, forfeited, rateBps, mode, exitedAt, indexed forfeitureRecipient)`. Index positions by chain ID, Core address, user, asset and position ID. The Escrow's two `hasMigrated*` getters are removed; migration availability depends on the window, caps and permissions.
+
+## Reward accounting precision
+
+Core tracks signed reward debt at the existing `1e24` accumulator precision. Share changes retain the full debt product. Claims, emergency payments, manual actions, and automatic batches consume only whole USDC base units and retain the fractional remainder. Zero-value claims preserve that remainder. `rewardDebt(user)` keeps its ABI and displays USDC base units, truncating negative fractions toward zero; use `claimable` / `claimableMany` for payable amounts instead of reconstructing them from the display getter. Adapter inputs and event amounts remain in token base units.
+
+`YTHOR_EXIT_RAMP()` returns seconds: `126144000` for production, `43200` for QA. These are compiled constants with no Owner setter.

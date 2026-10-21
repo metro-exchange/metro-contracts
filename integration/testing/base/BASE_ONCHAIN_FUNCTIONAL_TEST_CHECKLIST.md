@@ -1,5 +1,17 @@
 # Base On-Chain Functional Test Checklist
 
+## October 21 update: local validation only
+
+The deployment records below describe existing QA contracts. This source update does not redeploy them or change their addresses or permissions. Use their matching deployed revision's ABI. New indexed interfaces are validated locally and require a later project-requested deployment for on-chain acceptance.
+
+| Future on-chain check | Status |
+| --- | --- |
+| Repeat THOR/yTHOR migration; independent IDs/timestamps; out-of-order exits; stable IDs after exit | [ ] Not deployed |
+| QA yTHOR 10/20/30/40/50% at 4/7/10/13/16 hours; boundary +/- 1 second; one complete settlement per position | [ ] Not deployed |
+| Retained reward fractions through claims, transfers, exits and manual/automatic actions; payable rewards covered by funds | [ ] Not deployed |
+
+Production now uses 120 days plus 1,460 days (126,144,000 seconds) to reach 50%; QA still uses a 43,200-second ramp. The historical N-04 failure remains in its original record; local precision regression results are recorded separately in [RESULTS.md](../ethereum-fork/RESULTS.md).
+
 This is the handoff checklist for the **new project-facing Base QA deployment**. A box is checked only after the corresponding action and readback have passed against this new deployment; transactions against an older QA deployment do not count. Public addresses and settings are in [`base-qa.json`](../../config/base-qa.json), and the new deployment transaction hashes are listed below in this checklist. Chain ID must be `8453`. No Ethereum fork transaction counts as a Base on-chain result.
 
 The O/N functional scenarios are provided for the receiving project to execute after handover. Their unchecked status is not a prerequisite for uploading the source or the 87 deployment transactions, and it must not be interpreted as a successful functional test.
@@ -20,11 +32,11 @@ Seven waiting-period constants are shortened. QA also permits an Owner-only chan
 | `THOR_EXIT_DELAY` | 30 days | 3,600 seconds (1 hour) |
 | `THOR_EXIT_FULL_TIME` | 90 days | 10,800 seconds (3 hours) |
 | `YTHOR_EXIT_DELAY` | 120 days | 14,400 seconds (4 hours) |
-| `YTHOR_EXIT_RAMP` | 1,825 days | 43,200 seconds (12 hours) |
+| `YTHOR_EXIT_RAMP` | 1,460 days (current source) | 43,200 seconds (12 hours) |
 | `CONTRIBUTOR_CLIFF` | 180 days | 21,600 seconds (6 hours) |
 | `CONTRIBUTOR_DURATION` | 912.5 days | 21,600 seconds (6 hours) |
 
-The yTHOR ramp starts after its exit delay; the maximum yTHOR exit scenario takes roughly 16 hours, plus 30 minutes if a liquid withdrawal is requested. Use separate wallets for early, middle, and final exit points. Record actual block timestamps rather than assuming exact wall-clock boundaries. The QA deployment starts migration in the Escrow deployment block; both THOR and yTHOR deadlines are exactly 30 days later, and both conversion ratios are `0.3928569546`. Record the actual start time, deadlines, conversion ratios, recipient, and initial weight in `base-qa.json`.
+The yTHOR ramp starts after its exit delay; the maximum yTHOR exit scenario takes roughly 16 hours, plus 30 minutes if a liquid withdrawal is requested. The existing single-position deployment needs separate wallets for early, middle and final exit points; the new source supports separate positions in one wallet. Record actual block timestamps rather than assuming exact wall-clock boundaries. The QA deployment starts migration in the Escrow deployment block; both THOR and yTHOR deadlines are exactly 30 days later, and both conversion ratios are `0.3928569546`. Record the actual start time, deadlines, conversion ratios, recipient, and initial weight in `base-qa.json`.
 
 ## P. Deployment and preparation
 
@@ -36,7 +48,7 @@ The yTHOR ramp starts after its exit delay; the maximum yTHOR exit scenario take
 | P-04 | [x] | Deploy a fresh Commission Vault for the new TestUSDC and Distributor, bind it in the Distributor, and verify the initial split is zero until the project configures it. | Vault deployment and `distributor-vault` hashes are in [the transaction table](#base-qa-deployment-transaction-hashes); on-chain `maxCommissionSplitBps = 0`. |
 | P-05 | [x] | Create and fund real V2 pairs for METRO, five initial output assets, and ExtraToken against TestUSDC; verify Router/Factory and reserves. | [Seven pair addresses](../../config/base-qa.json); all pair-creation, approval and liquidity hashes are in [the transaction table](#base-qa-deployment-transaction-hashes). Each pair received 1,000 TestUSDC and 1,000 output-token units. |
 | P-06 | [x] | Verify both QA source files use the seven agreed time constants and record source/artifact hashes. | The seven values are listed above; full SHA-256 hashes appear in [the build-hash table](#base-qa-build-hashes). |
-| P-07 | [ ] | Fund role/test wallets and verify Owner, Minter, Operator, Keeper, Contributor, Aave V4 Giver position-manager authorization, and Maple recipient bitmaps for actual testers. | — |
+| P-07 | [ ] | Fund role/test wallets and verify Owner, Minter, Operator, Keeper, Contributor, Aave V4 Giver position-manager authorization, and Maple pool bitmaps 16/0/0 and separate Adapter deposit authorization. | — |
 | P-08 | [x] | Record all contract addresses, deploy/configuration hashes, start block, ABI, and key on-chain readbacks in the delivery materials. | [Delivery config](../../config/base-qa.json), [compiled ABI directory](../../abi), [readback summary](#base-qa-deployment-readbacks), and [87 transaction hashes](#base-qa-deployment-transaction-hashes). All 87 receipts were rechecked against canonical Base blocks. |
 
 ### Base QA deployment readbacks
@@ -206,3 +218,7 @@ The following 87 transactions belong to the fresh Base QA deployment (deployer n
 The previous Base run has on-chain transactions for P-01–P-08, O-01–O-09, and N-01–N-03/N-05–N-20. Its N-04 remains unpassed. Representative real transaction hashes include [token deployment](https://basescan.org/tx/0x9d5c3354bf78cc57b8250494698fbf883aae39b065977f6d624d0706d48f21d5), [stake](https://basescan.org/tx/0xa910fc880159923a9a0bb18010c8edab1d7fd2ffee8831366569a780eb4b2a8d), [V2 auto-swap](https://basescan.org/tx/0x438b82e4b66d0187ebbafdeaa5a1ba6571696189d495dffe5edfcfac527a9b63), [V3 deposit](https://basescan.org/tx/0xf35bf73bee02b19a49b0c1febf0fd9991b77b91d3953d9a2f7276093144d3305), [V4 deposit](https://basescan.org/tx/0xae0a78296419024a930e1a47631c1da1bf94cc107d3359959c7f633b22c18b89), [Maple deposit](https://basescan.org/tx/0xa1f756bbe63a6e213ca6bf01767a476044b768d670f3f85d86da911a86953f67), and [commission split](https://basescan.org/tx/0xfd847a3321c4e21b0665898b21b6b3b79fb6f3ec5484e4d97c4c7d841d41014e). Those hashes do **not** certify the new owner-controlled mocks or the longer-time QA build.
 
 Source references: [`src/`](../../../src), [`test/mocks/`](../../../test/mocks), [`test/core/`](../../../test/core), and the [Ethereum fork checklist](../ethereum-fork/CHECKLIST.md). Base Mock coverage proves integration behavior against the mock, not production Aave/Maple availability.
+
+## Maple pool configuration
+
+The Base QA Maple pool bitmaps are `P:deposit=16`, `P:transfer=0`, and `P:transferFrom=0`. This matches the Adapter's transferability check. Receiving TestSyrupUSDC no longer requires setting a bitmap of 16 for each recipient wallet. Deposit authorization for the actual Adapter proxy is a separate requirement and remains in effect. The pool bitmap correction was previously applied in transaction `0x21604b865a2824333c39dc471a856be5f750531c9f623f615489b9e1b9eb236c`; the October 20 readback at Base block 52,860,584 confirmed `16/0/0`. The QA deployment script now uses those same values. This source update performs no chain configuration transactions.

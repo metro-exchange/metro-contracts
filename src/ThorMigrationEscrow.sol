@@ -35,9 +35,6 @@ contract ThorMigrationEscrow is Ownable, Pausable, ReentrancyGuard {
     uint256 public deadlineYThor;
     uint256 public ratioYThor;
 
-    mapping(address => bool) public hasMigratedThor;
-    mapping(address => bool) public hasMigratedYThor;
-
     event MigratedThor(address indexed user, uint256 amountIn, uint256 principal);
     event MigratedYThor(address indexed user, uint256 amountIn, uint256 principal);
 
@@ -64,7 +61,6 @@ contract ThorMigrationEscrow is Ownable, Pausable, ReentrancyGuard {
     /// @notice Migrate THOR through the single project-configured conversion path.
     function migrateThor(uint256 amountIn) external nonReentrant whenNotPaused {
         require(block.timestamp >= migrationStartTime, "ThorEscrow: not started");
-        require(!hasMigratedThor[msg.sender], "ThorEscrow: thor already migrated");
         require(amountIn > 0, "ThorEscrow: zero amount");
         require(capThor != 0 && ratioThor != 0, "ThorEscrow: thor config not set");
         require(block.timestamp <= deadlineThor, "ThorEscrow: thor expired");
@@ -73,7 +69,6 @@ contract ThorMigrationEscrow is Ownable, Pausable, ReentrancyGuard {
         require(principal > 0, "ThorEscrow: zero mint");
         require(migratedThor + principal <= capThor, "ThorEscrow: thor cap");
 
-        hasMigratedThor[msg.sender] = true;
         migratedThor += principal;
 
         thorToken.safeTransferFrom(msg.sender, address(this), amountIn);
@@ -85,7 +80,6 @@ contract ThorMigrationEscrow is Ownable, Pausable, ReentrancyGuard {
     /// @notice Migrate yTHOR into an active position whose future reward multiplier is managed by xMETRO.
     function migrateYThor(uint256 amountIn) external nonReentrant whenNotPaused {
         require(block.timestamp >= migrationStartTime, "ThorEscrow: not started");
-        require(!hasMigratedYThor[msg.sender], "ThorEscrow: ythor already migrated");
         require(amountIn > 0, "ThorEscrow: zero amount");
         require(capYThor != 0 && ratioYThor != 0, "ThorEscrow: ythor config not set");
         require(block.timestamp <= deadlineYThor, "ThorEscrow: ythor expired");
@@ -93,7 +87,6 @@ contract ThorMigrationEscrow is Ownable, Pausable, ReentrancyGuard {
         uint256 principal = Math.mulDiv(amountIn, ratioYThor, 1e18);
         require(principal > 0, "ThorEscrow: zero mint");
         require(migratedYThor + principal <= capYThor, "ThorEscrow: ythor cap");
-        hasMigratedYThor[msg.sender] = true;
         migratedYThor += principal;
 
         yThorToken.safeTransferFrom(msg.sender, address(this), amountIn);
