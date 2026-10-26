@@ -23,8 +23,10 @@ contract xMETROInvariantTest is StdInvariant, Test {
         for (uint256 i; i < actors.length; i++) {
             actors[i] = makeAddr(string.concat("actor", vm.toString(i)));
         }
+        actors[0] = xmetro.migrationRewardExcludedAddress();
         handler = new xMETROHandlerV2(xmetro, metro, usdc, actors);
 
+        usdc.transferOwnership(address(handler));
         metro.setMinter(address(handler), true);
         metro.setMinter(address(xmetro), true);
         xmetro.setMigrationEscrow(address(handler));
@@ -32,6 +34,19 @@ contract xMETROInvariantTest is StdInvariant, Test {
         xmetro.setContributor(address(handler), true);
         xmetro.transferOwnership(address(handler));
         assertEq(xmetro.owner(), address(handler));
+
+        // Seed successful excluded migrations and both exit modes before random operations.
+        handler.creditThor(0, 100 ether);
+        handler.creditYThor(0, 100 ether);
+        handler.stake(0, 10 ether);
+        handler.stake(1, 10 ether);
+        handler.depositRewards(20e6);
+        handler.claimRewards(0);
+        handler.advanceTime(120 days);
+        handler.exitThor(0, 0, false);
+        handler.exitYThor(0, 0, true);
+        handler.creditThor(0, 10 ether);
+        handler.creditYThor(0, 10 ether);
 
         targetContract(address(handler));
         bytes4[] memory selectors = new bytes4[](15);
@@ -57,14 +72,27 @@ contract xMETROInvariantTest is StdInvariant, Test {
         uint256 sumShares;
         uint256 sumLocked;
         uint256 sumActiveYThor;
+        uint256 excludedThor;
+        uint256 excludedYThor;
         uint256 weightBps = xmetro.yThorRewardWeightBps();
         for (uint256 i; i < handler.actorsLength(); i++) {
             address actor = handler.actorAt(i);
             uint256 activePrincipal = _activeYThorPrincipal(actor);
+            bool excluded = actor == xmetro.migrationRewardExcludedAddress();
+            uint256 activeThor;
+            if (excluded) {
+                for (uint256 id; id < xmetro.thorPositionCount(actor); ++id) {
+                    (uint128 principal,,, bool exited) = xmetro.thorPositions(actor, id);
+                    if (!exited) activeThor += principal;
+                }
+                excludedThor += activeThor;
+                excludedYThor += activePrincipal;
+                assertLe(activeThor + activePrincipal, xmetro.lockedShares(actor));
+            }
             assertEq(
                 xmetro.rewardWeightOf(actor),
-                xmetro.balanceOf(actor) + xmetro.lockedShares(actor) - activePrincipal + activePrincipal * weightBps
-                    / 10_000
+                xmetro.balanceOf(actor) + xmetro.lockedShares(actor) - activePrincipal - activeThor
+                    + (excluded ? 0 : activePrincipal * weightBps / 10_000)
             );
             sumShares += xmetro.totalSharesOf(actor);
             sumLocked += xmetro.lockedShares(actor);
@@ -74,7 +102,8 @@ contract xMETROInvariantTest is StdInvariant, Test {
         assertEq(xmetro.totalShares(), sumShares);
         assertEq(xmetro.totalLockedShares(), sumLocked);
         assertEq(
-            xmetro.totalRewardWeight(), xmetro.totalShares() - sumActiveYThor + sumActiveYThor * weightBps / 10_000
+            xmetro.totalRewardWeight(),
+            xmetro.totalShares() - sumActiveYThor - excludedThor + (sumActiveYThor - excludedYThor) * weightBps / 10_000
         );
     }
 
@@ -103,6 +132,8 @@ contract xMETROInvariantTest is StdInvariant, Test {
     }
 
     function invariant_ClaimedRewardsAndContractBalanceMatchDeposits() public view {
+        assertGt(handler.totalRewardsDeposited(), 0);
+        assertGt(handler.totalRewardsClaimed(), 0);
         uint256 payableRewards;
         for (uint256 i; i < handler.actorsLength(); ++i) {
             payableRewards += xmetro.claimable(handler.actorAt(i));

@@ -52,6 +52,7 @@ contract Deploy is DeFiAdapterScriptBase {
         address autoCompoundOperator;
         address owner;
         address forfeitureRecipient;
+        address migrationRewardExcludedAddress;
         address commissionVault;
         address commissionVaultUsdc;
         address commissionVaultDistributor;
@@ -414,6 +415,7 @@ contract Deploy is DeFiAdapterScriptBase {
         a.autoCompoundOperator = i.autoCompoundOperator;
         a.owner = i.owner;
         a.forfeitureRecipient = i.forfeitureRecipient;
+        a.migrationRewardExcludedAddress = core.migrationRewardExcludedAddress();
         a.commissionVault = i.commissionVault;
         a.commissionVaultUsdc =
             i.commissionVault == address(0) ? address(0) : ICommissionVault(i.commissionVault).usdc();
@@ -488,9 +490,10 @@ contract Deploy is DeFiAdapterScriptBase {
         require(core.owner() == i.owner && !core.paused(), "Deploy: xMETRO ownership/pause");
         require(
             address(core.METRO()) == address(metro) && address(core.rewardToken()) == i.usdc
-                && core.forfeitureRecipient() == i.forfeitureRecipient && core.deFiAdapter() == address(adapter)
-                && core.deFiAdapterEpoch() == 1 && core.rewardDistributor() == address(distributor)
-                && core.migrationEscrow() == address(escrow),
+                && core.forfeitureRecipient() == i.forfeitureRecipient
+                && core.migrationRewardExcludedAddress() == i.forfeitureRecipient
+                && core.deFiAdapter() == address(adapter) && core.deFiAdapterEpoch() == 1
+                && core.rewardDistributor() == address(distributor) && core.migrationEscrow() == address(escrow),
             "Deploy: xMETRO binding"
         );
 
@@ -719,6 +722,7 @@ contract Deploy is DeFiAdapterScriptBase {
         json = vm.serializeAddress(obj, "autoCompoundOperator", a.autoCompoundOperator);
         json = vm.serializeAddress(obj, "owner", a.owner);
         json = vm.serializeAddress(obj, "forfeitureRecipient", a.forfeitureRecipient);
+        json = vm.serializeAddress(obj, "migrationRewardExcludedAddress", a.migrationRewardExcludedAddress);
         json = vm.serializeAddress(obj, "commissionVault", a.commissionVault);
         json = vm.serializeAddress(obj, "commissionVaultUsdc", a.commissionVaultUsdc);
         json = vm.serializeAddress(obj, "commissionVaultDistributor", a.commissionVaultDistributor);

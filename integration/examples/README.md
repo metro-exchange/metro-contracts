@@ -1,8 +1,10 @@
 # xMETRO Integration Examples
 
-## October 21 source update
+## October 24 source update
 
-This source version supports repeated THOR and yTHOR migrations, independent position IDs, and reward debt at `1e24` internal precision. Production yTHOR pays 10% after 120 days, increasing linearly to 50% over the following `4 * 365 days`. Base QA keeps its 4-hour delay and 12-hour ramp. Each position settles its full principal once; it cannot claim an additional amount later.
+This source version changes yTHOR exits to 20%-100% of the converted METRO principal. Production opens exits after 120 days and reaches 100% over the following `4 * 365 days`; Base QA keeps its 4-hour delay and 12-hour ramp. Repeated migrations, independent position IDs, one complete exit per position, and `1e24` reward-debt precision are retained.
+
+Only THOR/yTHOR migration positions owned by `migrationRewardExcludedAddress()` earn no USDC rewards and are excluded from the allocation denominator. Ordinary stakes, Contributor shares, received free xMETRO and migration payouts staked after exit retain normal prospective rewards. Existing earned rewards and fractional entitlements are preserved.
 
 The existing Base QA deployment and its address/configuration records remain unchanged. Use the ABI and examples from that deployment's revision (QA baseline `60754e05436c6c8056b60eac481d0bdc96a89d4c`) with its existing addresses. This version's ABI/examples target newly created local instances or a future deployment requested by the project. Source changes do not update an immutable deployed Core or migrate its storage.
 
@@ -11,7 +13,7 @@ These runnable Node.js modules use `ethers` 5.8.0 and the ABI files from this de
 - [`user-actions.mjs`](user-actions.mjs): approve and stake METRO, migrate THOR/yTHOR, claim, choose automatic actions, submit manual actions, request/withdraw, and authorize an Aave V4 Giver.
 - [`backend-actions.mjs`](backend-actions.mjs): Operator reward funding, Keeper batch execution with unique candidates and an optional gas/reward check, and event queries.
 
-Load a verified environment file for the same contract revision as these ABIs. `loadConfig()` accepts `deployed_pending_handover` and `deployed`; existing deployment JSON remains unchanged. The QA record uses the legacy status `deployed_pending_project_handover`, and belongs to the previous contract revision. Continue testing that deployment with its matching baseline examples. This update does not add status compatibility that would allow new ABIs to be used against old contracts. The Ethereum template remains `not_deployed`.
+Set `CONFIG_FILE` explicitly to a verified environment file for the same contract revision as these ABIs; the example environment has no default configuration path. `loadConfig()` accepts `deployed_pending_handover` and `deployed`; existing deployment JSON remains unchanged. The QA record uses the legacy status `deployed_pending_project_handover`, and belongs to the previous contract revision. Continue testing that deployment with its matching baseline examples. This update does not add status compatibility that would allow new ABIs to be used against old contracts. The Ethereum template remains `not_deployed`.
 
 All balances and minimums are integer base units: METRO/THOR/yTHOR generally use 18 decimals, USDC uses 6, and each output asset has its own decimals. For a V2 swap, `executionData = abi.encode(uint8(0), abi.encode(path))`; the path begins with USDC and ends with the configured output. For a V4 batch, pass a nonzero minimum for each original candidate; for every other batch strategy pass an empty `minUserAmountsOut` array. For Maple first authorization, request the signature for the **Adapter Proxy**; do not ask users to approve USDC to the Adapter.
 

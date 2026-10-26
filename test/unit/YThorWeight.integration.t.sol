@@ -120,4 +120,41 @@ contract YThorWeightIntegrationTest is Test {
         (uint128 principal,,, bool exited) = xmetro.yThorPositions(user, 0);
         return exited ? 0 : uint256(principal);
     }
+
+    function test_TreasuryRemainsExcludedAcrossProspectiveMultiplierChanges() public {
+        address treasury = xmetro.migrationRewardExcludedAddress();
+        _fundYThor(treasury, 100 ether);
+        vm.prank(treasury);
+        escrow.migrateYThor(100 ether);
+        vm.prank(userA);
+        escrow.migrateYThor(100 ether);
+        vm.prank(userB);
+        escrow.migrateYThor(100 ether);
+        metro.setMinter(address(this), true);
+        metro.mint(treasury, 10 ether);
+        vm.startPrank(treasury);
+        metro.approve(address(xmetro), 10 ether);
+        xmetro.stake(10 ether);
+        vm.stopPrank();
+        uint256[4] memory multipliers = [uint256(0), 5_000, 20_000, 3_333];
+        uint256 expectedUser;
+        uint256 expectedTreasury;
+        for (uint256 i; i < multipliers.length; ++i) {
+            _setWeight(multipliers[i]);
+            assertEq(xmetro.claimable(userA), expectedUser);
+            assertEq(xmetro.claimable(treasury), expectedTreasury);
+            assertEq(xmetro.rewardWeightOf(treasury), 10 ether);
+            uint256 userWeight = 100 ether * multipliers[i] / 10_000;
+            assertEq(xmetro.totalRewardWeight(), 10 ether + 2 * userWeight);
+            _depositRewards((10 ether + 2 * userWeight) / 1e12);
+            expectedUser += userWeight / 1e12;
+            expectedTreasury += 10e6;
+            assertEq(xmetro.claimable(userA), expectedUser);
+            assertEq(xmetro.claimable(userB), expectedUser);
+            assertEq(xmetro.claimable(treasury), expectedTreasury);
+        }
+        assertEq(xmetro.lockedShares(treasury), 100 ether);
+        assertEq(xmetro.totalShares(), 310 ether);
+        assertEq(metro.balanceOf(address(xmetro)), 310 ether);
+    }
 }

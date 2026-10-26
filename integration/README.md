@@ -1,8 +1,10 @@
 # xMETRO Integration Guide
 
-## October 21 source update
+## October 24 source update
 
-This source version supports repeated THOR and yTHOR migrations, independent position IDs, and reward debt at `1e24` internal precision. Production yTHOR pays 10% after 120 days, increasing linearly to 50% over the following `4 * 365 days`. Base QA keeps its 4-hour delay and 12-hour ramp. Each position settles its full principal once; it cannot claim an additional amount later.
+This source version changes yTHOR exits to 20%-100% of the converted METRO principal. Production opens exits after 120 days and reaches 100% over the following `4 * 365 days`; Base QA keeps its 4-hour delay and 12-hour ramp. Repeated migrations, independent position IDs, one complete exit per position, and `1e24` reward-debt precision are retained.
+
+Only THOR/yTHOR migration positions owned by `migrationRewardExcludedAddress()` earn no USDC rewards and are excluded from the allocation denominator. Ordinary stakes, Contributor shares, received free xMETRO and migration payouts staked after exit retain normal prospective rewards. Existing earned rewards and fractional entitlements are preserved.
 
 The existing Base QA deployment and its address/configuration records remain unchanged. Use the ABI and examples from that deployment's revision (QA baseline `60754e05436c6c8056b60eac481d0bdc96a89d4c`) with its existing addresses. This version's ABI/examples target newly created local instances or a future deployment requested by the project. Source changes do not update an immutable deployed Core or migrate its storage.
 
@@ -23,7 +25,7 @@ This source handoff does not require the project-facing Base functional checklis
 
 The Base checklist tracks the **new project-facing deployment** separately from a historical rapid-QA run. The older run checked 36 of 37 groups; N-04 was executed but did not pass its historical-pending assertion. Its transaction hashes and short time constants are historical evidence only, not passing results for the new deployment.
 
-The new Base QA environment is a fresh deployment with the agreed longer QA periods and owner-controlled TestToken minting. The Base QA branch records its public addresses, mock protocol contracts, roles, and time settings in `config/base-qa.json`, and its deployment transaction hashes in the Base checklist. The production branch's local Base files are templates, not a second deployment or evidence that the production bytecode was deployed to Base. Until project management and backend addresses are supplied, QA deployment ownership remains with the deployment team; a later handover is a separate set of transactions.
+The recorded Base QA environment is an earlier deployment with the agreed longer QA periods and owner-controlled TestToken minting. The Base QA branch records its public addresses, mock protocol contracts, roles, and time settings in `config/base-qa.json`, and its deployment transaction hashes in the Base checklist. The production branch's local Base files are templates, not a second deployment or evidence that the production bytecode was deployed to Base. Ownership and role values are deployment-time snapshots; later handovers must be verified separately.
 
 Ethereum fork tests use production time constants and real Ethereum protocols where available. Fork execution does not broadcast to Ethereum mainnet. See the checklist and results for which scenarios were actually run, skipped, or blocked.
 

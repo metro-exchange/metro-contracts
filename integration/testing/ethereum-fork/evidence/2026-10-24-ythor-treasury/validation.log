@@ -1,0 +1,3377 @@
+Local validation, 2026-10-24. Commands run in a clean tracked-source copy.
+No transactions were broadcast. Optional RPC skips are retained below.
+
+COMMAND: FOUNDRY_PROFILE=regression forge test -vv
+Compiling 1 files with Solc 0.8.30
+Solc 0.8.30 finished in 3.94s
+Compiler run successful with warnings:
+Warning (9302): Return value of low-level calls not used.
+   --> test/invariant/xMETRO.invariant.t.sol:324:9:
+    |
+324 |         address(xmetro).call(abi.encodeCall(XMetroCore.claimAndStakeUnlockedContributor, (uint256(0))));
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (9302): Return value of low-level calls not used.
+   --> test/invariant/xMETRO.invariant.t.sol:331:9:
+    |
+331 |         address(xmetro).call(abi.encodeCall(XMetroCore.requestWithdrawUnlockedContributor, (uint256(0))));
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (9302): Return value of low-level calls not used.
+   --> test/invariant/xMETRO.invariant.t.sol:337:9:
+    |
+337 |         address(xmetro).call(abi.encodeCall(XMetroCore.withdrawFree, (uint256(0))));
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (9302): Return value of low-level calls not used.
+   --> test/invariant/xMETRO.invariant.t.sol:338:9:
+    |
+338 |         address(xmetro).call(abi.encodeCall(XMetroCore.withdrawThor, (uint256(0))));
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (9302): Return value of low-level calls not used.
+   --> test/invariant/xMETRO.invariant.t.sol:339:9:
+    |
+339 |         address(xmetro).call(abi.encodeCall(XMetroCore.withdrawYThor, (uint256(0))));
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (9302): Return value of low-level calls not used.
+   --> test/invariant/xMETRO.invariant.t.sol:340:9:
+    |
+340 |         address(xmetro).call(abi.encodeCall(XMetroCore.withdrawContributor, (uint256(0))));
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+Ran 2 tests for test/unit/YThorWeight.integration.t.sol:YThorWeightIntegrationTest
+[PASS] test_TreasuryRemainsExcludedAcrossProspectiveMultiplierChanges() (gas: 902652)
+[PASS] test_WeightChangeAffectsEveryActivePositionProspectivelyAndExitStopsFutureRewards() (gas: 775169)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 7.99ms (1.28ms CPU time)
+
+Ran 10 tests for test/mock/XChainAndCore.t.sol:CoreIntegrationTest
+[PASS] test_ContributorPathRemainsSixMonthCliffAndTwoPointFiveYears() (gas: 252183)
+[PASS] test_EndToEndMigrationsRewardsCommissionAndLiquidExits() (gas: 1034524)
+[PASS] test_RepeatedMigrationAfterExitPreservesCapsAndRollback() (gas: 1110424)
+[PASS] test_TreasuryMintFailureRollsBackMigrationAndExcludedPrincipal() (gas: 937279)
+[PASS] test_TreasuryOnlyDistributionRollbackAndCommissionOnlyRouting() (gas: 840562)
+[PASS] test_TreasuryRealMigrationRewardsAndExitAccounting() (gas: 1356663)
+[PASS] test_YThorHalfRatioLiquidExitAtMaturity() (gas: 2004121)
+[PASS] test_YThorHalfRatioLiquidExitAtStart() (gas: 2027540)
+[PASS] test_YThorHalfRatioStakeExitAtMaturity() (gas: 1957374)
+[PASS] test_YThorHalfRatioStakeExitAtStart() (gas: 1980679)
+Suite result: ok. 10 passed; 0 failed; 0 skipped; finished in 11.26ms (4.45ms CPU time)
+
+Ran 13 tests for test/unit/ThorMigrationEscrow.unit.t.sol:ThorMigrationEscrowUnitTest
+[PASS] test_CapsRemainOwnerConfigurableAfterMigration() (gas: 195803)
+[PASS] test_ConfigurationPermissionsValidationAndEvents() (gas: 1193554)
+[PASS] test_ConstructorRejectsInvalidInputs() (gas: 253949)
+[PASS] test_DifferentAddressesHaveIndependentCredits() (gas: 233552)
+[PASS] test_FailedLaterCreditPreservesEarlierMigration() (gas: 224345)
+[PASS] test_FailedTokenTransferDoesNotConsumeCreditOrCap() (gas: 120627)
+[PASS] test_FailedXMetroCreditRollsBackTokensCreditAndCap() (gas: 154572)
+[PASS] test_MigrateThorUsesUnifiedRatioAndCreatesIndependentCredits() (gas: 208117)
+[PASS] test_MigrateYThorUsesPrincipalCapAndCreditsPrincipal() (gas: 209721)
+[PASS] test_MigrationIsAllowedExactlyAtStartAndDeadline() (gas: 1494660)
+[PASS] test_MigrationValidationStartDeadlineCapZeroAndZeroMint() (gas: 3562614)
+[PASS] test_PauseAndRescueProtections() (gas: 203729)
+[PASS] test_ThorAndYThorRepeatedMigrationsAreIndependent() (gas: 378689)
+Suite result: ok. 13 passed; 0 failed; 0 skipped; finished in 16.04ms (10.17ms CPU time)
+
+Ran 15 tests for test/unit/RewardDistributor.t.sol:RewardDistributorTest
+[PASS] test_ChangingVaultRoutesOnlyFutureDistributionsToReplacement() (gas: 578854)
+[PASS] test_CommissionConfigurationValidationAndMigration() (gas: 1576294)
+[PASS] test_ConstructorAndOperatorPermissions() (gas: 116720)
+[PASS] test_DistributeFromBalanceUsesSameRouting() (gas: 242752)
+[PASS] test_OneHundredPercentSplitCanProduceZeroNetWithoutCallingDepositRewardsZero() (gas: 163618)
+[PASS] test_PartialCoverageRollsOverThroughVaultBalanceWithoutDistributorState() (gas: 407611)
+[PASS] test_RequiredTopUpFailureRollsBackPulledFunds() (gas: 162529)
+[PASS] test_RescueOnlyOwnerAndBadRecipient() (gas: 68923)
+[PASS] test_ShortfallAboveCapSendsOnlyConfiguredSlice() (gas: 235041)
+[PASS] test_ShortfallBelowCapSendsOnlyNeedAndEmitsGrossCommissionNet() (gas: 247510)
+[PASS] test_SourceCompatibleVaultSettlementTopUpClaimAndSurplusRoundTrip() (gas: 1572821)
+[PASS] test_VaultTokenTransferFailureRollsBackPulledFundsAtomically() (gas: 6919141)
+[PASS] test_XMetroFailureRollsBackVaultTransferAndPullAtomically() (gas: 207450)
+[PASS] test_ZeroBpsBypassesVaultCompletely() (gas: 206547)
+[PASS] test_ZeroBpsIsRecoveryPathWhenConfiguredVaultLaterPauses() (gas: 237600)
+Suite result: ok. 15 passed; 0 failed; 0 skipped; finished in 16.46ms (9.97ms CPU time)
+
+Ran 15 tests for test/unit/MetroToken.t.sol:MetroTokenTest
+[PASS] test_Constructor_SetsImmutableCap() (gas: 6696)
+[PASS] test_Constructor_SetsOwnerAndNoDefaultMinter() (gas: 25918)
+[PASS] test_DomainSeparator_NotZero() (gas: 5607)
+[PASS] test_Mint_CrossingCapRevertsAtomically() (gas: 93010)
+[PASS] test_Mint_MultipleMintersShareOneCap() (gas: 124986)
+[PASS] test_Mint_OnlyMinter() (gas: 130502)
+[PASS] test_Permit_Expired_Reverts() (gas: 13969)
+[PASS] test_Permit_ReplaySignature_RevertsInvalidSigner() (gas: 159435)
+[PASS] test_Permit_Success_SetsAllowance_AndIncrementsNonce() (gas: 161562)
+[PASS] test_RenounceOwnership_DisablesOnlyOwner_ButDoesNotRevokeMinter() (gas: 96414)
+[PASS] test_SetMinter_EmitsEvent_AndToggle() (gas: 33756)
+[PASS] test_SetMinter_OnlyOwner() (gas: 45043)
+[PASS] test_TransferOwnership_ChangesOnlyOwnerPermissions() (gas: 50394)
+[PASS] test_TransferOwnership_DoesNotAutoGrantMinterToNewOwner() (gas: 99045)
+[PASS] test_TransferToDeadAddressDoesNotBurnOrRestoreCap() (gas: 119381)
+Suite result: ok. 15 passed; 0 failed; 0 skipped; finished in 17.79ms (10.71ms CPU time)
+
+Ran 3 tests for test/fuzz/MetroToken.fuzz.t.sol:MetroTokenFuzzTest
+[PASS] testFuzz_ImmutableCapAndMultipleMintersNeverExceedIt(uint128) (runs: 256, μ: 1108865, ~: 1108851)
+Logs:
+  Bound result 8504
+
+[PASS] testFuzz_MintRespectsAllowlist(address,address,uint96,bool) (runs: 256, μ: 1033641, ~: 1067043)
+Logs:
+  Bound result 2048
+
+[PASS] test_DeadAddressTransferNeverRestoresMintCapacity() (gas: 1094047)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 87.70ms (82.43ms CPU time)
+
+Ran 3 tests for test/fuzz/RewardDistributor.fuzz.t.sol:RewardDistributorFuzzTest
+[PASS] testFuzz_DistributeFromBalanceUsesIdenticalFormula(uint128,uint16,uint128) (runs: 256, μ: 214725, ~: 221584)
+Logs:
+  Bound result 920938463463374607431768211454
+  Bound result 24
+  Bound result 1
+
+[PASS] testFuzz_GrossAlwaysEqualsCommissionPlusNetAndObeysBothBounds(uint128,uint16,uint128) (runs: 256, μ: 245452, ~: 251022)
+Logs:
+  Bound result 920938463463374607431768211454
+  Bound result 24
+  Bound result 1
+
+[PASS] testFuzz_RolloverAcrossManyDistributionsNeedsNoDistributorAccounting(uint96,uint16,uint96,uint8) (runs: 256, μ: 648966, ~: 569499)
+Logs:
+  Bound result 4353983196490000150634
+  Bound result 7040
+  Bound result 963756835096070174117059
+  Bound result 1
+
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 358.98ms (352.52ms CPU time)
+
+Ran 58 tests for test/unit/xMETRO.unit.t.sol:xMETROUnitTest
+[PASS] testFuzz_RepeatedCreditsCannotClaimHistoricalRewards(bool) (runs: 256, μ: 823515, ~: 780480)
+[PASS] testFuzz_TreasuryExitPreservesOrdinaryRewards(bool,bool,bool) (runs: 256, μ: 623569, ~: 615251)
+[PASS] test_AddingYThorWeightCannotClaimHistoricalRewards() (gas: 441443)
+[PASS] test_BatchAutocompoundRequiresOperatorAndSkipsDisabledUsers() (gas: 1357319)
+[PASS] test_BatchAutocompoundUsesYThorTwoXPendingAndMintsProRata() (gas: 1456375)
+[PASS] test_ConstructorAndConfigurationValidation() (gas: 10018278)
+[PASS] test_ContributorSixMonthCliffTwoPointFiveYearLinearAndBothExitModes() (gas: 387913)
+[PASS] test_CoreCriticalSettingsCanBeChangedWhileUnpaused() (gas: 907184)
+[PASS] test_DefaultUnpausedAllowsStakeAndClaim() (gas: 284893)
+[PASS] test_DepositRevertsInsteadOfTrappingRewardsWhenConfiguredWeightRoundsDeltaToZero() (gas: 306274)
+[PASS] test_EmergencyDistributeCalculatesOnchainSkipsInvalidAndPaysDuplicateOnce() (gas: 415800)
+[PASS] test_EmergencyDistributeGuardsAndTransferFailureAreAtomic() (gas: 506707)
+[PASS] test_EmergencyDistributeHasNoFixedCandidateLimit() (gas: 322952)
+[PASS] test_EmptyAndOutOfRangePositionQueries() (gas: 200307)
+[PASS] test_FractionalYThorWeightRoundingCannotCreateUnbackedRewards() (gas: 348596)
+[PASS] test_FreeQueueBatchStopsAtMaxRequests() (gas: 293653)
+[PASS] test_GlobalFractionalWeightRoundingAcrossMultipleYThorUsersCannotOverclaim() (gas: 549105)
+[PASS] test_LaterMintFailureRollsBackPositionCacheDebtAndShares() (gas: 422632)
+[PASS] test_MigrationCreditOnlyEscrowAndAmountBounds() (gas: 49453)
+[PASS] test_MigrationCreditsMultiplePositionsAndTracksActiveYThorPrincipalWithoutVirtualMint() (gas: 439936)
+[PASS] test_MixedAccumulatorsCombineFractionsAndEmergencyPreservesRemainder() (gas: 591771)
+[PASS] test_MixedSourcesRemainIsolatedWhenYThorExits() (gas: 552689)
+[PASS] test_MultiplePositionsUseIndependentClocksAndStableIds() (gas: 910674)
+[PASS] test_OnlyOwnerCanRenounceAndCannotRecoverOwnership() (gas: 33289)
+[PASS] test_PauseCoversCreditsExitsRewardsWithdrawalsAndAutocompound() (gas: 437226)
+[PASS] test_PreviewWithdrawableNowTracksThorAndYThorSchedules() (gas: 289872)
+[PASS] test_RenouncePreservesPendingAndUserWithdrawal() (gas: 383950)
+[PASS] test_RenounceWhilePausedCannotBeUnpausedByFormerOwner() (gas: 26177)
+[PASS] test_RescueCannotRemoveBackingMETRO() (gas: 705146)
+[PASS] test_RewardDebtFollowsFreeShareTransfers() (gas: 367542)
+[PASS] test_ScaledDebtRejectsSignedOverflowAndRollsBack() (gas: 380205)
+[PASS] test_SingleStepOwnershipRejectsZeroAndRevokesOldOwner() (gas: 50234)
+[PASS] test_StakeAndFreeUnstakeUseExact72HourQueue() (gas: 278561)
+[PASS] test_StakeRewardContributorAndOwnerConfigurationGuards() (gas: 925708)
+[PASS] test_ThorAndYThorLiquidQueuesEnforceExact72HourBoundaryForSameUser() (gas: 487302)
+[PASS] test_ThorCannotExitBeforeDay30OrWhenNoPosition() (gas: 190546)
+[PASS] test_ThorClaimAndStakeAtDay30HasNoLiquidQueue() (gas: 256707)
+[PASS] test_ThorExitPreviewBoundariesAreLinearFromDay30ToDay90() (gas: 192374)
+[PASS] test_ThorLiquidExitClosesPositionPreservesPendingAndUsesQueue() (gas: 443409)
+[PASS] test_TreasuryExclusionPrecedesFractionalWeightRounding() (gas: 548364)
+[PASS] test_TreasuryFractionalRewardsSurviveMigrationExitAndTransfers() (gas: 999326)
+[PASS] test_TreasuryMigrationSharesKeepBackingAndExcludeOnlyTheirRewards() (gas: 888618)
+[PASS] test_TreasuryRewardSettlementPathsConsumeOnlyOrdinaryRewards() (gas: 1921647)
+[PASS] test_YThorAutocompoundUsesTwoXPendingAndKeepsLockedPosition() (gas: 1255004)
+[PASS] test_YThorCannotExitBeforeDay120OrWithoutPosition() (gas: 236208)
+[PASS] test_YThorClaimAndStakeClosesPositionAndHasNoQueue() (gas: 264291)
+[PASS] test_YThorClaimAndStakePreservesEarnedRewardsAndUsesOnlyPayoutAsFutureWeight() (gas: 548990)
+[PASS] test_YThorExitPreviewStartsDay120ThenRunsFullFourYears() (gas: 249639)
+[PASS] test_YThorExitRemovesActivePrincipalAfterWeightChange() (gas: 298317)
+[PASS] test_YThorGetsTwoThirdsOfRewardsAgainstEqualNormalPrincipal() (gas: 433501)
+[PASS] test_YThorLiquidExitRemovesPrincipalAndBonusAndPreservesPending() (gas: 600832)
+[PASS] test_YThorOneWeiExitsBeforeAndAtMaturity() (gas: 603142)
+[PASS] test_YThorPrincipalUsesIndependentAccumulator() (gas: 431510)
+[PASS] test_YThorQuarterBoundariesAndActualOneTimePayouts() (gas: 640661)
+[PASS] test_YThorRewardWeightSupportsSubOneXAndZeroWithoutPause() (gas: 38173)
+[PASS] test_ZeroAndSubOneXWeightsUseIndependentYThorAccumulator() (gas: 448348)
+[PASS] test_ZeroClaimsAndTransfersPreserveFractionsAndNegativeDebt() (gas: 690523)
+[PASS] test_ZeroWeightWithOnlyYThorRejectsRewardDepositAtomically() (gas: 297550)
+Suite result: ok. 58 passed; 0 failed; 0 skipped; finished in 305.87ms (314.52ms CPU time)
+
+Ran 4 tests for test/fuzz/ThorMigrationEscrow.fuzz.t.sol:ThorMigrationEscrowFuzzTest
+[PASS] testFuzz_CapFailureLeavesBalanceCountersAndCreditsUnchanged(uint96,uint96) (runs: 256, μ: 136277, ~: 136194)
+Logs:
+  Bound result 107806490206707459898735
+  Bound result 8703826658519911
+
+[PASS] testFuzz_RandomAmountAndRatioUseFullPrecisionMath(uint128,uint128,bool) (runs: 256, μ: 1334809, ~: 1334656)
+Logs:
+  Bound result 989742110343117803067153838328
+  Bound result 17817
+
+[PASS] testFuzz_RepeatedMigrationCreditsAndCumulativeCaps(uint96,uint8,bool) (runs: 256, μ: 300365, ~: 293305)
+Logs:
+  Bound result 8
+  Bound result 690
+
+[PASS] testFuzz_YThorCapCountsPrincipal(uint96) (runs: 256, μ: 200186, ~: 200151)
+Logs:
+  Bound result 5213
+
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 373.18ms (159.61ms CPU time)
+
+Ran 2 tests for test/invariant/MetroToken.invariant.t.sol:MetroTokenInvariantTest
+[PASS] invariant_TotalSupplyEqualsTrackedActorBalances() (runs: 128, calls: 12800, reverts: 0)
+
+╭-------------------+----------------+-------+---------+----------╮
+| Contract          | Selector       | Calls | Reverts | Discards |
++=================================================================+
+| MetroTokenHandler | mint           | 4322  | 0       | 0        |
+|-------------------+----------------+-------+---------+----------|
+| MetroTokenHandler | setMinter      | 4195  | 0       | 0        |
+|-------------------+----------------+-------+---------+----------|
+| MetroTokenHandler | transferTokens | 4283  | 0       | 0        |
+╰-------------------+----------------+-------+---------+----------╯
+
+Logs:
+  Bound result 5233609365304508403155736
+  Bound result 30
+  Bound result 13
+  Bound result 37518079982246367777809289
+  Bound result 0
+  Bound result 32953204673107414602942495
+  Bound result 9
+  Bound result 11442283005209504916958223
+  Bound result 1
+  Bound result 3255
+  Bound result 20
+  Bound result 45731658977919385154748648
+  Bound result 45641
+  Bound result 56120632734960562517054
+  Bound result 3279912818110712838871
+  Bound result 77491751105576192074151
+  Bound result 3858947845
+  Bound result 3
+  Bound result 3031414102320534006367
+  Bound result 2763700482158718080712
+  Bound result 12
+  Bound result 525260350157403017950422
+  Bound result 1225
+  Bound result 2367
+  Bound result 840038097
+  Bound result 172863021016304085
+  Bound result 112
+  Bound result 100000000000000000000
+
+[PASS] invariant_TotalSupplyNeverExceedsImmutableCap() (runs: 128, calls: 12800, reverts: 0)
+
+╭-------------------+----------------+-------+---------+----------╮
+| Contract          | Selector       | Calls | Reverts | Discards |
++=================================================================+
+| MetroTokenHandler | mint           | 4322  | 0       | 0        |
+|-------------------+----------------+-------+---------+----------|
+| MetroTokenHandler | setMinter      | 4195  | 0       | 0        |
+|-------------------+----------------+-------+---------+----------|
+| MetroTokenHandler | transferTokens | 4283  | 0       | 0        |
+╰-------------------+----------------+-------+---------+----------╯
+
+Logs:
+  Bound result 20
+  Bound result 13
+  Bound result 77497201454114634498489856
+  Bound result 30
+  Bound result 9
+  Bound result 1955223017265328015202027
+  Bound result 10
+  Bound result 70222176996119218269873279
+  Bound result 9
+  Bound result 1624363090625205971637301
+  Bound result 21
+  Bound result 962
+  Bound result 3256
+  Bound result 20
+  Bound result 12488121118676285700954091
+  Bound result 45641
+  Bound result 5544765181281084733385249
+  Bound result 708188266981266661293772
+  Bound result 2503
+  Bound result 77491751105576192074151
+  Bound result 3858947844
+  Bound result 3
+  Bound result 94971855077044054829098
+  Bound result 57493457199468374816265
+  Bound result 12
+  Bound result 1214580177457292601115442
+  Bound result 5641
+  Bound result 2323
+  Bound result 172863021016304085
+  Bound result 112
+  Bound result 100000000000000000000
+
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 2.00s (3.14s CPU time)
+
+Ran 3 tests for test/invariant/RewardDistributor.invariant.t.sol:RewardDistributorInvariantTest
+[PASS] invariant_GrossAlwaysEqualsCommissionPlusNet() (runs: 128, calls: 12800, reverts: 4254)
+
+╭--------------------------+---------------------+-------+---------+----------╮
+| Contract                 | Selector            | Calls | Reverts | Discards |
++=============================================================================+
+| RewardDistributorHandler | distribute          | 4254  | 4254    | 0        |
+|--------------------------+---------------------+-------+---------+----------|
+| RewardDistributorHandler | increaseVaultTarget | 4282  | 0       | 0        |
+|--------------------------+---------------------+-------+---------+----------|
+| RewardDistributorHandler | setBps              | 4264  | 0       | 0        |
+╰--------------------------+---------------------+-------+---------+----------╯
+
+Logs:
+  Bound result 825126813013
+  Bound result 13665
+  Bound result 843865965593
+  Bound result 1537
+  Bound result 0
+  Bound result 6309
+  Bound result 992
+  Bound result 0
+  Bound result 8316
+  Bound result 7454
+  Bound result 65
+  Bound result 724599816551
+  Bound result 765
+  Bound result 79709259255
+  Bound result 131662824459
+  Bound result 9996
+  Bound result 18024
+  Bound result 2447
+  Bound result 448320368182
+  Bound result 17278
+  Bound result 2
+  Bound result 179
+  Bound result 1
+  Bound result 100655648871
+  Bound result 311082783939
+  Bound result 46
+  Bound result 12
+  Bound result 741950747802
+  Bound result 0
+  Bound result 11
+  Bound result 1686
+  Bound result 1
+  Bound result 821018629457
+  Bound result 42994778903
+  Bound result 204
+  Bound result 5315
+  Bound result 6101
+  Bound result 1
+  Bound result 1657194069
+  Bound result 18132
+  Bound result 995
+  Bound result 1545
+  Bound result 1919
+  Bound result 73
+  Bound result 98519063745
+  Bound result 67843084619
+  Bound result 3971
+  Bound result 0
+  Bound result 27074957641
+  Bound result 18051
+  Bound result 180823168
+  Bound result 942469827148
+  Bound result 1547
+  Bound result 5529
+  Bound result 2
+  Bound result 4923
+  Bound result 12
+  Bound result 10
+  Bound result 668
+  Bound result 3373
+  Bound result 24472709380
+  Bound result 334340143
+  Bound result 431029765223
+  Bound result 1648
+
+[PASS] invariant_RoutedTokenBalancesMatchAccountingAndDistributorRetainsNothing() (runs: 128, calls: 12800, reverts: 4254)
+
+╭--------------------------+---------------------+-------+---------+----------╮
+| Contract                 | Selector            | Calls | Reverts | Discards |
++=============================================================================+
+| RewardDistributorHandler | distribute          | 4254  | 4254    | 0        |
+|--------------------------+---------------------+-------+---------+----------|
+| RewardDistributorHandler | increaseVaultTarget | 4282  | 0       | 0        |
+|--------------------------+---------------------+-------+---------+----------|
+| RewardDistributorHandler | setBps              | 4264  | 0       | 0        |
+╰--------------------------+---------------------+-------+---------+----------╯
+
+Logs:
+  Bound result 825126813013
+  Bound result 13665
+  Bound result 843865965593
+  Bound result 1537
+  Bound result 0
+  Bound result 6309
+  Bound result 992
+  Bound result 0
+  Bound result 8316
+  Bound result 7454
+  Bound result 65
+  Bound result 724599816551
+  Bound result 765
+  Bound result 79709259255
+  Bound result 131662824459
+  Bound result 9996
+  Bound result 18024
+  Bound result 2447
+  Bound result 448320368182
+  Bound result 17278
+  Bound result 2
+  Bound result 179
+  Bound result 1
+  Bound result 100655648871
+  Bound result 311082783939
+  Bound result 46
+  Bound result 12
+  Bound result 741950747802
+  Bound result 0
+  Bound result 11
+  Bound result 1686
+  Bound result 1
+  Bound result 821018629457
+  Bound result 42994778903
+  Bound result 204
+  Bound result 5315
+  Bound result 6101
+  Bound result 1
+  Bound result 1657194069
+  Bound result 18132
+  Bound result 995
+  Bound result 1545
+  Bound result 1919
+  Bound result 73
+  Bound result 98519063745
+  Bound result 67843084619
+  Bound result 3971
+  Bound result 0
+  Bound result 27074957641
+  Bound result 18051
+  Bound result 180823168
+  Bound result 942469827148
+  Bound result 1547
+  Bound result 5529
+  Bound result 2
+  Bound result 4923
+  Bound result 12
+  Bound result 10
+  Bound result 668
+  Bound result 3373
+  Bound result 24472709380
+  Bound result 334340143
+  Bound result 431029765223
+  Bound result 1648
+
+[PASS] invariant_VaultIsNeverFundedAboveItsNondecreasingTarget() (runs: 128, calls: 12800, reverts: 4254)
+
+╭--------------------------+---------------------+-------+---------+----------╮
+| Contract                 | Selector            | Calls | Reverts | Discards |
++=============================================================================+
+| RewardDistributorHandler | distribute          | 4254  | 4254    | 0        |
+|--------------------------+---------------------+-------+---------+----------|
+| RewardDistributorHandler | increaseVaultTarget | 4282  | 0       | 0        |
+|--------------------------+---------------------+-------+---------+----------|
+| RewardDistributorHandler | setBps              | 4264  | 0       | 0        |
+╰--------------------------+---------------------+-------+---------+----------╯
+
+Logs:
+  Bound result 825126813013
+  Bound result 13665
+  Bound result 843865965593
+  Bound result 1537
+  Bound result 0
+  Bound result 6309
+  Bound result 992
+  Bound result 0
+  Bound result 8316
+  Bound result 7454
+  Bound result 65
+  Bound result 724599816551
+  Bound result 765
+  Bound result 79709259255
+  Bound result 131662824459
+  Bound result 9996
+  Bound result 18024
+  Bound result 2447
+  Bound result 448320368182
+  Bound result 17278
+  Bound result 2
+  Bound result 179
+  Bound result 1
+  Bound result 100655648871
+  Bound result 311082783939
+  Bound result 46
+  Bound result 12
+  Bound result 741950747802
+  Bound result 0
+  Bound result 11
+  Bound result 1686
+  Bound result 1
+  Bound result 821018629457
+  Bound result 42994778903
+  Bound result 204
+  Bound result 5315
+  Bound result 6101
+  Bound result 1
+  Bound result 1657194069
+  Bound result 18132
+  Bound result 995
+  Bound result 1545
+  Bound result 1919
+  Bound result 73
+  Bound result 98519063745
+  Bound result 67843084619
+  Bound result 3971
+  Bound result 0
+  Bound result 27074957641
+  Bound result 18051
+  Bound result 180823168
+  Bound result 942469827148
+  Bound result 1547
+  Bound result 5529
+  Bound result 2
+  Bound result 4923
+  Bound result 12
+  Bound result 10
+  Bound result 668
+  Bound result 3373
+  Bound result 24472709380
+  Bound result 334340143
+  Bound result 431029765223
+  Bound result 1648
+
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 6.25s (4.68s CPU time)
+
+Ran 12 tests for test/fuzz/xMETRO.fuzz.t.sol:xMETROFuzzTest
+[PASS] testFuzz_EmergencyDistributionDeduplicatesAcrossTwoBatches(uint96,uint96,uint8,uint256) (runs: 256, μ: 607168, ~: 627296)
+Logs:
+  Bound result 150634
+  Bound result 684352
+  Bound result 2
+
+[PASS] testFuzz_ExitPreservesPastPendingAndStopsFutureYThorRewards(uint128,uint128,uint32) (runs: 256, μ: 530338, ~: 530372)
+Logs:
+  Bound result 463803656634070339290516
+  Bound result 832720904888
+  Bound result 10368001
+
+[PASS] testFuzz_MixedPositionYThorExitOnlyRemovesItsOwnPrincipal(uint96,uint96,uint96) (runs: 256, μ: 429791, ~: 431728)
+Logs:
+  Bound result 162514264337593543950334
+  Bound result 8087184056
+  Bound result 1
+
+[PASS] testFuzz_RewardSequenceMatchesAccrualModel(uint256,bool) (runs: 256, μ: 1685270, ~: 1686741)
+[PASS] testFuzz_RoundedYThorWeightNeverCreatesUnbackedClaimable(uint16,uint16,uint96) (runs: 256, μ: 422753, ~: 430787)
+Logs:
+  Bound result 15533
+  Bound result 24
+  Bound result 1
+
+[PASS] testFuzz_ThorExitCurveAndFundsConservation(uint128,uint32,bool) (runs: 256, μ: 201376, ~: 183634)
+Logs:
+  Bound result 1000000000000
+  Bound result 17346
+
+[PASS] testFuzz_TreasuryMixedPrincipalExitsMatchRewardModel(uint96,uint96,uint16,bool,bool) (runs: 256, μ: 774419, ~: 761976)
+Logs:
+  Bound result 2
+  Bound result 1583035
+  Bound result 11617
+
+[PASS] testFuzz_WeightChangesOnlyFutureRewardsForAllActiveYThor(uint16,uint16) (runs: 256, μ: 458636, ~: 459141)
+Logs:
+  Bound result 15727
+  Bound result 359
+
+[PASS] testFuzz_YThorExitCurveAndFundsConservation(uint128,uint32,bool) (runs: 256, μ: 249099, ~: 229014)
+Logs:
+  Bound result 1000000000000
+  Bound result 17346
+
+[PASS] testFuzz_YThorPrincipalCreatesConfiguredRewardWeight(uint128) (runs: 256, μ: 249593, ~: 249518)
+Logs:
+  Bound result 930956644
+
+[PASS] testFuzz_YThorRateIsMonotonic(uint32,uint32) (runs: 256, μ: 230964, ~: 230986)
+Logs:
+  Bound result 56704367
+  Bound result 315551336
+
+[PASS] testFuzz_YThorRewardAutocompoundThenExitSequence(uint96,uint64,uint32,bool) (runs: 256, μ: 1273439, ~: 1254274)
+Logs:
+  Bound result 18982184242502301330449
+  Bound result 29684
+  Bound result 126324468
+
+Suite result: ok. 12 passed; 0 failed; 0 skipped; finished in 6.96s (8.05s CPU time)
+
+Ran 6 tests for test/invariant/xMETRO.invariant.t.sol:xMETROInvariantTest
+[PASS] invariant_ClaimedRewardsAndContractBalanceMatchDeposits() (runs: 128, calls: 12800, reverts: 0)
+
+╭-----------------+--------------------------+-------+---------+----------╮
+| Contract        | Selector                 | Calls | Reverts | Discards |
++=========================================================================+
+| xMETROHandlerV2 | advanceTime              | 796   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | claimContributorAsShares | 860   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | claimRewards             | 893   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | creditThor               | 834   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | creditYThor              | 822   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | depositRewards           | 900   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | exitThor                 | 848   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | exitYThor                | 890   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | requestContributor       | 829   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | requestFreeUnstake       | 903   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | setYThorRewardWeight     | 796   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | stake                    | 883   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | stakeContributor         | 836   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | transferShares           | 848   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | withdrawQueues           | 862   | 0       | 0        |
+╰-----------------+--------------------------+-------+---------+----------╯
+
+Logs:
+  Bound result 100000000000000000000
+  Bound result 100000000000000000000
+  Bound result 10000000000000000000
+  Bound result 10000000000000000000
+  Bound result 20000000
+  Bound result 10368000
+  Bound result 10000000000000000000
+  Bound result 10000000000000000000
+  Bound result 1788734
+  Bound result 1
+  Bound result 3591
+  Bound result 57
+  Bound result 856
+  Bound result 3091
+  Bound result 841140747914
+  Bound result 9351
+  Bound result 946
+  Bound result 270230335400175166781
+  Bound result 15537
+  Bound result 89227
+  Bound result 647
+  Bound result 996375567
+  Bound result 514264337593543950332
+  Bound result 6638
+  Bound result 333128907848783900443
+  Bound result 15360168060
+  Bound result 655758424580161322529
+  Bound result 676824253413862
+  Bound result 454719679
+  Bound result 710024096583148475975
+  Bound result 163854
+  Bound result 1069
+  Bound result 15531
+  Bound result 0
+  Bound result 2000
+  Bound result 2287
+  Bound result 665240952054900618399
+  Bound result 20467
+  Bound result 70283092727100
+  Bound result 1557
+  Bound result 3274
+  Bound result 708530421018
+  Bound result 1964356147
+  Bound result 9407
+  Bound result 2308
+  Bound result 3423330204162
+  Bound result 9021062605770357900
+  Bound result 15534
+  Bound result 69188605008917070767
+  Bound result 4179080966244420935
+  Bound result 18106
+  Bound result 19697
+  Bound result 340
+  Bound result 2
+  Bound result 276368636
+  Bound result 9582593636747028
+  Bound result 4989
+  Bound result 48
+  Bound result 11123
+  Bound result 25
+  Bound result 0
+  Bound result 467657941686726109212
+  Bound result 3044
+  Bound result 21621796
+  Bound result 11579
+  Bound result 7954
+
+[PASS] invariant_EachMigrationPositionCanExitAtMostOnce() (runs: 128, calls: 12800, reverts: 0)
+
+╭-----------------+--------------------------+-------+---------+----------╮
+| Contract        | Selector                 | Calls | Reverts | Discards |
++=========================================================================+
+| xMETROHandlerV2 | advanceTime              | 796   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | claimContributorAsShares | 860   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | claimRewards             | 893   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | creditThor               | 834   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | creditYThor              | 822   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | depositRewards           | 900   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | exitThor                 | 848   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | exitYThor                | 890   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | requestContributor       | 829   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | requestFreeUnstake       | 903   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | setYThorRewardWeight     | 796   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | stake                    | 883   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | stakeContributor         | 836   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | transferShares           | 848   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | withdrawQueues           | 862   | 0       | 0        |
+╰-----------------+--------------------------+-------+---------+----------╯
+
+Logs:
+  Bound result 100000000000000000000
+  Bound result 100000000000000000000
+  Bound result 10000000000000000000
+  Bound result 10000000000000000000
+  Bound result 20000000
+  Bound result 10368000
+  Bound result 10000000000000000000
+  Bound result 10000000000000000000
+  Bound result 1788734
+  Bound result 1
+  Bound result 3591
+  Bound result 57
+  Bound result 5838
+  Bound result 3159
+  Bound result 841140747914
+  Bound result 9406
+  Bound result 1061
+  Bound result 270230335400175166781
+  Bound result 7172
+  Bound result 89227
+  Bound result 647
+  Bound result 996375567
+  Bound result 514264337593543950332
+  Bound result 6725
+  Bound result 333128907848783900443
+  Bound result 15360168060
+  Bound result 655758424580161322529
+  Bound result 676824253413862
+  Bound result 454719679
+  Bound result 710024096583148475975
+  Bound result 163854
+  Bound result 3610164998
+  Bound result 15531
+  Bound result 0
+  Bound result 2000
+  Bound result 2402
+  Bound result 665240952054900618399
+  Bound result 20334
+  Bound result 70283092727100
+  Bound result 15642999
+  Bound result 3273
+  Bound result 708530421018
+  Bound result 1964356147
+  Bound result 23253
+  Bound result 2308
+  Bound result 19587
+  Bound result 3423330204162
+  Bound result 9021062605770357900
+  Bound result 15534
+  Bound result 69188605008917070767
+  Bound result 4179080966244420935
+  Bound result 18912
+  Bound result 21251
+  Bound result 248
+  Bound result 340
+  Bound result 2
+  Bound result 11675
+  Bound result 9582593636747028
+  Bound result 5372
+  Bound result 48
+  Bound result 12296
+  Bound result 25
+  Bound result 0
+  Bound result 467657941686726109212
+  Bound result 3941
+  Bound result 21621796
+  Bound result 11786
+
+[PASS] invariant_GlobalAndPerUserRewardWeightFormulaAlwaysHolds() (runs: 128, calls: 12800, reverts: 0)
+
+╭-----------------+--------------------------+-------+---------+----------╮
+| Contract        | Selector                 | Calls | Reverts | Discards |
++=========================================================================+
+| xMETROHandlerV2 | advanceTime              | 796   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | claimContributorAsShares | 860   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | claimRewards             | 893   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | creditThor               | 834   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | creditYThor              | 822   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | depositRewards           | 900   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | exitThor                 | 848   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | exitYThor                | 890   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | requestContributor       | 829   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | requestFreeUnstake       | 903   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | setYThorRewardWeight     | 796   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | stake                    | 883   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | stakeContributor         | 836   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | transferShares           | 848   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | withdrawQueues           | 862   | 0       | 0        |
+╰-----------------+--------------------------+-------+---------+----------╯
+
+Logs:
+  Bound result 100000000000000000000
+  Bound result 100000000000000000000
+  Bound result 10000000000000000000
+  Bound result 10000000000000000000
+  Bound result 20000000
+  Bound result 10368000
+  Bound result 10000000000000000000
+  Bound result 10000000000000000000
+  Bound result 1788734
+  Bound result 1
+  Bound result 3590
+  Bound result 57
+  Bound result 883
+  Bound result 3195
+  Bound result 841140747914
+  Bound result 19093
+  Bound result 1042
+  Bound result 270230335400175166781
+  Bound result 21048
+  Bound result 89227
+  Bound result 647
+  Bound result 996375567
+  Bound result 514264337593543950332
+  Bound result 6950
+  Bound result 333128907848783900443
+  Bound result 15360168060
+  Bound result 655758424580161322529
+  Bound result 676824253413862
+  Bound result 454719679
+  Bound result 710024096583148475975
+  Bound result 163854
+  Bound result 3812710930
+  Bound result 15531
+  Bound result 0
+  Bound result 2000
+  Bound result 2514
+  Bound result 665240952054900618399
+  Bound result 21731
+  Bound result 70283092727100
+  Bound result 14604148
+  Bound result 957625571
+  Bound result 708530421018
+  Bound result 1964356147
+  Bound result 11245
+  Bound result 2308
+  Bound result 3423330204162
+  Bound result 9021062605770357900
+  Bound result 15534
+  Bound result 69188605008917070767
+  Bound result 4179080966244420935
+  Bound result 20635
+  Bound result 22457
+  Bound result 340
+  Bound result 2
+  Bound result 9735
+  Bound result 9582593636747028
+  Bound result 5915
+  Bound result 48
+  Bound result 13664
+  Bound result 25
+  Bound result 0
+  Bound result 467657941686726109212
+  Bound result 3831
+  Bound result 21621796
+  Bound result 12469
+
+[PASS] invariant_MetroSupplyNeverExceedsCap() (runs: 128, calls: 12800, reverts: 0)
+
+╭-----------------+--------------------------+-------+---------+----------╮
+| Contract        | Selector                 | Calls | Reverts | Discards |
++=========================================================================+
+| xMETROHandlerV2 | advanceTime              | 796   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | claimContributorAsShares | 860   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | claimRewards             | 893   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | creditThor               | 834   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | creditYThor              | 822   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | depositRewards           | 900   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | exitThor                 | 848   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | exitYThor                | 890   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | requestContributor       | 829   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | requestFreeUnstake       | 903   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | setYThorRewardWeight     | 796   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | stake                    | 883   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | stakeContributor         | 836   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | transferShares           | 848   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | withdrawQueues           | 862   | 0       | 0        |
+╰-----------------+--------------------------+-------+---------+----------╯
+
+Logs:
+  Bound result 100000000000000000000
+  Bound result 100000000000000000000
+  Bound result 10000000000000000000
+  Bound result 10000000000000000000
+  Bound result 20000000
+  Bound result 10368000
+  Bound result 10000000000000000000
+  Bound result 10000000000000000000
+  Bound result 1788734
+  Bound result 1
+  Bound result 3591
+  Bound result 57
+  Bound result 797248079664
+  Bound result 3027
+  Bound result 841140747914
+  Bound result 1321500932
+  Bound result 944
+  Bound result 270230335400175166781
+  Bound result 7037
+  Bound result 89227
+  Bound result 647
+  Bound result 996375567
+  Bound result 514264337593543950332
+  Bound result 6308
+  Bound result 333128907848783900443
+  Bound result 15360168060
+  Bound result 655758424580161322529
+  Bound result 676824253413862
+  Bound result 454719679
+  Bound result 710024096583148475975
+  Bound result 163854
+  Bound result 3574153037
+  Bound result 15531
+  Bound result 0
+  Bound result 2000
+  Bound result 2331
+  Bound result 665240952054900618399
+  Bound result 20575
+  Bound result 70283092727100
+  Bound result 14442226
+  Bound result 3002
+  Bound result 708530421018
+  Bound result 1964356147
+  Bound result 9406
+  Bound result 2308
+  Bound result 3423330204162
+  Bound result 9021062605770357900
+  Bound result 15534
+  Bound result 69188605008917070767
+  Bound result 4179080966244420935
+  Bound result 18383
+  Bound result 20524
+  Bound result 340
+  Bound result 2
+  Bound result 13430
+  Bound result 9582593636747028
+  Bound result 5093
+  Bound result 48
+  Bound result 11639
+  Bound result 25
+  Bound result 0
+  Bound result 467657941686726109212
+  Bound result 752110274
+  Bound result 21621796
+  Bound result 17280001
+  Bound result 7687
+
+[PASS] invariant_PositionCountsMatchSuccessfulCredits() (runs: 128, calls: 12800, reverts: 0)
+
+╭-----------------+--------------------------+-------+---------+----------╮
+| Contract        | Selector                 | Calls | Reverts | Discards |
++=========================================================================+
+| xMETROHandlerV2 | advanceTime              | 796   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | claimContributorAsShares | 860   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | claimRewards             | 893   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | creditThor               | 834   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | creditYThor              | 822   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | depositRewards           | 900   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | exitThor                 | 848   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | exitYThor                | 890   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | requestContributor       | 829   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | requestFreeUnstake       | 903   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | setYThorRewardWeight     | 796   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | stake                    | 883   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | stakeContributor         | 836   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | transferShares           | 848   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | withdrawQueues           | 862   | 0       | 0        |
+╰-----------------+--------------------------+-------+---------+----------╯
+
+Logs:
+  Bound result 100000000000000000000
+  Bound result 100000000000000000000
+  Bound result 10000000000000000000
+  Bound result 10000000000000000000
+  Bound result 20000000
+  Bound result 10368000
+  Bound result 10000000000000000000
+  Bound result 10000000000000000000
+  Bound result 1788734
+  Bound result 1
+  Bound result 3591
+  Bound result 57
+  Bound result 856
+  Bound result 3091
+  Bound result 841140747914
+  Bound result 9351
+  Bound result 946
+  Bound result 270230335400175166781
+  Bound result 15536
+  Bound result 89227
+  Bound result 647
+  Bound result 996375567
+  Bound result 514264337593543950332
+  Bound result 6309
+  Bound result 333128907848783900443
+  Bound result 15360168060
+  Bound result 655758424580161322529
+  Bound result 676824253413862
+  Bound result 454719679
+  Bound result 710024096583148475975
+  Bound result 163854
+  Bound result 3574153039
+  Bound result 15531
+  Bound result 0
+  Bound result 2000
+  Bound result 2288
+  Bound result 665240952054900618399
+  Bound result 20376
+  Bound result 70283092727100
+  Bound result 14442225
+  Bound result 3004
+  Bound result 708530421018
+  Bound result 1964356147
+  Bound result 9600
+  Bound result 2308
+  Bound result 3423330204162
+  Bound result 9021062605770357900
+  Bound result 15534
+  Bound result 69188605008917070767
+  Bound result 4179080966244420935
+  Bound result 18339
+  Bound result 20585
+  Bound result 340
+  Bound result 2
+  Bound result 9582593636747028
+  Bound result 5043
+  Bound result 48
+  Bound result 11257
+  Bound result 25
+  Bound result 0
+  Bound result 467657941686726109212
+  Bound result 21621796
+  Bound result 61
+
+[PASS] invariant_RealMetroBackingEqualsSharesPlusOutstandingCooldowns() (runs: 128, calls: 12800, reverts: 0)
+
+╭-----------------+--------------------------+-------+---------+----------╮
+| Contract        | Selector                 | Calls | Reverts | Discards |
++=========================================================================+
+| xMETROHandlerV2 | advanceTime              | 796   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | claimContributorAsShares | 860   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | claimRewards             | 893   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | creditThor               | 834   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | creditYThor              | 822   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | depositRewards           | 900   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | exitThor                 | 848   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | exitYThor                | 890   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | requestContributor       | 829   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | requestFreeUnstake       | 903   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | setYThorRewardWeight     | 796   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | stake                    | 883   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | stakeContributor         | 836   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | transferShares           | 848   | 0       | 0        |
+|-----------------+--------------------------+-------+---------+----------|
+| xMETROHandlerV2 | withdrawQueues           | 862   | 0       | 0        |
+╰-----------------+--------------------------+-------+---------+----------╯
+
+Logs:
+  Bound result 100000000000000000000
+  Bound result 100000000000000000000
+  Bound result 10000000000000000000
+  Bound result 10000000000000000000
+  Bound result 20000000
+  Bound result 10368000
+  Bound result 10000000000000000000
+  Bound result 10000000000000000000
+  Bound result 1788734
+  Bound result 1
+  Bound result 3591
+  Bound result 57
+  Bound result 5838
+  Bound result 3159
+  Bound result 841140747914
+  Bound result 9408
+  Bound result 1061
+  Bound result 270230335400175166781
+  Bound result 7155
+  Bound result 89227
+  Bound result 647
+  Bound result 996375567
+  Bound result 514264337593543950332
+  Bound result 6640
+  Bound result 333128907848783900443
+  Bound result 15360168060
+  Bound result 655758424580161322529
+  Bound result 676824253413862
+  Bound result 454719679
+  Bound result 710024096583148475975
+  Bound result 163854
+  Bound result 1069
+  Bound result 15531
+  Bound result 0
+  Bound result 2000
+  Bound result 2287
+  Bound result 665240952054900618399
+  Bound result 20466
+  Bound result 70283092727100
+  Bound result 1557
+  Bound result 3274
+  Bound result 708530421018
+  Bound result 1964356147
+  Bound result 2308
+  Bound result 3423330204162
+  Bound result 9021062605770357900
+  Bound result 15534
+  Bound result 69188605008917070767
+  Bound result 4179080966244420935
+  Bound result 18148
+  Bound result 19739
+  Bound result 340
+  Bound result 2
+  Bound result 228978093
+  Bound result 9582593636747028
+  Bound result 983101240
+  Bound result 48
+  Bound result 10997
+  Bound result 25
+  Bound result 0
+  Bound result 467657941686726109212
+  Bound result 21621796
+  Bound result 11496
+  Bound result 7288
+
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 6.91s (24.89s CPU time)
+
+Ran 13 test suites in 6.97s (23.32s CPU time): 146 tests passed, 0 failed, 0 skipped (146 total tests)
+2026-10-24T09:14:29.414468Z  WARN evm::traces: failed to flush signature cache err=failed to create file "/Users/ethan/.foundry/cache/signatures": Operation not permitted (os error 1)
+
+COMMAND: FOUNDRY_PROFILE=core forge test -vv
+Compiling 38 files with Solc 0.8.30
+Solc 0.8.30 finished in 16.27s
+Compiler run successful with warnings:
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/core/XMetroCore.adapter.t.sol:138:5:
+    |
+138 |     function xMETRO() external view returns (address) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+Note: The shadowed declaration is here:
+  --> src/xMETRO.sol:24:1:
+   |
+24 | contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
+   | ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+  --> test/core/XMetroCore.adapter.invariant.t.sol:40:5:
+   |
+40 |     function xMETRO() external view returns (address) {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+Note: The shadowed declaration is here:
+  --> src/xMETRO.sol:24:1:
+   |
+24 | contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
+   | ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+  --> test/core/XMetroDeposit.invariant.t.sol:70:5:
+   |
+70 |     function xMETRO() external view returns (address) {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+Note: The shadowed declaration is here:
+  --> src/xMETRO.sol:24:1:
+   |
+24 | contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
+   | ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+  --> test/core/XMetroSystem.integration.t.sol:79:5:
+   |
+79 |     function xMETRO() external view returns (address) {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+Note: The shadowed declaration is here:
+  --> src/xMETRO.sol:24:1:
+   |
+24 | contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
+   | ^ (Relevant source part starts here and spans across multiple lines).
+
+
+Ran 3 tests for test/core/XMetroCore.adapter.t.sol:XMetroCoreSizeTest
+[SKIP] test_BasePinned_CreateFinalCoreUnderEIP170() (gas: 0)
+[SKIP] test_EthereumPinned_CreateFinalCoreUnderEIP170() (gas: 0)
+[PASS] test_Local_CreateFinalCoreUnderEIP170() (gas: 5740482)
+Suite result: ok. 1 passed; 0 failed; 2 skipped; finished in 1.72ms (929.46µs CPU time)
+
+Ran 3 tests for test/core/XMetroSystem.integration.t.sol:XMetroSystemIntegrationTest
+[PASS] test_CommissionNetRewardFeedsEveryAdapterPathAndPlainClaim() (gas: 1793727)
+[PASS] test_PausedEmergencySettlesOnlyLedgerRewardsAndLeavesBackingUntouched() (gas: 521398)
+[PASS] test_ThorYThorAndContributorPendingUseTheSameRealAdapterPaths() (gas: 2231607)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 8.07ms (3.66ms CPU time)
+
+Ran 28 tests for test/core/BaseQAProtocolMocks.t.sol:BaseQAProtocolMocksTest
+[PASS] testFuzz_V3_TransferRoundUpAndBalanceConservation(uint96) (runs: 256, μ: 402079, ~: 402313)
+Logs:
+  Bound result 7183205
+
+[PASS] test_AllPaths_ProtocolCallbackCannotReenterCore() (gas: 1056036)
+[PASS] test_Maple_AlreadyAuthorizedUsesDepositWithNoSignature() (gas: 369340)
+[PASS] test_Maple_AuthorizationPoolDepositRouterReturnAndEventOrder() (gas: 439279)
+[PASS] test_Maple_BatchDepositsOnceAndLeavesDonatedSharesAlone() (gas: 747452)
+[PASS] test_Maple_ERC20AllowanceAndProtocolApprovalEvent() (gas: 423156)
+[PASS] test_Maple_FaultsRollbackNewAuthorizationAndEveryBalance() (gas: 2126574)
+[PASS] test_Maple_InvalidSignatureWrongLenderNonceBitmapAndExpiryRollback() (gas: 1443107)
+[PASS] test_Maple_PermissionConfigurationEventsAndBatchLengths() (gas: 89246)
+[PASS] test_Maple_PoolDepositAndTransferActuallyCheckBitmaps() (gas: 270652)
+[PASS] test_Maple_RevokedSignerAndRouterPermissionsAreEnforced() (gas: 541624)
+[PASS] test_Maple_SignatureCannotReplayAndExactDeadlineIsValidAtRouter() (gas: 310013)
+[PASS] test_Maple_ZeroAndCustomDepositDataAreBothAccepted() (gas: 589088)
+[PASS] test_QAAdminControlsCanBeHandedOver() (gas: 381304)
+[PASS] test_Tokens_DecimalsMintApprovalAndTransfer() (gas: 1724174)
+[PASS] test_V3_BatchSuppliesOnceAndEmitsScaledTransfers() (gas: 803999)
+[PASS] test_V3_FiniteAllowanceTransferFromAndSelfTransfer() (gas: 419551)
+[PASS] test_V3_InterestMintAndFullTransferCollateralDisable() (gas: 391856)
+[PASS] test_V3_ManualCustodyMintSupplyAndNoUserUSDCApproval() (gas: 382591)
+[PASS] test_V3_MintAndFinalizeArePoolOnlyAndIndexCannotDecrease() (gas: 30099)
+[PASS] test_V3_PartialPullOrLowOutputRollsBackRewardsAndShares() (gas: 938050)
+[PASS] test_V3_SecondMintIncludesPreviouslyAccruedInterest() (gas: 401317)
+[PASS] test_V4_BatchSuppliesForEachUserAndConservesShares() (gas: 691856)
+[PASS] test_V4_FourAccountingFaultsAreRejected() (gas: 1624030)
+[PASS] test_V4_InactiveManagerIsNotAuthorizedEvenIfUserApprovalRemains() (gas: 223721)
+[PASS] test_V4_ManualCallsGiverNotAdapterPositionManagerAndLogsBothLayers() (gas: 294048)
+[PASS] test_V4_RegistrationActivationApprovalEventsAndRevocation() (gas: 238153)
+[PASS] test_V4_SecondUserFailureRollsBackWholeBatch() (gas: 782240)
+Suite result: ok. 28 passed; 0 failed; 0 skipped; finished in 108.52ms (108.23ms CPU time)
+
+Ran 14 tests for test/core/XMetroCore.adapter.t.sol:XMetroCoreAdapterFlowTest
+[PASS] testFuzz_RepeatedStrategyAndRouterChangesPreservePendingUntilFreshOptIn(uint8) (runs: 256, μ: 1224160, ~: 1133006)
+Logs:
+  Bound result 3
+
+[PASS] testFuzz_StrategySettlementPreservesFractionAcrossAllExecutionPaths(bool,bool) (runs: 256, μ: 695996, ~: 684803)
+[PASS] test_AaveV4MinimaStayAlignedAfterCoreFiltersCandidates() (gas: 1532960)
+[PASS] test_AdapterFailureRollsBackRewardDebtAndBothFundTransfers() (gas: 777553)
+[PASS] test_AutoModesRemainMutuallyExclusive() (gas: 127025)
+[PASS] test_BatchFiltersZeroDuplicateNoPendingAndKeepsSourceAlignment() (gas: 712117)
+[PASS] test_ConfigRevisionMakesPreferenceStaleWithoutConsumingPending() (gas: 742638)
+[PASS] test_CoreAutoSwapBatchFiltersAndForwardsAlignedArrays() (gas: 659316)
+[PASS] test_CoreLegacyAutoCompoundBatchUsesSwapMetroAndMintsShares() (gas: 655873)
+[PASS] test_CoreManualClaimUsesFinalProxyAndFixedRecipient() (gas: 440228)
+[PASS] test_OneInchFailureRollsBackPendingDebtPreferenceAndBalances() (gas: 519826)
+[PASS] test_ProxyReplacementInvalidatesPreferenceAndOldProxyLosesConfigAuthority() (gas: 5888535)
+[PASS] test_SingleStepOwnerHandoffMovesAdapterConfigurationAuthority() (gas: 124632)
+[PASS] test_UUPSUpgradeWithPendingRequiresFreshOptInAndRetainsConfiguration() (gas: 5415202)
+Suite result: ok. 14 passed; 0 failed; 0 skipped; finished in 2.56s (465.43ms CPU time)
+
+Ran 3 tests for test/core/XMetroCore.adapter.invariant.t.sol:XMetroCoreAdapterInvariantTest
+[PASS] invariant_AdapterExecutionNeverDisturbsMetroBacking() (runs: 128, calls: 12800, reverts: 0)
+
+╭-----------------------------------+---------------------+-------+---------+----------╮
+| Contract                          | Selector            | Calls | Reverts | Discards |
++======================================================================================+
+| XMetroCoreAdapterInvariantHandler | claim               | 2603  | 0       | 0        |
+|-----------------------------------+---------------------+-------+---------+----------|
+| XMetroCoreAdapterInvariantHandler | depositRewards      | 2570  | 0       | 0        |
+|-----------------------------------+---------------------+-------+---------+----------|
+| XMetroCoreAdapterInvariantHandler | executeAutoCompound | 2539  | 0       | 0        |
+|-----------------------------------+---------------------+-------+---------+----------|
+| XMetroCoreAdapterInvariantHandler | executeAutoSwap     | 2541  | 0       | 0        |
+|-----------------------------------+---------------------+-------+---------+----------|
+| XMetroCoreAdapterInvariantHandler | switchMode          | 2547  | 0       | 0        |
+╰-----------------------------------+---------------------+-------+---------+----------╯
+
+Logs:
+  Bound result 600000000
+  Bound result 3
+  Bound result 409834702
+  Bound result 37602802956
+  Bound result 5575
+  Bound result 52973903215
+  Bound result 418
+  Bound result 713511528
+  Bound result 106057445
+  Bound result 21615
+  Bound result 46878834546
+  Bound result 1
+  Bound result 1265658451
+  Bound result 527
+  Bound result 83993201727
+
+[PASS] invariant_AtMostOneAutomaticPreferenceIsActivePerUser() (runs: 128, calls: 12800, reverts: 0)
+
+╭-----------------------------------+---------------------+-------+---------+----------╮
+| Contract                          | Selector            | Calls | Reverts | Discards |
++======================================================================================+
+| XMetroCoreAdapterInvariantHandler | claim               | 2603  | 0       | 0        |
+|-----------------------------------+---------------------+-------+---------+----------|
+| XMetroCoreAdapterInvariantHandler | depositRewards      | 2570  | 0       | 0        |
+|-----------------------------------+---------------------+-------+---------+----------|
+| XMetroCoreAdapterInvariantHandler | executeAutoCompound | 2539  | 0       | 0        |
+|-----------------------------------+---------------------+-------+---------+----------|
+| XMetroCoreAdapterInvariantHandler | executeAutoSwap     | 2541  | 0       | 0        |
+|-----------------------------------+---------------------+-------+---------+----------|
+| XMetroCoreAdapterInvariantHandler | switchMode          | 2547  | 0       | 0        |
+╰-----------------------------------+---------------------+-------+---------+----------╯
+
+Logs:
+  Bound result 600000000
+  Bound result 3
+  Bound result 409834702
+  Bound result 37602802956
+  Bound result 5575
+  Bound result 52973903215
+  Bound result 17148
+  Bound result 3834
+  Bound result 106057445
+  Bound result 17529
+  Bound result 46878834546
+  Bound result 1
+  Bound result 1265658451
+  Bound result 267
+  Bound result 83993201727
+
+[PASS] invariant_RewardTokenConservationAcrossClaimsAndBothAutomaticPaths() (runs: 128, calls: 12800, reverts: 0)
+
+╭-----------------------------------+---------------------+-------+---------+----------╮
+| Contract                          | Selector            | Calls | Reverts | Discards |
++======================================================================================+
+| XMetroCoreAdapterInvariantHandler | claim               | 2603  | 0       | 0        |
+|-----------------------------------+---------------------+-------+---------+----------|
+| XMetroCoreAdapterInvariantHandler | depositRewards      | 2570  | 0       | 0        |
+|-----------------------------------+---------------------+-------+---------+----------|
+| XMetroCoreAdapterInvariantHandler | executeAutoCompound | 2539  | 0       | 0        |
+|-----------------------------------+---------------------+-------+---------+----------|
+| XMetroCoreAdapterInvariantHandler | executeAutoSwap     | 2541  | 0       | 0        |
+|-----------------------------------+---------------------+-------+---------+----------|
+| XMetroCoreAdapterInvariantHandler | switchMode          | 2547  | 0       | 0        |
+╰-----------------------------------+---------------------+-------+---------+----------╯
+
+Logs:
+  Bound result 600000000
+  Bound result 3
+  Bound result 409834702
+  Bound result 37602802956
+  Bound result 5575
+  Bound result 52973903215
+  Bound result 770
+  Bound result 4041
+  Bound result 106057445
+  Bound result 294443688
+  Bound result 46878834546
+  Bound result 1
+  Bound result 1265658451
+  Bound result 267
+  Bound result 83993201727
+
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 2.56s (6.74s CPU time)
+
+Ran 4 tests for test/core/XMetroDeposit.invariant.t.sol:XMetroDepositInvariantTest
+[PASS] invariant_ThreeDepositPathsConserveRewardAndReceiptBalances() (runs: 128, calls: 12800, reverts: 0)
+
+╭-------------------------+----------------+-------+---------+----------╮
+| Contract                | Selector       | Calls | Reverts | Discards |
++=======================================================================+
+| DepositInvariantHandler | depositRewards | 6211  | 0       | 0        |
+|-------------------------+----------------+-------+---------+----------|
+| DepositInvariantHandler | execute        | 6589  | 0       | 0        |
+╰-------------------------+----------------+-------+---------+----------╯
+
+Logs:
+  Bound result 100000000
+  Bound result 645327401234
+  Bound result 416992731
+  Bound result 551030413375
+  Bound result 598272221171
+  Bound result 2
+  Bound result 3748
+  Bound result 4385369844
+  Bound result 397688978552
+  Bound result 329631818383
+  Bound result 503892777857
+  Bound result 155711139377
+  Bound result 146658623383
+  Bound result 15940
+  Bound result 487856726391
+  Bound result 424426908169
+  Bound result 253390430875
+  Bound result 377354809635
+  Bound result 663410508793
+  Bound result 1259
+  Bound result 15384
+  Bound result 63496194682
+  Bound result 4072
+  Bound result 1581
+  Bound result 575
+  Bound result 1
+  Bound result 917212744607
+  Bound result 11484
+  Bound result 17412
+  Bound result 956635543873
+  Bound result 1325756
+  Bound result 9247
+  Bound result 319649312243
+  Bound result 21302399608
+  Bound result 389697941440
+  Bound result 3723268953
+  Bound result 3127
+  Bound result 593543950333
+  Bound result 1002408472
+  Bound result 2514000706
+  Bound result 7308017409
+  Bound result 14042
+  Bound result 546561449014
+  Bound result 11090
+
+[PASS] testFuzz_MapleBatchVariableShareRateAndAuthorizationNonce(uint16,bool) (runs: 256, μ: 646976, ~: 613324)
+Logs:
+  Bound result 100000000
+  Bound result 9819
+  Bound result 100000000
+
+[PASS] testFuzz_V3BatchAcrossNormalizedIncomeIndices(uint8) (runs: 256, μ: 662921, ~: 662921)
+Logs:
+  Bound result 100000000
+  Bound result 100000000
+
+[PASS] testFuzz_V4BatchMinimaAndRevokedManagerRollback(uint96,uint8) (runs: 256, μ: 617053, ~: 622713)
+Logs:
+  Bound result 100000000
+  Bound result 100000000
+  Bound result 61370265
+  Bound result 44554983
+  Bound result 189703082
+
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 3.84s (4.44s CPU time)
+
+Ran 6 test suites in 3.84s (9.08s CPU time): 53 tests passed, 0 failed, 2 skipped (55 total tests)
+2026-10-24T09:18:29.005407Z  WARN evm::traces: failed to flush signature cache err=failed to create file "/Users/ethan/.foundry/cache/signatures": Operation not permitted (os error 1)
+
+COMMAND: FOUNDRY_PROFILE=adapter forge test -vv
+No files changed, compilation skipped
+
+Ran 1 test for test/adapter/XMetroDeFiAdapter.storage.t.sol:XMetroDeFiAdapterStorageTest
+[PASS] test_Erc7201NamespaceFormulaAndHeaderCanaryAreFrozen() (gas: 5651123)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 13.49ms (5.54ms CPU time)
+
+Ran 4 tests for test/adapter/XMetroDeFiAdapter.flows.t.sol:CompactAdapterConfigurationSecurityTest
+[PASS] test_AllConfigurationSettersSucceedWhileCoreIsUnpaused() (gas: 4046493)
+[PASS] test_ImplementationIsUninitializedAndCannotBeInitializedDirectly() (gas: 4192674)
+[PASS] test_ReplacedProxyCannotConfigureButPausedOwnerCanRescueIt() (gas: 5077775)
+[PASS] test_RevisionsAreMonotonicAndIdenticalConfigurationIsRejected() (gas: 1464421)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 18.62ms (5.75ms CPU time)
+
+Ran 2 tests for test/adapter/XMetroDeFiAdapter.flows.t.sol:CompactMapleFlowTest
+[PASS] test_MapleAuthorizationErrorIsTyped() (gas: 1145856)
+[PASS] test_MapleOneDepositAndProportionalDistribution() (gas: 1309126)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 19.35ms (6.00ms CPU time)
+
+Ran 4 tests for test/adapter/XMetroDeFiAdapter.uups.t.sol:CompactUUPSDeploymentTest
+[SKIP] test_BasePinned_CreateProxyInitializeAndUpgrade() (gas: 0)
+[SKIP] test_EthereumPinned_CreateProxyInitializeAndUpgrade() (gas: 0)
+[PASS] test_FailedUpgradeMatrixRollsBackSlotAndLogicEpoch() (gas: 9638710)
+[PASS] test_Local_CreateProxyInitializeAndUpgrade() (gas: 5222466)
+Suite result: ok. 2 passed; 0 failed; 2 skipped; finished in 19.96ms (11.98ms CPU time)
+
+Ran 2 tests for test/adapter/XMetroDeFiAdapter.flows.t.sol:CompactERC20ReturnShapeTest
+[PASS] test_NoReturnTransferSucceedsWhileFalseOrOversizedReturnRollsBack() (gas: 1484676)
+[PASS] test_ZeroFirstApprovalFallbackAndFailedClearAreAtomic() (gas: 6934618)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 20.10ms (7.72ms CPU time)
+
+Ran 4 tests for test/adapter/XMetroDeFiAdapter.flows.t.sol:CompactAaveFlowTest
+[PASS] test_AaveV3ManualAndBatchExactScaledDistribution() (gas: 1234483)
+[PASS] test_AaveV4AuthorizationErrorIsTyped() (gas: 984099)
+[PASS] test_AaveV4PerUserSupplyAndMinima() (gas: 1202554)
+[PASS] test_DisableBrokenAaveV3NeverCallsOldProtocolAndRevisionAdvances() (gas: 992914)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 23.70ms (9.80ms CPU time)
+
+Ran 6 tests for test/adapter/XMetroDeFiAdapter.giver.t.sol:XMetroGiverSecurityTest
+[PASS] test_ConfigRequiresRegisteredActiveGiverAndCannotUseProxy() (gas: 593232)
+[PASS] test_DisableDoesNotCallBrokenGiverAndRetainsConfiguration() (gas: 58970)
+[PASS] test_DonationIsolationAndReentryGuardPreserved() (gas: 339567)
+[PASS] test_GiverAppendDoesNotMoveMapleOrExistingStorageAndSurvivesUpgrade() (gas: 6702765)
+[PASS] test_PartialConsumptionWrongReturnAndWrongSharesAreAtomic() (gas: 1238386)
+[PASS] test_RuntimeRechecksBothProtocolPermissionsAndUserApproval() (gas: 281336)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 159.97ms (8.28ms CPU time)
+
+Ran 6 tests for test/adapter/XMetroDeFiAdapter.fuzz.t.sol:CompactAdapterFuzzTest
+[PASS] testFuzz_BatchDistributionPreservesDonationsAndConservesEveryUnit(uint96,uint96,uint96,uint64,uint64) (runs: 256, μ: 336331, ~: 337320)
+Logs:
+  Bound result 138416632741742025
+  Bound result 13
+  Bound result 2097442381625511259
+  Bound result 37571
+  Bound result 566866201673843735
+
+[PASS] testFuzz_BatchUnequalQuoteDistributesEveryOutputUnit(uint64,uint8,uint16,uint8) (runs: 256, μ: 895648, ~: 881572)
+Logs:
+  Bound result 4
+  Bound result 9900
+  Bound result 8432885180
+  Bound result 3740275300
+  Bound result 1802941113
+  Bound result 5591992988
+
+[PASS] testFuzz_OneInchOverflowingDynamicOffsetNeverReachesRouter(uint64,bool) (runs: 256, μ: 364948, ~: 365039)
+[PASS] testFuzz_OneInchTruncatedHeaderNeverReachesRouter(uint16) (runs: 256, μ: 366694, ~: 366899)
+Logs:
+  Bound result 157
+
+[PASS] testFuzz_StrategyRevisionAdvancesExactlyOncePerSemanticToggle(uint8) (runs: 256, μ: 137748, ~: 102539)
+Logs:
+  Bound result 1
+
+[PASS] test_BatchRejectsZeroOutputForDustUserAtomically() (gas: 303722)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 163.23ms (690.60ms CPU time)
+
+Ran 13 tests for test/adapter/XMetroDeFiAdapter.flows.t.sol:CompactSwapFlowTest
+[PASS] test_AccessAndConfigurationErrorsAreTyped() (gas: 44336)
+[PASS] test_OneInchAccountingUsesActualBalancesAndExactSpend() (gas: 835666)
+[PASS] test_OneInchBatchDistributesActualOutputProRata() (gas: 267743)
+[PASS] test_OneInchLargeReturnAndRevertDataAreBoundedAndAtomic() (gas: 614682)
+[PASS] test_OneInchMalformedSelectorOffsetAndLengthAreAtomic() (gas: 437085)
+[PASS] test_OneInchRejectsWrongCriticalFieldsAndForbiddenFlags() (gas: 708472)
+[PASS] test_ReentrantRouterIsRejectedBeforeNestedRequestValidation() (gas: 544879)
+[PASS] test_SlippageAndAccountingErrorsAreTyped() (gas: 634432)
+[PASS] test_UnderfundedCoreRequestUsesTypedAccountingFailureInsteadOfPanic() (gas: 51606)
+[PASS] test_UnknownDexAndMalformedPathsAreTypedAndAtomic() (gas: 210267)
+[PASS] test_V2AndFixedOneInchFundEnvelopes() (gas: 386212)
+[PASS] test_V2BatchEmitsOneVerifiedSettlementPerUser() (gas: 272262)
+[PASS] test_V3SingleAndMultiHopFundEnvelopes() (gas: 710701)
+Suite result: ok. 13 passed; 0 failed; 0 skipped; finished in 5.74s (18.40ms CPU time)
+
+Ran 3 tests for test/adapter/XMetroDeFiAdapter.invariant.t.sol:CompactAdapterInvariantTest
+[PASS] invariant_AdapterBalancesAndAllowanceReturnToTheirPreexistingBaselines() (runs: 128, calls: 12800, reverts: 0)
+
+╭--------------------------------+----------+-------+---------+----------╮
+| Contract                       | Selector | Calls | Reverts | Discards |
++========================================================================+
+| CompactAdapterInvariantHandler | batch    | 6531  | 0       | 0        |
+|--------------------------------+----------+-------+---------+----------|
+| CompactAdapterInvariantHandler | manual   | 6269  | 0       | 0        |
+╰--------------------------------+----------+-------+---------+----------╯
+
+Logs:
+  Bound result 870932582979505835322
+  Bound result 4155336199
+  Bound result 2358
+  Bound result 2660
+  Bound result 5879
+  Bound result 10
+  Bound result 797
+  Bound result 1
+  Bound result 12129
+  Bound result 124
+  Bound result 10
+  Bound result 64
+  Bound result 10000000
+  Bound result 1
+  Bound result 339987621980940326
+  Bound result 379602479282403
+  Bound result 224
+  Bound result 5841
+  Bound result 43
+  Bound result 22987768274032408314
+  Bound result 152
+  Bound result 950
+  Bound result 17000000
+  Bound result 32
+  Bound result 4
+  Bound result 19966
+  Bound result 1365
+  Bound result 10568
+  Bound result 6864
+  Bound result 7065
+  Bound result 953
+  Bound result 682181369929049572
+  Bound result 3
+  Bound result 1575
+  Bound result 1004
+  Bound result 31536000
+  Bound result 10
+  Bound result 3000
+  Bound result 8453
+  Bound result 64
+  Bound result 1159723221891424349
+  Bound result 13405700247
+  Bound result 37947483
+  Bound result 9050
+  Bound result 39230
+  Bound result 178657951389654762
+  Bound result 944105045
+  Bound result 522337194562704945
+  Bound result 17801
+  Bound result 53844332380700
+  Bound result 40000000
+  Bound result 10866
+  Bound result 10001
+  Bound result 441
+  Bound result 9450
+  Bound result 1
+  Bound result 18370
+  Bound result 1282
+  Bound result 10000000
+  Bound result 15660
+  Bound result 20487
+  Bound result 15471
+  Bound result 1
+  Bound result 6660522506217670
+  Bound result 74932
+  Bound result 7286
+  Bound result 1
+  Bound result 5709
+  Bound result 59338094393499272
+  Bound result 446668124959716228
+  Bound result 133686446083425
+  Bound result 5439
+  Bound result 10368000
+  Bound result 8453
+  Bound result 5025
+  Bound result 721
+  Bound result 16331
+  Bound result 480
+  Bound result 3
+  Bound result 5973
+  Bound result 204818041029907296714966
+  Bound result 832194068227962941481174
+  Bound result 29659042698
+  Bound result 400337267
+  Bound result 990796977
+  Bound result 80664
+  Bound result 37359730318726
+  Bound result 271033274221810255
+  Bound result 24586040892
+  Bound result 1
+  Bound result 1
+  Bound result 3181
+  Bound result 71206
+  Bound result 10000
+  Bound result 27
+  Bound result 20487
+  Bound result 13
+  Bound result 2
+  Bound result 56
+  Bound result 1699
+  Bound result 446744073709551614
+  Bound result 446744073709551612
+  Bound result 1000860
+  Bound result 25000325163
+  Bound result 8116
+  Bound result 1
+  Bound result 22318058787
+  Bound result 69794683175944
+  Bound result 155321109122689435015049
+  Bound result 37909696801042325163623
+  Bound result 373166025
+  Bound result 474135133634465
+  Bound result 1679861523527418
+  Bound result 194084548096462074
+  Bound result 1
+  Bound result 196981213341585522
+  Bound result 3590734529403
+  Bound result 8097
+  Bound result 8410
+  Bound result 19071
+  Bound result 4180
+  Bound result 3858
+  Bound result 1
+  Bound result 22392
+  Bound result 64816481641848
+  Bound result 72
+  Bound result 26796
+  Bound result 4854
+  Bound result 2507
+  Bound result 150
+  Bound result 3
+  Bound result 500
+  Bound result 6756
+  Bound result 28
+  Bound result 1382
+  Bound result 5
+  Bound result 4567
+  Bound result 641493798993604662
+  Bound result 43
+  Bound result 7963843
+  Bound result 1
+  Bound result 598
+  Bound result 21121
+  Bound result 446744073709551612
+  Bound result 2122053689894
+  Bound result 1513552568
+  Bound result 10368000
+  Bound result 3620900466
+  Bound result 100000
+  Bound result 64136109757329824
+  Bound result 1000000000000000000
+  Bound result 11000000
+  Bound result 1419928851
+  Bound result 18
+  Bound result 923328565436707
+  Bound result 3034325578
+  Bound result 2109176392
+  Bound result 5537
+  Bound result 1681337098354
+  Bound result 3104993
+  Bound result 134657676734
+  Bound result 870932582983661171521
+  Bound result 80268397313231632919
+  Bound result 246685
+  Bound result 84889408080
+  Bound result 203244756474247245
+  Bound result 1
+  Bound result 926663473
+  Bound result 31195511060971
+  Bound result 8049087111
+  Bound result 7319855633315
+  Bound result 364706156426
+  Bound result 10165229836385
+  Bound result 5475
+  Bound result 1149
+  Bound result 7000000
+  Bound result 1252838675616
+  Bound result 25532651514
+  Bound result 20
+  Bound result 229595734696
+  Bound result 1024557
+  Bound result 1
+  Bound result 97
+  Bound result 2056
+  Bound result 162514264337593543950334
+  Bound result 19814
+  Bound result 100000
+  Bound result 449
+  Bound result 11
+  Bound result 16846700286656
+  Bound result 161009
+  Bound result 84
+  Bound result 64
+  Bound result 9000
+  Bound result 2592000
+  Bound result 5890297959991298
+  Bound result 7157
+  Bound result 5
+  Bound result 499377381852597978
+  Bound result 6965
+  Bound result 5284676
+  Bound result 307483990
+  Bound result 2651
+  Bound result 28
+
+[PASS] invariant_AllSuccessfulInputAndOutputUnitsAreConserved() (runs: 128, calls: 12800, reverts: 0)
+
+╭--------------------------------+----------+-------+---------+----------╮
+| Contract                       | Selector | Calls | Reverts | Discards |
++========================================================================+
+| CompactAdapterInvariantHandler | batch    | 6531  | 0       | 0        |
+|--------------------------------+----------+-------+---------+----------|
+| CompactAdapterInvariantHandler | manual   | 6269  | 0       | 0        |
+╰--------------------------------+----------+-------+---------+----------╯
+
+Logs:
+  Bound result 870932582979505835322
+  Bound result 4155336199
+  Bound result 814
+  Bound result 2660
+  Bound result 19416
+  Bound result 10
+  Bound result 796
+  Bound result 1
+  Bound result 12129
+  Bound result 124
+  Bound result 10
+  Bound result 64
+  Bound result 10000000
+  Bound result 1
+  Bound result 339987621980940326
+  Bound result 379602479282403
+  Bound result 224
+  Bound result 450580596923828124
+  Bound result 43
+  Bound result 22987768274032408314
+  Bound result 152
+  Bound result 288
+  Bound result 17000000
+  Bound result 32
+  Bound result 4
+  Bound result 20068
+  Bound result 1522
+  Bound result 10599
+  Bound result 6551
+  Bound result 4742
+  Bound result 892
+  Bound result 682181369929049572
+  Bound result 3
+  Bound result 1575
+  Bound result 2357
+  Bound result 31536000
+  Bound result 10
+  Bound result 3000
+  Bound result 8453
+  Bound result 64
+  Bound result 1159723221891424349
+  Bound result 13405700247
+  Bound result 37947483
+  Bound result 9635
+  Bound result 39230
+  Bound result 178657951389654762
+  Bound result 944105045
+  Bound result 522337194562704945
+  Bound result 18106
+  Bound result 53844332380700
+  Bound result 40000000
+  Bound result 10493
+  Bound result 10001
+  Bound result 442
+  Bound result 9368
+  Bound result 1
+  Bound result 18558
+  Bound result 1429
+  Bound result 10000000
+  Bound result 15885
+  Bound result 20487
+  Bound result 15471
+  Bound result 1
+  Bound result 6660522506217670
+  Bound result 74932
+  Bound result 7286
+  Bound result 1
+  Bound result 5677
+  Bound result 59338094393499272
+  Bound result 446668124959716228
+  Bound result 133686446083425
+  Bound result 6353
+  Bound result 10368000
+  Bound result 8453
+  Bound result 6026
+  Bound result 1365
+  Bound result 16331
+  Bound result 480
+  Bound result 3
+  Bound result 5742
+  Bound result 204818041029907296714966
+  Bound result 832194068227962941481174
+  Bound result 29659042698
+  Bound result 400337267
+  Bound result 990796977
+  Bound result 80664
+  Bound result 37359730318726
+  Bound result 271033274221810255
+  Bound result 24586040892
+  Bound result 1
+  Bound result 1
+  Bound result 293
+  Bound result 71206
+  Bound result 10000
+  Bound result 27
+  Bound result 20487
+  Bound result 13
+  Bound result 2
+  Bound result 56
+  Bound result 676
+  Bound result 446744073709551614
+  Bound result 446744073709551612
+  Bound result 1000860
+  Bound result 25000325163
+  Bound result 8280
+  Bound result 1
+  Bound result 22318058787
+  Bound result 69794683175944
+  Bound result 155321109122689435015049
+  Bound result 833065920988392072444164
+  Bound result 373166025
+  Bound result 474135133634465
+  Bound result 1679861523527418
+  Bound result 194084548096462074
+  Bound result 1
+  Bound result 196981213341585522
+  Bound result 3590734529403
+  Bound result 8281
+  Bound result 7623
+  Bound result 19480
+  Bound result 1488324153
+  Bound result 3858
+  Bound result 1
+  Bound result 22392
+  Bound result 64816481641848
+  Bound result 72
+  Bound result 26796
+  Bound result 4998
+  Bound result 515
+  Bound result 150
+  Bound result 3
+  Bound result 500
+  Bound result 6926
+  Bound result 28
+  Bound result 1606
+  Bound result 5
+  Bound result 5061
+  Bound result 92074395913468139
+  Bound result 43
+  Bound result 7963843
+  Bound result 1
+  Bound result 598
+  Bound result 21121
+  Bound result 446744073709551612
+  Bound result 2122053689894
+  Bound result 1513552568
+  Bound result 10368000
+  Bound result 3792478065
+  Bound result 100000
+  Bound result 935611519312281520
+  Bound result 1000000000000000000
+  Bound result 11000000
+  Bound result 1419928851
+  Bound result 18
+  Bound result 923328565436707
+  Bound result 2606
+  Bound result 2109176392
+  Bound result 5537
+  Bound result 1681337098354
+  Bound result 3104993
+  Bound result 134657676734
+  Bound result 870932582983671207545
+  Bound result 80268397313231632919
+  Bound result 246685
+  Bound result 84889408080
+  Bound result 203244756474247245
+  Bound result 1
+  Bound result 926663473
+  Bound result 31195511060971
+  Bound result 8049087111
+  Bound result 7319855633315
+  Bound result 364706156426
+  Bound result 10165229836385
+  Bound result 5732
+  Bound result 333
+  Bound result 7000000
+  Bound result 1252838675616
+  Bound result 25532651514
+  Bound result 20
+  Bound result 229595734696
+  Bound result 1024557
+  Bound result 1
+  Bound result 97
+  Bound result 1228
+  Bound result 162514264337593543950334
+  Bound result 6727
+  Bound result 100000
+  Bound result 662
+  Bound result 11
+  Bound result 16846700286656
+  Bound result 161009
+  Bound result 84
+  Bound result 64
+  Bound result 9000
+  Bound result 2592000
+  Bound result 5890297959991298
+  Bound result 7157
+  Bound result 5
+  Bound result 499377381852597978
+  Bound result 7394
+  Bound result 5284676
+  Bound result 14361
+  Bound result 5178
+  Bound result 28
+
+[PASS] invariant_BindingsAndStrategyVersionNeverDriftDuringExecution() (runs: 128, calls: 12800, reverts: 0)
+
+╭--------------------------------+----------+-------+---------+----------╮
+| Contract                       | Selector | Calls | Reverts | Discards |
++========================================================================+
+| CompactAdapterInvariantHandler | batch    | 6531  | 0       | 0        |
+|--------------------------------+----------+-------+---------+----------|
+| CompactAdapterInvariantHandler | manual   | 6269  | 0       | 0        |
+╰--------------------------------+----------+-------+---------+----------╯
+
+Logs:
+  Bound result 870932582979505835322
+  Bound result 4155336199
+  Bound result 2358
+  Bound result 2660
+  Bound result 5879
+  Bound result 10
+  Bound result 797
+  Bound result 1
+  Bound result 12129
+  Bound result 124
+  Bound result 10
+  Bound result 64
+  Bound result 10000000
+  Bound result 1
+  Bound result 339987621980940326
+  Bound result 379602479282403
+  Bound result 224
+  Bound result 5841
+  Bound result 43
+  Bound result 22987768274032408314
+  Bound result 152
+  Bound result 950
+  Bound result 17000000
+  Bound result 32
+  Bound result 4
+  Bound result 19966
+  Bound result 1365
+  Bound result 10568
+  Bound result 6864
+  Bound result 7065
+  Bound result 953
+  Bound result 682181369929049572
+  Bound result 3
+  Bound result 1575
+  Bound result 1004
+  Bound result 31536000
+  Bound result 10
+  Bound result 3000
+  Bound result 8453
+  Bound result 64
+  Bound result 1159723221891424349
+  Bound result 13405700247
+  Bound result 37947483
+  Bound result 9050
+  Bound result 39230
+  Bound result 178657951389654762
+  Bound result 944105045
+  Bound result 522337194562704945
+  Bound result 17801
+  Bound result 53844332380700
+  Bound result 40000000
+  Bound result 10866
+  Bound result 10001
+  Bound result 441
+  Bound result 9450
+  Bound result 1
+  Bound result 18370
+  Bound result 1282
+  Bound result 10000000
+  Bound result 15660
+  Bound result 20487
+  Bound result 15471
+  Bound result 1
+  Bound result 6660522506217670
+  Bound result 74932
+  Bound result 7286
+  Bound result 1
+  Bound result 5709
+  Bound result 59338094393499272
+  Bound result 446668124959716228
+  Bound result 133686446083425
+  Bound result 5439
+  Bound result 10368000
+  Bound result 8453
+  Bound result 5025
+  Bound result 721
+  Bound result 16331
+  Bound result 480
+  Bound result 3
+  Bound result 5973
+  Bound result 204818041029907296714966
+  Bound result 832194068227962941481174
+  Bound result 29659042698
+  Bound result 400337267
+  Bound result 990796977
+  Bound result 80664
+  Bound result 37359730318726
+  Bound result 271033274221810255
+  Bound result 24586040892
+  Bound result 1
+  Bound result 1
+  Bound result 3181
+  Bound result 71206
+  Bound result 10000
+  Bound result 27
+  Bound result 20487
+  Bound result 13
+  Bound result 2
+  Bound result 56
+  Bound result 1699
+  Bound result 446744073709551614
+  Bound result 446744073709551612
+  Bound result 1000860
+  Bound result 25000325163
+  Bound result 8116
+  Bound result 1
+  Bound result 22318058787
+  Bound result 69794683175944
+  Bound result 155321109122689435015049
+  Bound result 37909696801042312163623
+  Bound result 373166025
+  Bound result 474135133634465
+  Bound result 1679861523527418
+  Bound result 194084548096462074
+  Bound result 1
+  Bound result 196981213341585522
+  Bound result 3590734529403
+  Bound result 8097
+  Bound result 8410
+  Bound result 19071
+  Bound result 4180
+  Bound result 3858
+  Bound result 1
+  Bound result 22392
+  Bound result 64816481641848
+  Bound result 72
+  Bound result 26796
+  Bound result 4854
+  Bound result 2507
+  Bound result 150
+  Bound result 3
+  Bound result 500
+  Bound result 6756
+  Bound result 28
+  Bound result 1382
+  Bound result 5
+  Bound result 4567
+  Bound result 642123804767908060
+  Bound result 43
+  Bound result 7963843
+  Bound result 1
+  Bound result 598
+  Bound result 21121
+  Bound result 446744073709551612
+  Bound result 2122053689894
+  Bound result 1513552568
+  Bound result 10368000
+  Bound result 3620900466
+  Bound result 100000
+  Bound result 530156884689593553
+  Bound result 1000000000000000000
+  Bound result 11000000
+  Bound result 1419928851
+  Bound result 18
+  Bound result 923328565436707
+  Bound result 3034325578
+  Bound result 2109176392
+  Bound result 5537
+  Bound result 1681337098354
+  Bound result 3104993
+  Bound result 134657676734
+  Bound result 870932582983661176538
+  Bound result 80268397313231632919
+  Bound result 246685
+  Bound result 84889408080
+  Bound result 203244756474247245
+  Bound result 1
+  Bound result 926663473
+  Bound result 31195511060971
+  Bound result 8049087111
+  Bound result 7319855633315
+  Bound result 364706156426
+  Bound result 10165229836385
+  Bound result 5475
+  Bound result 1149
+  Bound result 7000000
+  Bound result 1252838675616
+  Bound result 25532651514
+  Bound result 20
+  Bound result 229595734696
+  Bound result 1024557
+  Bound result 1
+  Bound result 97
+  Bound result 2056
+  Bound result 162514264337593543950334
+  Bound result 19814
+  Bound result 100000
+  Bound result 449
+  Bound result 11
+  Bound result 16846700286656
+  Bound result 161009
+  Bound result 84
+  Bound result 64
+  Bound result 9000
+  Bound result 2592000
+  Bound result 5890297959991298
+  Bound result 7157
+  Bound result 5
+  Bound result 499377381852597978
+  Bound result 6965
+  Bound result 5284676
+  Bound result 307483990
+  Bound result 2651
+  Bound result 28
+
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 5.94s (16.98s CPU time)
+
+Ran 10 test suites in 5.95s (12.11s CPU time): 43 tests passed, 0 failed, 2 skipped (45 total tests)
+2026-10-24T09:19:46.799962Z  WARN evm::traces: failed to flush signature cache err=failed to create file "/Users/ethan/.foundry/cache/signatures": Operation not permitted (os error 1)
+
+COMMAND: FOUNDRY_PROFILE=deployment-test forge test -vv
+Compiling 75 files with Solc 0.8.30
+Solc 0.8.30 finished in 69.20s
+Compiler run successful!
+
+Ran 1 test for test/deployment/DeployScript.t.sol:DeployScriptTest
+[PASS] test_DeploymentScriptAndPreflight() (gas: 185858415)
+Logs:
+  === xMETRO Deployment ===
+  Chain ID: 31337
+  Deployer: 0x10A64B2a27Ad79841dEe2FbA9040B76b31204A98
+  Starting nonce: 0
+  METRO: 0x0f7e724145A8A2EA5A09B04fDd5e50dC48377cdC
+  xMETRO Core: 0xa48568A6221a2Cd08F3719CC9e274cC3751Ff21e
+  Adapter Implementation: 0x2F14eb8A351030aF9dee2b6f4808b9F8d426B932
+  0x4255648d5556c39f53e4c6083a33ff4cf56b020f434b87f8dede9f13868e0a02
+  Adapter Proxy: 0xEb72DDfD0CE84B6d4E55cc1DD3479F4f6df7C783
+  Core adapter epoch: 1
+  Adapter logic epoch: 1
+  Final owner: 0x86A797fe7A15D65F8c14014612F82B6B49E242DC
+  RewardDistributor: 0x05512FC947C92C8Be0A33B1b80fe65224d0C2bd0
+  ThorMigrationEscrow: 0xFA76052d0e6f39827660170b0fa2A5CEc1b92DB1
+  Addresses written to: deployments/31337/addresses.json
+  Deployment verified on chain 31337
+  xMETRO: 0xa48568A6221a2Cd08F3719CC9e274cC3751Ff21e
+  Adapter Proxy: 0xEb72DDfD0CE84B6d4E55cc1DD3479F4f6df7C783
+  === xMETRO Deployment ===
+  Chain ID: 31337
+  Deployer: 0x10A64B2a27Ad79841dEe2FbA9040B76b31204A98
+  Starting nonce: 0
+  METRO: 0x0f7e724145A8A2EA5A09B04fDd5e50dC48377cdC
+  xMETRO Core: 0xa48568A6221a2Cd08F3719CC9e274cC3751Ff21e
+  Adapter Implementation: 0x2F14eb8A351030aF9dee2b6f4808b9F8d426B932
+  0x4255648d5556c39f53e4c6083a33ff4cf56b020f434b87f8dede9f13868e0a02
+  Adapter Proxy: 0xEb72DDfD0CE84B6d4E55cc1DD3479F4f6df7C783
+  Core adapter epoch: 1
+  Adapter logic epoch: 1
+  Final owner: 0x86A797fe7A15D65F8c14014612F82B6B49E242DC
+  RewardDistributor: 0x05512FC947C92C8Be0A33B1b80fe65224d0C2bd0
+  ThorMigrationEscrow: 0xFA76052d0e6f39827660170b0fa2A5CEc1b92DB1
+  Addresses written to: deployments/31337/addresses.json
+  Deployment verified on chain 31337
+  xMETRO: 0xa48568A6221a2Cd08F3719CC9e274cC3751Ff21e
+  Adapter Proxy: 0xEb72DDfD0CE84B6d4E55cc1DD3479F4f6df7C783
+  === xMETRO Deployment ===
+  Chain ID: 31337
+  Deployer: 0x10A64B2a27Ad79841dEe2FbA9040B76b31204A98
+  Starting nonce: 0
+  METRO: 0x0f7e724145A8A2EA5A09B04fDd5e50dC48377cdC
+  xMETRO Core: 0xa48568A6221a2Cd08F3719CC9e274cC3751Ff21e
+  Adapter Implementation: 0x2F14eb8A351030aF9dee2b6f4808b9F8d426B932
+  0x4255648d5556c39f53e4c6083a33ff4cf56b020f434b87f8dede9f13868e0a02
+  Adapter Proxy: 0xEb72DDfD0CE84B6d4E55cc1DD3479F4f6df7C783
+  Core adapter epoch: 1
+  Adapter logic epoch: 1
+  Final owner: 0x86A797fe7A15D65F8c14014612F82B6B49E242DC
+  RewardDistributor: 0x05512FC947C92C8Be0A33B1b80fe65224d0C2bd0
+  ThorMigrationEscrow: 0xFA76052d0e6f39827660170b0fa2A5CEc1b92DB1
+  Addresses written to: deployments/31337/addresses.json
+  Deployment verified on chain 31337
+  xMETRO: 0xa48568A6221a2Cd08F3719CC9e274cC3751Ff21e
+  Adapter Proxy: 0xEb72DDfD0CE84B6d4E55cc1DD3479F4f6df7C783
+  === Adapter UUPS Upgrade ===
+  Proxy: 0xEb72DDfD0CE84B6d4E55cc1DD3479F4f6df7C783
+  Old Implementation: 0x2F14eb8A351030aF9dee2b6f4808b9F8d426B932
+  New Implementation: 0xd997C3f67b8A09710E238b4F2fA55cC8dEbE1731
+  Logic epoch: 2
+  === Adapter Proxy Replacement ===
+  Old Proxy: 0xEb72DDfD0CE84B6d4E55cc1DD3479F4f6df7C783
+  New Proxy: 0xe4E5C7C990c84e0720c7D1750AAF757162f202D9
+  New Implementation: 0x64ab8273b8c680159AF0182ec18C8E3f64914f36
+  Adapter epoch: 2
+  Maple must authorize the new Proxy address.
+
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 59.04ms (34.25ms CPU time)
+
+Ran 1 test suite in 59.81ms (59.04ms CPU time): 1 tests passed, 0 failed, 0 skipped (1 total tests)
+2026-10-24T09:20:50.090459Z  WARN evm::traces: failed to flush signature cache err=failed to create file "/Users/ethan/.foundry/cache/signatures": Operation not permitted (os error 1)
+
+COMMAND: FOUNDRY_PROFILE=fork-v2 forge build
+Warning: Failed to get git revision for dependency 'lib/forge-std'
+Warning: Failed to get git revision for dependency 'lib/openzeppelin-contracts'
+Compiling 81 files with Solc 0.8.30
+Solc 0.8.30 finished in 40.41s
+Compiler run successful!
+2026-10-24T09:20:21.252267Z  WARN evm::traces: failed to flush signature cache err=failed to create file "/Users/ethan/.foundry/cache/signatures": Operation not permitted (os error 1)
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+   ╭▸ src/ThorMigrationEscrow.sol:52:17
+   │
+52 │         require(migrationStartTime_ >= block.timestamp, "ThorEscrow: bad start time");
+   │                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#block-timestamp
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+    ╭▸ src/XMetroCoreLogic.sol:299:32
+    │
+299 │         if (position.exited || block.timestamp < eligibleAt) return (false, 0, 0, 0, eligibleAt);
+    │                                ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#block-timestamp
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   ╭▸ src/XMetroCoreLogic.sol:97:69
+   │
+97 │         state.contributorVestings[receiver].push(ContributorVesting(uint128(amount), 0, startTime, duration));
+   │                                                                     ━━━━━━━━━━━━━━━
+   │
+   ├ note: consider disabling this lint if you're certain the cast is safe
+   │       
+   │       // casting to 'uint128' is safe because [explain why]
+   │       // forge-lint: disable-next-line(unsafe-typecast)
+   │       
+   │       
+   ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+    ╭▸ src/XMetroCoreLogic.sol:115:40
+    │
+115 │                     schedule.claimed = uint128(uint256(schedule.claimed) + releasable);
+    │                                        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint128' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+    ╭▸ src/XMetroCoreLogic.sol:272:33
+    │
+272 │         positions.push(Position(uint128(principal), migratedAt, 0, false));
+    │                                 ━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint128' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   ╭▸ test/fork-v2/mainnet/MapleDeposit.t.sol:25:42
+   │
+25 │     bytes32 private constant P_DEPOSIT = bytes32("P:deposit");
+   │                                          ━━━━━━━━━━━━━━━━━━━━
+   │
+   ├ note: consider disabling this lint if you're certain the cast is safe
+   │       
+   │       // casting to 'bytes32' is safe because [explain why]
+   │       // forge-lint: disable-next-line(unsafe-typecast)
+   │       
+   │       
+   ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   ╭▸ test/fork-v2/mainnet/OneInchSwap.t.sol:48:18
+   │
+48 │         assertEq(bytes4(data), IOneInchRouterMainnet.swap.selector);
+   │                  ━━━━━━━━━━━━
+   │
+   ├ note: consider disabling this lint if you're certain the cast is safe
+   │       
+   │       // casting to 'bytes4' is safe because [explain why]
+   │       // forge-lint: disable-next-line(unsafe-typecast)
+   │       
+   │       
+   ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+    ╭▸ test/fork-v2/mainnet/vendor/CommissionVault.sol:175:17
+    │
+175 │         require(block.timestamp >= pendingActivationTime, "Timelock not expired");
+    │                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#block-timestamp
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+    ╭▸ test/fork-v2/mainnet/vendor/CommissionVault.sol:283:17
+    │
+283 │         require(block.timestamp >= change.effectiveAt, "Timelock not expired");
+    │                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#block-timestamp
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   ╭▸ test/fork-v2/mainnet/OneInchSwap.t.sol:74:20
+   │
+74 │         assertTrue(bytes4(data) != IOneInchRouterMainnet.swap.selector);
+   │                    ━━━━━━━━━━━━
+   │
+   ├ note: consider disabling this lint if you're certain the cast is safe
+   │       
+   │       // casting to 'bytes4' is safe because [explain why]
+   │       // forge-lint: disable-next-line(unsafe-typecast)
+   │       
+   │       
+   ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[erc20-unchecked-transfer]: ERC20 'transfer' and 'transferFrom' calls should check the return value
+   ╭▸ test/fork-v2/mainnet/TokenStakeRewards.t.sol:70:9
+   │
+70 │         metro.transferFrom(alice, bob, 6 ether);
+   │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#erc20-unchecked-transfer
+
+warning[erc20-unchecked-transfer]: ERC20 'transfer' and 'transferFrom' calls should check the return value
+   ╭▸ test/fork-v2/mainnet/TokenStakeRewards.t.sol:73:9
+   │
+73 │         metro.transfer(bob, 56 ether);
+   │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#erc20-unchecked-transfer
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+    ╭▸ test/fork-v2/mainnet/CommissionNetPaths.t.sol:125:22
+    │
+125 │             assertEq(bytes4(callData), bytes4(0x07ed2379));
+    │                      ━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'bytes4' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+    ╭▸ test/fork-v2/mainnet/OneInchSwap.t.sol:197:18
+    │
+197 │         assertEq(bytes4(data), IOneInchRouterMainnet.swap.selector);
+    │                  ━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'bytes4' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+    ╭▸ test/fork-v2/mainnet/CrossSourcePaths.t.sol:112:18
+    │
+112 │         assertEq(bytes4(oneInchCalldata), bytes4(0x07ed2379));
+    │                  ━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'bytes4' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[erc20-unchecked-transfer]: ERC20 'transfer' and 'transferFrom' calls should check the return value
+    ╭▸ test/fork-v2/mainnet/TokenStakeRewards.t.sol:159:9
+    │
+159 │         core.transfer(bob, 1 ether);
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#erc20-unchecked-transfer
+
+warning[erc20-unchecked-transfer]: ERC20 'transfer' and 'transferFrom' calls should check the return value
+    ╭▸ test/fork-v2/mainnet/TokenStakeRewards.t.sol:172:9
+    │
+172 │         core.transfer(bob, 100 ether);
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#erc20-unchecked-transfer
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+   ╭▸ src/ThorMigrationEscrow.sol:62:17
+   │
+62 │         require(block.timestamp >= migrationStartTime, "ThorEscrow: not started");
+   │                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#block-timestamp
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+   ╭▸ src/ThorMigrationEscrow.sol:65:17
+   │
+65 │         require(block.timestamp <= deadlineThor, "ThorEscrow: thor expired");
+   │                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#block-timestamp
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   ╭▸ test/fork-v2/mainnet/AdapterLifecycle.t.sol:59:42
+   │
+59 │     bytes32 private constant P_DEPOSIT = bytes32("P:deposit");
+   │                                          ━━━━━━━━━━━━━━━━━━━━
+   │
+   ├ note: consider disabling this lint if you're certain the cast is safe
+   │       
+   │       // casting to 'bytes32' is safe because [explain why]
+   │       // forge-lint: disable-next-line(unsafe-typecast)
+   │       
+   │       
+   ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+   ╭▸ src/ThorMigrationEscrow.sol:81:17
+   │
+81 │         require(block.timestamp >= migrationStartTime, "ThorEscrow: not started");
+   │                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#block-timestamp
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+   ╭▸ src/ThorMigrationEscrow.sol:84:17
+   │
+84 │         require(block.timestamp <= deadlineYThor, "ThorEscrow: ythor expired");
+   │                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#block-timestamp
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+   ╭▸ src/ThorMigrationEscrow.sol:99:17
+   │
+99 │         require(newStartTime >= block.timestamp, "ThorEscrow: bad start time");
+   │                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#block-timestamp
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   ╭▸ test/fork-v2/mainnet/MapleDeposit.t.sol:26:43
+   │
+26 │     bytes32 private constant P_TRANSFER = bytes32("P:transfer");
+   │                                           ━━━━━━━━━━━━━━━━━━━━━
+   │
+   ├ note: consider disabling this lint if you're certain the cast is safe
+   │       
+   │       // casting to 'bytes32' is safe because [explain why]
+   │       // forge-lint: disable-next-line(unsafe-typecast)
+   │       
+   │       
+   ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+    ╭▸ src/ThorMigrationEscrow.sol:106:17
+    │
+106 │         require(newDeadlineThor >= block.timestamp && newDeadlineYThor >= block.timestamp, "ThorEscrow: bad deadline");
+    │                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#block-timestamp
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   ╭▸ test/fork-v2/mainnet/MapleDeposit.t.sol:27:48
+   │
+27 │     bytes32 private constant P_TRANSFER_FROM = bytes32("P:transferFrom");
+   │                                                ━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ├ note: consider disabling this lint if you're certain the cast is safe
+   │       
+   │       // casting to 'bytes32' is safe because [explain why]
+   │       // forge-lint: disable-next-line(unsafe-typecast)
+   │       
+   │       
+   ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+    ╭▸ src/ThorMigrationEscrow.sol:106:55
+    │
+106 │         require(newDeadlineThor >= block.timestamp && newDeadlineYThor >= block.timestamp, "ThorEscrow: bad deadline");
+    │                                                       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#block-timestamp
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+    ╭▸ test/fork-v2/mainnet/MapleDeposit.t.sol:264:80
+    │
+264 │         strategy = IXMetroAdapterAdminFork(proxy).setMapleConfig(MAPLE_ROUTER, bytes32("0:XMetro"), true, true);
+    │                                                                                ━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'bytes32' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+    ╭▸ test/fork-v2/mainnet/vendor/CommissionVault.sol:387:30
+    │
+387 │         uint40 effectiveAt = uint40(block.timestamp + payoutTimelock);
+    │                              ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint40' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[erc20-unchecked-transfer]: ERC20 'transfer' and 'transferFrom' calls should check the return value
+    ╭▸ test/fork-v2/mainnet/TokenStakeRewards.t.sol:198:9
+    │
+198 │         core.transferFrom(alice, bob, 40 ether);
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#erc20-unchecked-transfer
+
+warning[erc20-unchecked-transfer]: ERC20 'transfer' and 'transferFrom' calls should check the return value
+    ╭▸ test/fork-v2/mainnet/TokenStakeRewards.t.sol:214:9
+    │
+214 │         core.transfer(alice, 10 ether);
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#erc20-unchecked-transfer
+
+warning[erc20-unchecked-transfer]: ERC20 'transfer' and 'transferFrom' calls should check the return value
+    ╭▸ test/fork-v2/mainnet/TokenStakeRewards.t.sol:215:9
+    │
+215 │         core.transfer(bob, 0);
+    │         ━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#erc20-unchecked-transfer
+
+warning[erc20-unchecked-transfer]: ERC20 'transfer' and 'transferFrom' calls should check the return value
+    ╭▸ test/fork-v2/mainnet/TokenStakeRewards.t.sol:221:9
+    │
+221 │         core.transferFrom(alice, bob, 6 ether);
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#erc20-unchecked-transfer
+
+warning[erc20-unchecked-transfer]: ERC20 'transfer' and 'transferFrom' calls should check the return value
+    ╭▸ test/fork-v2/mainnet/TokenStakeRewards.t.sol:225:9
+    │
+225 │         core.transfer(bob, 1 ether);
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#erc20-unchecked-transfer
+
+warning[erc20-unchecked-transfer]: ERC20 'transfer' and 'transferFrom' calls should check the return value
+    ╭▸ test/fork-v2/mainnet/TokenStakeRewards.t.sol:489:9
+    │
+489 │         core.transfer(bob, 50 ether);
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#erc20-unchecked-transfer
+
+warning[erc20-unchecked-transfer]: ERC20 'transfer' and 'transferFrom' calls should check the return value
+    ╭▸ test/fork-v2/mainnet/TokenStakeRewards.t.sol:541:9
+    │
+541 │         core.transfer(bob, 1 ether);
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#erc20-unchecked-transfer
+
+warning[erc20-unchecked-transfer]: ERC20 'transfer' and 'transferFrom' calls should check the return value
+    ╭▸ test/fork-v2/mainnet/TokenStakeRewards.t.sol:544:9
+    │
+544 │         core.transfer(alice, 1 ether);
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#erc20-unchecked-transfer
+
+
+COMMAND: ETH_RPC_URL=https://eth.drpc.org FOUNDRY_PROFILE=fork-v2 forge test --match-contract 'MigrationExitMainnetTest|YThorRewardWeightMainnetTest|DeploymentGovernanceMainnetTest' -vv
+No files changed, compilation skipped
+
+Ran 23 tests for test/fork-v2/mainnet/MigrationExit.t.sol:MigrationExitMainnetTest
+[PASS] test_E10_IndependentRepeatedThorYThorMigrations() (gas: 677942)
+[PASS] test_E10_OnlyBoundEscrowCanCredit() (gas: 1685841)
+[PASS] test_E10_RealThorMigrationCustodyMintPosition() (gas: 295233)
+[PASS] test_E10_RealYThorMigrationAndRewardWeight() (gas: 535848)
+[PASS] test_E10_StartDeadlineRatioRoundingAndPrincipalCap() (gas: 1946066)
+[PASS] test_E10_TransferMintAndCapFailuresAreAtomic() (gas: 1214775)
+[PASS] test_E11_CapsOwnerNonzeroAndNoRetroactivity() (gas: 418704)
+[PASS] test_E11_DeadlinesOwnerAndStartRelations() (gas: 39759)
+[PASS] test_E11_RatiosFirstSetLocksImmediately() (gas: 1202590)
+[PASS] test_E11_StartTimeOwnerAndBoundary() (gas: 27055)
+[PASS] test_E12_ForfeitureRecipientAndMetroBacking() (gas: 343113)
+[PASS] test_E12_LiquidAndStakeExitPaths() (gas: 592243)
+[PASS] test_E12_OneTimeCloseAndHistoricalRewards() (gas: 786789)
+[PASS] test_E12_ThorExitCurveIndependentSnapshots() (gas: 571808)
+[PASS] test_E12_ThorQueueBoundaryPositionAndEvents() (gas: 423726)
+[PASS] test_E13_ActivePrincipalWeightForfeitureBacking() (gas: 434276)
+[PASS] test_E13_ClosedPositionOldPendingClaimOrAuto() (gas: 3688756)
+[PASS] test_E13_YThorExitCurveIndependentSnapshots() (gas: 922499)
+[PASS] test_E13_YThorLiquidAndStakePaths() (gas: 701113)
+[PASS] test_E13_YThorQueueEventsAndBoundary() (gas: 492164)
+[PASS] test_E15_AllFourQueuesExcludedEvenAfterMaturity() (gas: 1020740)
+[PASS] test_E15_EmptyPartiallyConsumedAndClosedPreview() (gas: 873453)
+[PASS] test_E15_MixedPositionsPreviewIsSourceSum() (gas: 652904)
+Suite result: ok. 23 passed; 0 failed; 0 skipped; finished in 1.02s (23.87ms CPU time)
+
+Ran 8 tests for test/fork-v2/mainnet/YThorRewardWeight.t.sol:YThorRewardWeightMainnetTest
+[PASS] test_E14_AboveBelowZeroAndRestoredWeights() (gas: 1093959)
+[PASS] test_E14_AllExistingYThorUsersChangeTogether() (gas: 698749)
+[PASS] test_E14_InitialOwnerAndUpperBound() (gas: 45048)
+[PASS] test_E14_MigrationExitClaimTwoAccumulatorsAndDebt() (gas: 1108199)
+[PASS] test_E14_OnlyZeroWeightYThorRejectsThenMixedSharesEarn() (gas: 1026623)
+[PASS] test_E14_SmallPrincipalFractionalBpsAndDust() (gas: 1094610)
+Logs:
+  E14 tiny reward claim sum raw: 3
+  E14 tiny reward unallocated tail raw: 1
+
+[PASS] test_E14_TreasuryRealMigrationsExcludeOnlyMigrationRewards() (gas: 1179947)
+[PASS] test_E14_WeightsDoNotRewriteHistoricalRewards() (gas: 758263)
+Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 4.49s (3.49s CPU time)
+
+Ran 18 tests for test/fork-v2/mainnet/DeploymentGovernance.t.sol:DeploymentGovernanceMainnetTest
+[PASS] test_E01_ArtifactSizesAndProxySlots() (gas: 3382060)
+[PASS] test_E01_ExplicitPauseConfigurationAndSingleStepOwnership() (gas: 143282)
+[PASS] test_E01_FormalCreateAndReadback() (gas: 150743)
+Logs:
+  METRO: 0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f
+  Core: 0x2e234DAe75C793f67A35089C9d99245E1C58470b
+  Adapter implementation: 0xF62849F9A0B5Bf2913b396098F7c7019b51A820a
+  Adapter proxy: 0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9
+  Distributor: 0xc7183455a4C133Ae270771860664b6B7ec320bB1
+  Escrow: 0xa0Cb889707d426A7A386870A03bc70d1b0697598
+  Commission Vault: 0x1d1499e622D69689cdf9004d05Ec547d650Ff211
+
+[PASS] test_E01_InitializerAndBindingGuards() (gas: 82022)
+[PASS] test_E01_RealUsdcAndNewMetroUniswapV2Liquidity() (gas: 2919746)
+Logs:
+  V2 METRO/USDC pair: 0x32Bab2E53d9081a3Cac251CcEb8faF09548528e3
+  THOR funding EOA: 0x02d9E8506ba56d3F9bE6007f712720EEaDAc5FdC
+  yTHOR funding EOA: 0x46e3A8C8135647b48B2e82198E42E0C69EacbAb8
+  V2 quote for 100 USDC: 98715803439706129885
+
+[PASS] test_E09_AdapterRescueRequiresCurrentOwnerAndPause() (gas: 149459)
+[PASS] test_E09_CoreAndEscrowPauseBoundaries() (gas: 132511)
+[PASS] test_E09_DistributorRescueOwnerOnly() (gas: 78002)
+[PASS] test_E09_OwnershipSemanticsAndIsolatedRenounce() (gas: 3035654)
+[PASS] test_E09_PauseAllowsReadsApprovalsAndDisable() (gas: 209971)
+[PASS] test_E09_PauseBlocksNormalUserMoneyPaths() (gas: 384406)
+[PASS] test_E09_ProtectedTokensAndLegitimateRescue() (gas: 236407)
+[PASS] test_E23_EmergencyFilteringAndOverOneHundredUsers() (gas: 12409875)
+Logs:
+  Emergency 101 users business-call gas: 5637057
+
+[PASS] test_E23_EmergencyInsufficientBalanceRollsBackWholeBatch() (gas: 539576)
+[PASS] test_E23_EmergencyOwnerPauseAndRealPending() (gas: 530356)
+[PASS] test_E23_EmergencyPreservesAllPrincipalLedgers() (gas: 982830)
+[PASS] test_E23_ReplaceAutoCompoundOperatorUsesNewKeeper() (gas: 3377884)
+[PASS] test_E23_ReplaceEscrowAndDistributorRevokesOldRoles() (gas: 2975173)
+Suite result: ok. 18 passed; 0 failed; 0 skipped; finished in 4.49s (27.55ms CPU time)
+
+Ran 3 test suites in 4.52s (10.01s CPU time): 49 tests passed, 0 failed, 0 skipped (49 total tests)
+
+
+COMMAND: FOUNDRY_PROFILE=core forge build --sizes
+Warning: Failed to get git revision for dependency 'lib/forge-std'
+Warning: Failed to get git revision for dependency 'lib/openzeppelin-contracts'
+Compiling 54 files with Solc 0.8.30
+Solc 0.8.30 finished in 15.93s
+Compiler run successful with warnings:
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/core/XMetroCore.adapter.t.sol:138:5:
+    |
+138 |     function xMETRO() external view returns (address) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+Note: The shadowed declaration is here:
+  --> src/xMETRO.sol:24:1:
+   |
+24 | contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
+   | ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+  --> test/core/XMetroCore.adapter.invariant.t.sol:40:5:
+   |
+40 |     function xMETRO() external view returns (address) {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+Note: The shadowed declaration is here:
+  --> src/xMETRO.sol:24:1:
+   |
+24 | contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
+   | ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+  --> test/core/XMetroDeposit.invariant.t.sol:70:5:
+   |
+70 |     function xMETRO() external view returns (address) {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+Note: The shadowed declaration is here:
+  --> src/xMETRO.sol:24:1:
+   |
+24 | contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
+   | ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+  --> test/core/XMetroSystem.integration.t.sol:79:5:
+   |
+79 |     function xMETRO() external view returns (address) {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+Note: The shadowed declaration is here:
+  --> src/xMETRO.sol:24:1:
+   |
+24 | contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
+   | ^ (Relevant source part starts here and spans across multiple lines).
+
+
+╭---------------------------+------------------+-------------------+--------------------+---------------------╮
+| Contract                  | Runtime Size (B) | Initcode Size (B) | Runtime Margin (B) | Initcode Margin (B) |
++=============================================================================================================+
+| Address                   | 3                | 31                | 24,573             | 49,121              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| Bytes                     | 3                | 31                | 24,573             | 49,121              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| CoreAaveV4Spoke           | 1,504            | 1,682             | 23,072             | 47,470              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| CoreCode                  | 3                | 27                | 24,573             | 49,125              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| CoreFlowToken             | 1,666            | 2,605             | 22,910             | 46,547              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| CoreMisreportingV2Router  | 784              | 810               | 23,792             | 48,342              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| CoreRewardSource          | 616              | 799               | 23,960             | 48,353              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| CoreV2Router              | 753              | 779               | 23,823             | 48,373              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| ECDSA                     | 3                | 31                | 24,573             | 49,121              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| ERC1967Proxy              | 76               | 598               | 24,500             | 48,554              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| ERC1967Utils              | 3                | 31                | 24,573             | 49,121              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| ERC20Mintable             | 2,013            | 3,046             | 22,563             | 46,106              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| Errors                    | 3                | 31                | 24,573             | 49,121              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| LowLevelCall              | 3                | 31                | 24,573             | 49,121              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| Math                      | 3                | 31                | 24,573             | 49,121              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| MessageHashUtils          | 3                | 31                | 24,573             | 49,121              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| MetroToken                | 4,400            | 6,449             | 20,176             | 42,703              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| MockAaveV3Pool            | 5,407            | 9,805             | 19,169             | 39,347              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| MockAaveV4Giver           | 1,629            | 1,910             | 22,947             | 47,242              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| MockAaveV4Spoke           | 3,944            | 4,276             | 20,632             | 44,876              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| MockCommissionVault       | 993              | 1,216             | 23,583             | 47,936              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| MockOneInchExecutor       | 3                | 27                | 24,573             | 49,125              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| MockOneInchRouter         | 899              | 925               | 23,677             | 48,227              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| MockPoolPermissionManager | 2,555            | 2,673             | 22,021             | 46,479              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| MockScaledAToken          | 3,677            | 3,888             | 20,899             | 45,264              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| MockSyrupRouter           | 5,018            | 5,927             | 19,558             | 43,225              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| MockSyrupUSDC             | 3,446            | 3,720             | 21,130             | 45,432              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| Panic                     | 3                | 31                | 24,573             | 49,121              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| RewardDistributor         | 4,677            | 5,241             | 19,899             | 43,911              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| SafeCast                  | 3                | 31                | 24,573             | 49,121              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| SafeERC20                 | 3                | 31                | 24,573             | 49,121              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| ShortStrings              | 3                | 31                | 24,573             | 49,121              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| SignedMath                | 3                | 31                | 24,573             | 49,121              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| StorageSlot               | 3                | 31                | 24,573             | 49,121              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| Strings                   | 3                | 31                | 24,573             | 49,121              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| SystemCode                | 3                | 27                | 24,573             | 49,125              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| SystemV2Router            | 726              | 752               | 23,850             | 48,400              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| ThorMigrationEscrow       | 4,565            | 5,241             | 20,011             | 43,911              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| XMetroCoreLogic           | 3                | 31                | 24,573             | 49,121              |
+|---------------------------+------------------+-------------------+--------------------+---------------------|
+| xMETRO                    | 23,510           | 25,146            | 1,066              | 24,006              |
+╰---------------------------+------------------+-------------------+--------------------+---------------------╯
+
+2026-10-24T09:30:40.990505Z  WARN evm::traces: failed to flush signature cache err=failed to create file "/Users/ethan/.foundry/cache/signatures": Operation not permitted (os error 1)
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+    ╭▸ src/XMetroCoreLogic.sol:299:32
+    │
+299 │         if (position.exited || block.timestamp < eligibleAt) return (false, 0, 0, 0, eligibleAt);
+    │                                ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#block-timestamp
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   ╭▸ test/core/XMetroSystem.integration.t.sol:54:43
+   │
+54 │     bytes32 internal constant P_DEPOSIT = bytes32("P:deposit");
+   │                                           ━━━━━━━━━━━━━━━━━━━━
+   │
+   ├ note: consider disabling this lint if you're certain the cast is safe
+   │       
+   │       // casting to 'bytes32' is safe because [explain why]
+   │       // forge-lint: disable-next-line(unsafe-typecast)
+   │       
+   │       
+   ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   ╭▸ src/XMetroCoreLogic.sol:97:69
+   │
+97 │         state.contributorVestings[receiver].push(ContributorVesting(uint128(amount), 0, startTime, duration));
+   │                                                                     ━━━━━━━━━━━━━━━
+   │
+   ├ note: consider disabling this lint if you're certain the cast is safe
+   │       
+   │       // casting to 'uint128' is safe because [explain why]
+   │       // forge-lint: disable-next-line(unsafe-typecast)
+   │       
+   │       
+   ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+    ╭▸ test/core/XMetroDeposit.invariant.t.sol:166:51
+    │
+166 │         permissions.setPoolBitmap(address(maple), bytes32("P:deposit"), 16);
+    │                                                   ━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'bytes32' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   ╭▸ test/core/BaseQAProtocolMocks.t.sol:38:41
+   │
+38 │     bytes32 internal constant DEPOSIT = bytes32("P:deposit");
+   │                                         ━━━━━━━━━━━━━━━━━━━━
+   │
+   ├ note: consider disabling this lint if you're certain the cast is safe
+   │       
+   │       // casting to 'bytes32' is safe because [explain why]
+   │       // forge-lint: disable-next-line(unsafe-typecast)
+   │       
+   │       
+   ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   ╭▸ test/core/BaseQAProtocolMocks.t.sol:39:38
+   │
+39 │     bytes32 internal constant DATA = bytes32("0:xMETRO");
+   │                                      ━━━━━━━━━━━━━━━━━━━
+   │
+   ├ note: consider disabling this lint if you're certain the cast is safe
+   │       
+   │       // casting to 'bytes32' is safe because [explain why]
+   │       // forge-lint: disable-next-line(unsafe-typecast)
+   │       
+   │       
+   ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+    ╭▸ src/XMetroCoreLogic.sol:115:40
+    │
+115 │                     schedule.claimed = uint128(uint256(schedule.claimed) + releasable);
+    │                                        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint128' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+    ╭▸ src/xMETRO.sol:295:17
+    │
+295 │             if (r.unlockTime > block.timestamp) break;
+    │                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#block-timestamp
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+   ╭▸ src/ThorMigrationEscrow.sol:52:17
+   │
+52 │         require(migrationStartTime_ >= block.timestamp, "ThorEscrow: bad start time");
+   │                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#block-timestamp
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+   ╭▸ src/ThorMigrationEscrow.sol:62:17
+   │
+62 │         require(block.timestamp >= migrationStartTime, "ThorEscrow: not started");
+   │                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#block-timestamp
+
+warning[erc20-unchecked-transfer]: ERC20 'transfer' and 'transferFrom' calls should check the return value
+    ╭▸ test/core/BaseQAProtocolMocks.t.sol:188:9
+    │
+188 │         aToken.transfer(users[1], 15e6);
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#erc20-unchecked-transfer
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+    ╭▸ src/XMetroCoreLogic.sol:272:33
+    │
+272 │         positions.push(Position(uint128(principal), migratedAt, 0, false));
+    │                                 ━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint128' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+    ╭▸ test/core/XMetroDeposit.invariant.t.sol:178:64
+    │
+178 │         bytes32 mapleId = admin.setMapleConfig(address(maple), bytes32("0:xMETRO"), true, true);
+    │                                                                ━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'bytes32' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+   ╭▸ src/ThorMigrationEscrow.sol:65:17
+   │
+65 │         require(block.timestamp <= deadlineThor, "ThorEscrow: thor expired");
+   │                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#block-timestamp
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+    ╭▸ src/xMETRO.sol:279:62
+    │
+279 │         _unstakeRequestsFree[msg.sender].push(UnstakeRequest(uint128(amount), unlockTime));
+    │                                                              ━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint128' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+   ╭▸ src/ThorMigrationEscrow.sol:81:17
+   │
+81 │         require(block.timestamp >= migrationStartTime, "ThorEscrow: not started");
+   │                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#block-timestamp
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+   ╭▸ src/ThorMigrationEscrow.sol:84:17
+   │
+84 │         require(block.timestamp <= deadlineYThor, "ThorEscrow: ythor expired");
+   │                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#block-timestamp
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+    ╭▸ src/xMETRO.sol:705:69
+    │
+705 │         _unstakeRequestsContributor[msg.sender].push(UnstakeRequest(uint128(unlocked), unlockTime));
+    │                                                                     ━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint128' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+    ╭▸ src/xMETRO.sol:823:60
+    │
+823 │             _unstakeRequestsThor[user].push(UnstakeRequest(uint128(amount), unlockTime));
+    │                                                            ━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint128' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+    ╭▸ src/xMETRO.sol:825:61
+    │
+825 │             _unstakeRequestsYThor[user].push(UnstakeRequest(uint128(amount), unlockTime));
+    │                                                             ━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint128' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+    ╭▸ src/xMETRO.sol:837:19
+    │
+837 │         pending = uint256(accumulated - debt) / ACC_PRECISION;
+    │                   ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint256' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+   ╭▸ src/ThorMigrationEscrow.sol:99:17
+   │
+99 │         require(newStartTime >= block.timestamp, "ThorEscrow: bad start time");
+   │                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#block-timestamp
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+     ╭▸ src/xMETRO.sol:1147:42
+     │
+1147 │         return _rewardDebtScaled[user] / int256(ACC_PRECISION);
+     │                                          ━━━━━━━━━━━━━━━━━━━━━
+     │
+     ├ note: consider disabling this lint if you're certain the cast is safe
+     │       
+     │       // casting to 'int256' is safe because [explain why]
+     │       // forge-lint: disable-next-line(unsafe-typecast)
+     │       
+     │       
+     ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+    ╭▸ src/ThorMigrationEscrow.sol:106:17
+    │
+106 │         require(newDeadlineThor >= block.timestamp && newDeadlineYThor >= block.timestamp, "ThorEscrow: bad deadline");
+    │                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#block-timestamp
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+    ╭▸ src/ThorMigrationEscrow.sol:106:55
+    │
+106 │         require(newDeadlineThor >= block.timestamp && newDeadlineYThor >= block.timestamp, "ThorEscrow: bad deadline");
+    │                                                       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#block-timestamp
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+     ╭▸ src/xMETRO.sol:1159:16
+     │
+1159 │         return int256(scaled);
+     │                ━━━━━━━━━━━━━━
+     │
+     ├ note: consider disabling this lint if you're certain the cast is safe
+     │       
+     │       // casting to 'int256' is safe because [explain why]
+     │       // forge-lint: disable-next-line(unsafe-typecast)
+     │       
+     │       
+     ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[erc20-unchecked-transfer]: ERC20 'transfer' and 'transferFrom' calls should check the return value
+    ╭▸ test/core/BaseQAProtocolMocks.t.sol:218:9
+    │
+218 │         aToken.transfer(users[1], amount);
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#erc20-unchecked-transfer
+
+warning[erc20-unchecked-transfer]: ERC20 'transfer' and 'transferFrom' calls should check the return value
+    ╭▸ test/core/BaseQAProtocolMocks.t.sol:230:9
+    │
+230 │         aToken.transferFrom(users[0], users[1], 5e6);
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#erc20-unchecked-transfer
+
+warning[erc20-unchecked-transfer]: ERC20 'transfer' and 'transferFrom' calls should check the return value
+    ╭▸ test/core/BaseQAProtocolMocks.t.sol:234:9
+    │
+234 │         aToken.transfer(users[0], 1e6);
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#erc20-unchecked-transfer
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+    ╭▸ test/core/BaseQAProtocolMocks.t.sol:508:51
+    │
+508 │         permissions.setPoolBitmap(address(maple), bytes32("P:transfer"), 16);
+    │                                                   ━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'bytes32' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[erc20-unchecked-transfer]: ERC20 'transfer' and 'transferFrom' calls should check the return value
+    ╭▸ test/core/BaseQAProtocolMocks.t.sol:511:9
+    │
+511 │         syrup.transfer(users[1], 1);
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#erc20-unchecked-transfer
+
+warning[erc20-unchecked-transfer]: ERC20 'transfer' and 'transferFrom' calls should check the return value
+    ╭▸ test/core/BaseQAProtocolMocks.t.sol:514:9
+    │
+514 │         syrup.transfer(users[1], 1);
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#erc20-unchecked-transfer
+
+warning[erc20-unchecked-transfer]: ERC20 'transfer' and 'transferFrom' calls should check the return value
+    ╭▸ test/core/BaseQAProtocolMocks.t.sol:525:9
+    │
+525 │         syrup.transferFrom(users[0], users[1], 5e6);
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#erc20-unchecked-transfer
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+    ╭▸ test/core/BaseQAProtocolMocks.t.sol:537:51
+    │
+537 │         permissions.setPoolBitmap(address(maple), bytes32("P:transfer"), 4);
+    │                                                   ━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'bytes32' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+    ╭▸ test/core/BaseQAProtocolMocks.t.sol:544:26
+    │
+544 │         assertEq(ids[0], bytes32("P:transfer"));
+    │                          ━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'bytes32' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[erc20-unchecked-transfer]: ERC20 'transfer' and 'transferFrom' calls should check the return value
+    ╭▸ test/core/BaseQAProtocolMocks.t.sol:581:13
+    │
+581 │             token.transferFrom(users[0], users[2], amount);
+    │             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://book.getfoundry.sh/reference/forge/forge-lint#erc20-unchecked-transfer
+

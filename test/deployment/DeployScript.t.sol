@@ -30,7 +30,7 @@ contract DeployScriptTest is Test {
 
     uint256 internal constant DEPLOYER_KEY = 0xD3F10;
     uint256 internal constant ADAPTER_RUNTIME = 20_487;
-    uint256 internal constant CORE_RUNTIME = 22_921;
+    uint256 internal constant CORE_RUNTIME = 23_510;
     bytes32 internal constant P_DEPOSIT = bytes32("P:deposit");
     bytes32 internal constant IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
     bytes32 internal constant ADMIN_SLOT = 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103;
@@ -147,6 +147,8 @@ contract DeployScriptTest is Test {
         assertEq(vm.load(proxy, BEACON_SLOT), bytes32(0));
 
         assertEq(core.owner(), finalOwner);
+        assertEq(core.migrationRewardExcludedAddress(), vm.envAddress("FORFEITURE_RECIPIENT"));
+        assertEq(json.readAddress(".migrationRewardExcludedAddress"), core.migrationRewardExcludedAddress());
         assertFalse(core.paused());
         assertEq(core.deFiAdapter(), proxy);
         assertEq(core.deFiAdapterEpoch(), 1);
@@ -209,6 +211,8 @@ contract DeployScriptTest is Test {
 
         _set("XMETRO", address(core));
         assertEq(core.owner(), finalOwner);
+        assertEq(core.migrationRewardExcludedAddress(), vm.envAddress("FORFEITURE_RECIPIENT"));
+        assertEq(json.readAddress(".migrationRewardExcludedAddress"), core.migrationRewardExcludedAddress());
         assertFalse(core.paused());
 
         address implementationDeployer = makeAddr("implementation-deployer");

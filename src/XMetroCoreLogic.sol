@@ -20,8 +20,8 @@ library XMetroCoreLogic {
     uint64 private constant YTHOR_EXIT_RAMP = 4 * 365 days;
     uint256 private constant BPS_DENOMINATOR = 10_000;
     uint256 private constant THOR_EXIT_START_BPS = 5_000;
-    uint256 private constant YTHOR_EXIT_START_BPS = 1_000;
-    uint256 private constant YTHOR_EXIT_MAX_BPS = 5_000;
+    uint256 private constant YTHOR_EXIT_START_BPS = 2_000;
+    uint256 private constant YTHOR_EXIT_MAX_BPS = 10_000;
     uint64 private constant CONTRIBUTOR_CLIFF = 180 days;
     uint64 private constant CONTRIBUTOR_DURATION = (5 * 365 days) / 2;
 
