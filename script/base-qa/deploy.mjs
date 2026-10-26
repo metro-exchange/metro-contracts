@@ -126,8 +126,14 @@ async function preparePlan() {
       (process.env.BASE_QA_RATIO_YTHOR && process.env.BASE_QA_RATIO_YTHOR !== qaConversionRatio)) {
     throw new Error('Base QA starts at Escrow deployment; both deadlines are +30 days and both ratios are 0.3928569546');
   }
+  const forfeitureRecipient = process.env.BASE_QA_FORFEITURE_RECIPIENT;
+  if (!forfeitureRecipient || !ethers.utils.isAddress(forfeitureRecipient) || forfeitureRecipient === zero) {
+    throw new Error('Set BASE_QA_FORFEITURE_RECIPIENT explicitly; it also fixes the migration reward exclusion address');
+  }
+  if (ctx.state.plan && ctx.state.plan.forfeitureRecipient?.toLowerCase() !== forfeitureRecipient.toLowerCase()) {
+    throw new Error('Recorded plan differs from the selected treasury; do not reuse an old deployment plan');
+  }
   if (!ctx.state.plan) {
-    const forfeitureRecipient = process.env.BASE_QA_FORFEITURE_RECIPIENT || addr.deployer;
     const initialYThorRewardWeightBps = Number(process.env.BASE_QA_YTHOR_REWARD_WEIGHT_BPS || 20000);
     if (!Number.isSafeInteger(initialYThorRewardWeightBps) || initialYThorRewardWeightBps < 0 ||
         !ethers.utils.isAddress(forfeitureRecipient) || forfeitureRecipient === zero) {
@@ -207,6 +213,9 @@ async function coreStage() {
   if ((await core.forfeitureRecipient()).toLowerCase() !== ctx.state.plan.forfeitureRecipient.toLowerCase()) {
     throw new Error('Core forfeiture recipient mismatch');
   }
+  if ((await core.migrationRewardExcludedAddress()).toLowerCase() !== ctx.state.plan.forfeitureRecipient.toLowerCase()) {
+    throw new Error('Core migration reward exclusion address mismatch');
+  }
   if ((await vault.usdc()).toLowerCase() !== c('TestUSDC').toLowerCase()) throw new Error('Vault USDC mismatch');
   if ((await vault.distributor()).toLowerCase() !== c('Distributor').toLowerCase()) throw new Error('Vault Distributor mismatch');
   if (!(await vault.migrationFinalized())) throw new Error('Vault migration is not finalized');
@@ -214,6 +223,7 @@ async function coreStage() {
     contracts: ctx.state.contracts,
     corePaused: await core.paused(), coreOwner: await core.owner(),
     rewardToken: await core.rewardToken(), metro: await core.METRO(),
+    migrationRewardExcludedAddress: await core.migrationRewardExcludedAddress(),
     vaultUSDC: await vault.usdc(), vaultDistributor: await vault.distributor(),
     vaultMigrationFinalized: await vault.migrationFinalized(), plan: ctx.state.plan
   });

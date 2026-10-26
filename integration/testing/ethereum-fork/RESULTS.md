@@ -1,5 +1,30 @@
 # Ethereum Mainnet Fork Results and Evidence
 
+## October 24, 2026: yTHOR exit rates and treasury migration exclusion
+
+Local, uncommitted source update on `xmetro-v2-base-qa`, based on `f51d19e6e6a2680bc972665609c2b81676409737`. No Git commit, GitHub push, deployment, token transfer or permission change was performed. The tested source digests and artifact information are in the [manifest](evidence/2026-10-24-ythor-treasury/manifest.json); commands and actual outputs are in the [validation log](evidence/2026-10-24-ythor-treasury/validation.log).
+
+| Validation | Result |
+| --- | --- |
+| Business regression, including unit/mock/fuzz/invariant tests | 148 passed, 0 failed, 0 skipped |
+| Core profile | 53 passed, 0 failed, 2 skipped |
+| Adapter profile | 43 passed, 0 failed, 2 skipped |
+| Deployment script profile | 1 passed, 0 failed, 0 skipped |
+| Production migration/reward/governance fork suites | Compiled only; production-time fork tests were not executed on QA |
+| Exact CI formatting and edited verification script | Passed |
+| ABI | Only `migrationRewardExcludedAddress()` added; existing methods, constructor and events unchanged |
+| Storage layout | Existing fields unchanged; one excluded-THOR-principal counter appended |
+
+The four optional pinned ETH/Base deployment tests were skipped in the Core/Adapter profiles because their RPC variables were unset; they are not counted as passes. The production fork used Ethereum block `26,077,998` and real token contracts on a local fork. QA retains its accelerated timing and is validated by its own local suites.
+
+Core runtime: **23,394 bytes**, below the unchanged **23,552-byte** project limit, with **158 bytes** remaining. Constructor bytecode before arguments: **24,998 bytes**. Adapter runtime remains **20,487 bytes**. The [compiled storage layout](evidence/2026-10-24-ythor-treasury/core-storage-layout.json) preserves reward accumulators at slots 7 and 8. Build tools: Forge 1.7.1 and solc 0.8.30, using the existing profiles.
+
+New coverage includes 0.5-ratio real Escrow migrations; 20%-100% payouts and 1-wei boundaries; migration-only treasury exclusion with ordinary/Contributor/transferred shares; independent reward models; exit-to-stake without retroactive rewards; all Core reward settlement routes; Distributor rollback and commission-only routing; and excluded-principal rollback after mint failure. The invariant fixture now gives its handler TestUSDC mint authority and seeds successful deposits, claims and treasury exits so reward conservation is not vacuous.
+
+QA JavaScript syntax checks passed for `deploy.mjs` and unchanged `preflight.mjs`. Five isolated `preparePlan` cases passed: missing/zero addresses rejected, explicit treasury recorded, matching saved plan accepted, and mismatched plan rejected. No runner, signer file or RPC was used for those checks.
+
+
+
 ## October 21 update: multi-position migration and precision
 
 Baseline: `60754e05436c6c8056b60eac481d0bdc96a89d4c` plus the local uncommitted changes recorded in the [manifest](evidence/2026-10-21-multi-migration/manifest.json). The three changed business sources are `ThorMigrationEscrow.sol`, `XMetroCoreLogic.sol`, and `xMETRO.sol`. Production yTHOR now reaches 50% at migration + 120 days + 4 * 365 days. QA retains its 4-hour delay and 12-hour ramp. Both variants preserve fractional reward debt and use indexed migration positions.

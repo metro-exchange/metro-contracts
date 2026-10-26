@@ -1,14 +1,20 @@
 # THOR/yTHOR Migration to METRO
 
-## October 21 source update
+## October 24 source update
 
-This source version supports repeated THOR and yTHOR migrations, independent position IDs, and reward debt at `1e24` internal precision. Production yTHOR pays 10% after 120 days, increasing linearly to 50% over the following `4 * 365 days`. Base QA keeps its 4-hour delay and 12-hour ramp. Each position settles its full principal once; it cannot claim an additional amount later.
+This source version changes yTHOR exits to 20%-100% of the converted METRO principal. Production opens exits after 120 days and reaches 100% over the following `4 * 365 days`; Base QA keeps its 4-hour delay and 12-hour ramp. Repeated migrations, independent position IDs, one complete exit per position, and `1e24` reward-debt precision are retained.
+
+Only THOR/yTHOR migration positions owned by `migrationRewardExcludedAddress()` earn no USDC rewards and are excluded from the allocation denominator. Ordinary stakes, Contributor shares, received free xMETRO and migration payouts staked after exit retain normal prospective rewards. Existing earned rewards and fractional entitlements are preserved.
+
+The constructor fixes `migrationRewardExcludedAddress` from the existing `forfeitureRecipient_` argument; no constructor argument or user-action signature changes. For production, configure `FORFEITURE_RECIPIENT=0x7D8911eB1C72F0Ba29302bE30301B75Cec81F622`. Both production addresses are immutable. The treasury keeps normal migration and exit rights. If it exits early, forfeited METRO returns to that same recipient and only the payout is queued or staked; the project's intention not to exit early is not an on-chain restriction.
+
+For a future Base QA deployment, explicitly set the existing `BASE_QA_FORFEITURE_RECIPIENT` before creating the deployment plan. The script rejects missing addresses or a different address in a saved plan. QA `setForfeitureRecipient()` changes only the forfeiture recipient; it never changes the fixed migration reward exclusion address or historical rewards. The existing on-chain QA deployment has not acquired these changes.
 
 The existing Base QA deployment and its address/configuration records remain unchanged. Use the ABI and examples from that deployment's revision (QA baseline `60754e05436c6c8056b60eac481d0bdc96a89d4c`) with its existing addresses. This version's ABI/examples target newly created local instances or a future deployment requested by the project. Source changes do not update an immutable deployed Core or migrate its storage.
 
 This Foundry project implements THOR/yTHOR migration, METRO staking, USDC rewards, automated reward actions, commission routing, and upgradeable DeFi integrations.
 
-**Base QA branch:** this branch uses the seven shortened waiting periods listed below. It is not the production-time audit build. The initial TestToken and Mock protocol owners remain with the deployment team until the project's management address is supplied.
+**Base QA branch:** this branch uses the seven shortened waiting periods listed below. It is not the production-time audit build. The checked-in Base QA records describe the earlier deployment and its initial roles; verify current ownership separately before operating those contracts.
 
 ## Contract architecture
 
@@ -61,7 +67,7 @@ Maple configuration stores a SyrupRouter and `bytes32 depositData`; syrupUSDC is
 
 - Each address may migrate THOR and yTHOR repeatedly within the migration window and cumulative caps. Each call creates an independently timed position.
 - THOR cannot exit before 1 hour; the payout rises linearly from 50% at 1 hour to 100% at 3 hours. Production uses days 30–90.
-- yTHOR principal uses the configured `ratioYThor`. Reward weight starts at the constructor's `YTHOR_REWARD_WEIGHT_BPS` (`10,000 = 1x`) and may be changed by the xMETRO owner without pausing. The current weight applies to future reward deposits for all active yTHOR positions; accrued rewards are not repriced. This QA build opens yTHOR exit at 4 hours and increases payout from 10% to 50% over the next 12 hours. Production uses day 120 and a four-year ramp (4 * 365 days after the initial 120 days).
+- yTHOR principal uses the configured `ratioYThor`. Reward weight starts at the constructor's `YTHOR_REWARD_WEIGHT_BPS` (`10,000 = 1x`) and may be changed by the xMETRO owner without pausing. The current weight applies to future reward deposits for eligible active yTHOR positions, excluding those owned by `migrationRewardExcludedAddress()`; accrued rewards are not repriced. This QA build opens yTHOR exit at 4 hours and increases payout from 20% to 100% of the converted METRO principal over the next 12 hours. Production uses day 120 and a four-year ramp (4 * 365 days after the initial 120 days).
 - Forfeited principal goes to `forfeitureRecipient`. Only the Base QA xMETRO owner may update this address for future exits; the production recipient remains immutable.
 - Liquid exits for free stake, THOR, yTHOR, and Contributor positions have separate 30-minute QA withdrawal queues (72 hours in production). Exit-to-stake produces transferable xMETRO immediately.
 - Contributor vesting has a 6-hour QA cliff followed by 6 hours of linear release (180 days and 2.5 years in production).

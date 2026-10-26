@@ -6,6 +6,7 @@ import "forge-std/Test.sol";
 import {xMETRO as XMetroCore} from "../../src/xMETRO.sol";
 import {MetroToken} from "../../src/metro.sol";
 import {ERC20Mintable} from "../mocks/ERC20Mintable.sol";
+import {IXMetroDeFiAdapter} from "../../src/interfaces/IXMetroDeFiAdapter.sol";
 import {MockXMetroDeFiAdapter} from "../mocks/MockXMetroDeFiAdapter.sol";
 
 contract BoundMigrationEscrowProbe {
@@ -189,6 +190,13 @@ contract xMETROUnitTest is Test {
 
     function test_BaseQaForfeitureRecipientCanFollowOwnerHandover() public {
         address newRecipient = makeAddr("projectTreasury");
+        assertEq(xmetro.migrationRewardExcludedAddress(), forfeitureRecipient);
+        _stake(forfeitureRecipient, 10 ether);
+        _stake(userA, 10 ether);
+        xmetro.creditThorFromMigration(forfeitureRecipient, 100 ether);
+        xmetro.creditYThorFromMigration(forfeitureRecipient, 100 ether);
+        _depositRewards(20e6);
+        assertEq(xmetro.claimable(forfeitureRecipient), 10e6);
 
         vm.prank(outsider);
         vm.expectRevert();
@@ -201,6 +209,17 @@ contract xMETROUnitTest is Test {
         emit XMetroCore.ForfeitureRecipientUpdated(forfeitureRecipient, newRecipient);
         xmetro.setForfeitureRecipient(newRecipient);
         assertEq(xmetro.forfeitureRecipient(), newRecipient);
+        assertEq(xmetro.migrationRewardExcludedAddress(), forfeitureRecipient);
+        assertEq(xmetro.claimable(forfeitureRecipient), 10e6);
+        xmetro.creditThorFromMigration(forfeitureRecipient, 10 ether);
+        xmetro.creditYThorFromMigration(forfeitureRecipient, 20 ether);
+        xmetro.creditThorFromMigration(newRecipient, 1 ether);
+        xmetro.creditYThorFromMigration(newRecipient, 1 ether);
+        assertEq(xmetro.rewardWeightOf(newRecipient), 3 ether);
+        assertEq(xmetro.claimable(newRecipient), 0);
+        _depositRewards(23e6);
+        assertEq(xmetro.claimable(forfeitureRecipient), 20e6);
+        assertEq(xmetro.claimable(newRecipient), 3e6);
 
         xmetro.creditThorFromMigration(userA, 100 ether);
         (, uint64 migratedAt,,) = xmetro.thorPositions(userA, 0);
@@ -218,13 +237,15 @@ contract xMETROUnitTest is Test {
         vm.prank(userB);
         xmetro.setForfeitureRecipient(forfeitureRecipient);
         assertEq(xmetro.forfeitureRecipient(), forfeitureRecipient);
+        assertEq(xmetro.migrationRewardExcludedAddress(), forfeitureRecipient);
+        assertEq(xmetro.rewardWeightOf(newRecipient), 3 ether);
 
         xmetro.creditYThorFromMigration(userB, 100 ether);
         (, uint64 yThorMigratedAt,,) = xmetro.yThorPositions(userB, 0);
         vm.warp(uint256(yThorMigratedAt) + 14400 seconds);
         vm.prank(userB);
         (, uint256 yThorForfeited) = xmetro.exitYThor(0, XMetroCore.ExitMode.Liquid);
-        assertEq(yThorForfeited, 90 ether);
+        assertEq(yThorForfeited, 80 ether);
         assertEq(metro.balanceOf(forfeitureRecipient), yThorForfeited);
         assertEq(metro.balanceOf(newRecipient), forfeited);
     }
@@ -599,6 +620,8 @@ contract xMETROUnitTest is Test {
         uint256 eligibleAt = uint256(migratedAt) + 14400 seconds;
         uint256 ramp = 12 hours;
         assertEq(xmetro.YTHOR_EXIT_RAMP(), ramp);
+        assertEq(xmetro.YTHOR_EXIT_START_BPS(), 2_000);
+        assertEq(xmetro.YTHOR_EXIT_MAX_BPS(), 10_000);
 
         vm.warp(eligibleAt - 1);
         (bool eligible, uint256 rate,,,) = xmetro.previewYThorExit(userA, 0);
@@ -611,31 +634,31 @@ contract xMETROUnitTest is Test {
         eligible = eligibleAtStart;
         rate = rateAtStart;
         assertTrue(eligible);
-        assertEq(rate, 1_000);
-        assertEq(payout, 10 ether);
-        assertEq(forfeited, 90 ether);
+        assertEq(rate, 2_000);
+        assertEq(payout, 20 ether);
+        assertEq(forfeited, 80 ether);
 
         vm.warp(eligibleAt + ramp / 2);
         (, rate, payout, forfeited,) = xmetro.previewYThorExit(userA, 0);
-        assertEq(rate, 3_000);
-        assertEq(payout, 30 ether);
+        assertEq(rate, 6_000);
+        assertEq(payout, 60 ether);
         assertEq(payout + forfeited, 100 ether);
 
         vm.warp(eligibleAt + ramp - 1);
         (, uint256 beforeEndRate,,,) = xmetro.previewYThorExit(userA, 0);
-        assertLt(beforeEndRate, 5_000);
+        assertEq(beforeEndRate, 9_999);
 
         vm.warp(eligibleAt + ramp);
         (, rate, payout, forfeited,) = xmetro.previewYThorExit(userA, 0);
-        assertEq(rate, 5_000);
-        assertEq(payout, 50 ether);
-        assertEq(forfeited, 50 ether);
+        assertEq(rate, 10_000);
+        assertEq(payout, 100 ether);
+        assertEq(forfeited, 0);
 
         vm.warp(eligibleAt + ramp + 2 * 43200 seconds);
         (, rate, payout, forfeited,) = xmetro.previewYThorExit(userA, 0);
-        assertEq(rate, 5_000);
-        assertEq(payout, 50 ether);
-        assertEq(forfeited, 50 ether);
+        assertEq(rate, 10_000);
+        assertEq(payout, 100 ether);
+        assertEq(forfeited, 0);
     }
 
     function test_PreviewWithdrawableNowTracksThorAndYThorSchedules() public {
@@ -655,9 +678,9 @@ contract xMETROUnitTest is Test {
         (uint256 thorAtDay120, uint256 yThorAtDay120, uint256 contributorAtDay120, uint256 totalAtDay120) =
             xmetro.previewWithdrawableNow(userA);
         assertEq(thorAtDay120, 100 ether);
-        assertEq(yThorAtDay120, 10 ether);
+        assertEq(yThorAtDay120, 20 ether);
         assertEq(contributorAtDay120, 0);
-        assertEq(totalAtDay120, 110 ether);
+        assertEq(totalAtDay120, 120 ether);
     }
 
     function test_YThorLiquidExitRemovesPrincipalAndBonusAndPreservesPending() public {
@@ -670,9 +693,9 @@ contract xMETROUnitTest is Test {
 
         vm.prank(userA);
         (uint256 payout, uint256 forfeited) = xmetro.exitYThor(0, XMetroCore.ExitMode.Liquid);
-        assertEq(payout, 10 ether);
-        assertEq(forfeited, 90 ether);
-        assertEq(metro.balanceOf(forfeitureRecipient), 90 ether);
+        assertEq(payout, 20 ether);
+        assertEq(forfeited, 80 ether);
+        assertEq(metro.balanceOf(forfeitureRecipient), 80 ether);
         assertEq(xmetro.lockedShares(userA), 0);
         assertEq(_activeYThorPrincipal(userA), 0);
         assertEq(xmetro.totalRewardWeight(), xmetro.totalShares());
@@ -723,8 +746,8 @@ contract xMETROUnitTest is Test {
 
         vm.prank(userA);
         (uint256 payout, uint256 forfeited) = xmetro.exitYThor(0, XMetroCore.ExitMode.Stake);
-        assertEq(payout, 50 ether);
-        assertEq(forfeited, 50 ether);
+        assertEq(payout, 100 ether);
+        assertEq(forfeited, 0);
         assertEq(xmetro.balanceOf(userA), payout);
         assertEq(xmetro.lockedShares(userA), 0);
         assertEq(_activeYThorPrincipal(userA), 0);
@@ -745,22 +768,22 @@ contract xMETROUnitTest is Test {
 
         vm.prank(userA);
         (uint256 payout, uint256 forfeited) = xmetro.exitYThor(0, XMetroCore.ExitMode.Stake);
-        assertEq(payout, 30 ether);
-        assertEq(forfeited, 70 ether);
+        assertEq(payout, 60 ether);
+        assertEq(forfeited, 40 ether);
         assertEq(xmetro.lockedShares(userA), 0);
         assertEq(_activeYThorPrincipal(userA), 0);
-        assertEq(xmetro.balanceOf(userA), 30 ether);
-        assertEq(xmetro.rewardWeightOf(userA), 30 ether);
+        assertEq(xmetro.balanceOf(userA), 60 ether);
+        assertEq(xmetro.rewardWeightOf(userA), 60 ether);
         assertEq(xmetro.claimable(userA), 200e6);
 
-        // Only the 30 METRO payout remains reward-bearing after the one-time exit.
+        // Only the 60 METRO payout remains reward-bearing after the one-time exit.
         _depositRewards(130e6);
-        assertEq(xmetro.claimable(userA), 230e6);
-        assertEq(xmetro.claimable(userB), 200e6);
+        assertEq(xmetro.claimable(userA), 248_750_000);
+        assertEq(xmetro.claimable(userB), 181_250_000);
 
         vm.prank(userA);
-        assertEq(xmetro.claimRewards(), 230e6);
-        assertEq(usdc.balanceOf(userA), 230e6);
+        assertEq(xmetro.claimRewards(), 248_750_000);
+        assertEq(usdc.balanceOf(userA), 248_750_000);
     }
 
     function test_ThorAndYThorLiquidQueuesEnforceExact72HourBoundaryForSameUser() public {
@@ -774,7 +797,7 @@ contract xMETROUnitTest is Test {
         (uint256 yThorPayout,) = xmetro.exitYThor(0, XMetroCore.ExitMode.Liquid);
         vm.stopPrank();
         assertEq(thorPayout, 100 ether);
-        assertEq(yThorPayout, 10 ether);
+        assertEq(yThorPayout, 20 ether);
         assertEq(xmetro.lockedShares(userA), 0);
         assertEq(_activeYThorPrincipal(userA), 0);
 
@@ -1232,12 +1255,12 @@ contract xMETROUnitTest is Test {
             vm.warp(point - 1);
             (bool eligible, uint256 beforeRate,,,) = xmetro.previewYThorExit(userA, i);
             assertEq(eligible, i != 0);
-            assertEq(beforeRate, i == 0 ? 0 : 999 + i * 1_000);
+            assertEq(beforeRate, i == 0 ? 0 : 1_999 + i * 2_000);
             vm.warp(point);
             (bool atPoint, uint256 rate, uint256 payout, uint256 forfeited,) = xmetro.previewYThorExit(userA, i);
             assertTrue(atPoint);
-            assertEq(rate, 1_000 + i * 1_000);
-            assertEq(payout, (10 + i * 10) * 1 ether);
+            assertEq(rate, 2_000 + i * 2_000);
+            assertEq(payout, (20 + i * 20) * 1 ether);
             assertEq(forfeited + payout, 100 ether);
             vm.warp(point + 1);
             (, uint256 nextRate,,,) = xmetro.previewYThorExit(userA, i);
@@ -1246,7 +1269,8 @@ contract xMETROUnitTest is Test {
             xmetro.exitYThor(i, XMetroCore.ExitMode.Stake);
             expectedForfeiture += forfeited;
         }
-        assertEq(xmetro.balanceOf(userA), 150 ether);
+        assertEq(xmetro.balanceOf(userA), 300 ether);
+        assertEq(expectedForfeiture, 200 ether);
         assertEq(metro.balanceOf(forfeitureRecipient), expectedForfeiture);
         assertEq(xmetro.lockedShares(userA), 0);
         vm.warp(start + delay + 5 * quarter);
@@ -1356,5 +1380,254 @@ contract xMETROUnitTest is Test {
         assertEq(xmetro.totalShares(), 1);
         vm.prank(userA);
         assertEq(xmetro.claimRewards(), reward);
+    }
+
+    function test_TreasuryMigrationSharesKeepBackingAndExcludeOnlyTheirRewards() public {
+        address treasury = forfeitureRecipient;
+        assertEq(xmetro.migrationRewardExcludedAddress(), treasury);
+        xmetro.creditThorFromMigration(treasury, 100 ether);
+        xmetro.creditYThorFromMigration(treasury, 50 ether);
+        vm.warp(block.timestamp + 1);
+        xmetro.creditThorFromMigration(treasury, 20 ether);
+        xmetro.creditYThorFromMigration(treasury, 30 ether);
+        assertEq(xmetro.totalShares(), 200 ether);
+        assertEq(metro.balanceOf(address(xmetro)), 200 ether);
+        assertEq(xmetro.rewardWeightOf(treasury), 0);
+        assertEq(xmetro.totalRewardWeight(), 0);
+        usdc.mint(address(this), 1e6);
+        vm.expectRevert(XMetroCore.InvalidConfiguration.selector);
+        xmetro.depositRewards(1e6);
+        assertEq(usdc.balanceOf(address(xmetro)), 0);
+        assertEq(usdc.balanceOf(address(this)), 1e6);
+        _stake(userB, 100 ether);
+        _depositRewards(100e6);
+        assertEq(xmetro.claimable(treasury), 0);
+        assertEq(xmetro.claimable(userB), 100e6);
+        _stake(treasury, 20 ether);
+        _stakeContributor(userA, treasury, 30 ether);
+        _depositRewards(150e6);
+        assertEq(xmetro.claimable(treasury), 50e6);
+        assertEq(xmetro.claimable(userB), 200e6);
+        vm.prank(userB);
+        xmetro.transfer(treasury, 10 ether);
+        assertEq(xmetro.claimable(treasury), 50e6);
+        assertEq(xmetro.rewardWeightOf(treasury), 60 ether);
+        _depositRewards(150e6);
+        assertEq(xmetro.claimable(treasury), 110e6);
+        vm.prank(treasury);
+        xmetro.transfer(userB, 5 ether);
+        assertEq(xmetro.rewardWeightOf(treasury), 55 ether);
+        assertEq(xmetro.claimable(treasury), 110e6);
+        assertEq(xmetro.totalRewardWeight(), 150 ether);
+        vm.prank(treasury);
+        assertEq(xmetro.claimRewards(), 110e6);
+        assertEq(metro.balanceOf(address(xmetro)), xmetro.totalShares());
+    }
+
+    function test_TreasuryFractionalRewardsSurviveMigrationExitAndTransfers() public {
+        address treasury = forfeitureRecipient;
+        _stake(treasury, 1);
+        _stake(userA, 2);
+        _depositRewards(1);
+        assertEq(xmetro.claimable(treasury), 0);
+        int256 oldDebt = xmetro.rewardDebt(treasury);
+        xmetro.creditThorFromMigration(treasury, 10);
+        xmetro.creditYThorFromMigration(treasury, 10);
+        assertEq(xmetro.rewardDebt(treasury), oldDebt);
+        vm.prank(treasury);
+        assertEq(xmetro.claimRewards(), 0);
+        vm.prank(treasury);
+        xmetro.transfer(userA, 1);
+        vm.prank(userA);
+        xmetro.transfer(treasury, 1);
+        vm.warp(block.timestamp + 14400 seconds);
+        vm.startPrank(treasury);
+        xmetro.requestThorExit(0);
+        xmetro.exitYThor(0, XMetroCore.ExitMode.Liquid);
+        vm.stopPrank();
+        _depositRewards(3);
+        vm.prank(treasury);
+        assertEq(xmetro.claimRewards(), 1);
+        assertEq(xmetro.totalRewardWeight(), 3);
+        xmetro.creditThorFromMigration(treasury, 7);
+        xmetro.creditYThorFromMigration(treasury, 9);
+        _depositRewards(2);
+        assertEq(xmetro.claimable(treasury), 0);
+        _depositRewards(1);
+        assertEq(xmetro.claimable(treasury), 1);
+        assertLe(xmetro.claimable(treasury) + xmetro.claimable(userA), usdc.balanceOf(address(xmetro)));
+    }
+
+    function testFuzz_TreasuryExitPreservesOrdinaryRewards(bool yThor, bool stakeMode, bool mature) public {
+        address treasury = forfeitureRecipient;
+        _stake(treasury, 10 ether);
+        _stake(userA, 10 ether);
+        _depositRewards(20e6);
+        uint256 start = vm.getBlockTimestamp();
+        if (yThor) xmetro.creditYThorFromMigration(treasury, 100 ether);
+        else xmetro.creditThorFromMigration(treasury, 100 ether);
+        vm.warp(start + 1);
+        if (yThor) xmetro.creditYThorFromMigration(treasury, 50 ether);
+        else xmetro.creditThorFromMigration(treasury, 50 ether);
+        uint256 delay = yThor ? 14400 seconds : 3600 seconds;
+        vm.warp(start + delay - 1);
+        vm.prank(treasury);
+        vm.expectRevert(XMetroCore.InvalidConfiguration.selector);
+        _treasuryExit(yThor, stakeMode, 0);
+        vm.warp(start + (mature ? (yThor ? 14400 seconds + 43200 seconds : 10800 seconds) : delay));
+        _depositRewards(20e6);
+        uint256 expectedPayout = mature ? 100 ether : (yThor ? 20 ether : 50 ether);
+        uint256 supply = metro.totalSupply();
+        vm.prank(treasury);
+        (uint256 payout, uint256 forfeited) = _treasuryExit(yThor, stakeMode, 0);
+        assertEq(payout, expectedPayout);
+        assertEq(forfeited, 100 ether - expectedPayout);
+        assertEq(metro.balanceOf(treasury), forfeited);
+        assertEq(metro.totalSupply(), supply);
+        assertEq(xmetro.lockedShares(treasury), 50 ether);
+        assertEq(xmetro.claimable(treasury), 20e6);
+        assertEq(xmetro.rewardWeightOf(treasury), 10 ether + (stakeMode ? payout : 0));
+        vm.prank(treasury);
+        vm.expectRevert(XMetroCore.InvalidConfiguration.selector);
+        _treasuryExit(yThor, stakeMode, 0);
+        if (!mature) {
+            vm.prank(treasury);
+            vm.expectRevert(XMetroCore.InvalidConfiguration.selector);
+            _treasuryExit(yThor, stakeMode, 1);
+        }
+        _depositRewards(stakeMode ? 20e6 + payout / 1e12 : 20e6);
+        assertEq(xmetro.claimable(treasury), 30e6 + (stakeMode ? payout / 1e12 : 0));
+        if (!stakeMode) {
+            vm.warp(block.timestamp + 1800 seconds - 1);
+            vm.prank(treasury);
+            vm.expectRevert(XMetroCore.NothingToWithdraw.selector);
+            if (yThor) xmetro.withdrawYThor(0);
+            else xmetro.withdrawThor(0);
+            vm.warp(block.timestamp + 1);
+            vm.prank(treasury);
+            uint256 withdrawn = yThor ? xmetro.withdrawYThor(0) : xmetro.withdrawThor(0);
+            assertEq(withdrawn, payout);
+            assertEq(metro.balanceOf(treasury), 100 ether);
+        }
+    }
+
+    function _treasuryExit(bool yThor, bool stakeMode, uint256 id) private returns (uint256, uint256) {
+        if (yThor) return xmetro.exitYThor(id, stakeMode ? XMetroCore.ExitMode.Stake : XMetroCore.ExitMode.Liquid);
+        if (stakeMode) return xmetro.exitAndStakeThor(id);
+        return xmetro.requestThorExit(id);
+    }
+
+    function test_TreasuryExclusionPrecedesFractionalWeightRounding() public {
+        xmetro.creditYThorFromMigration(forfeitureRecipient, 1);
+        xmetro.creditYThorFromMigration(userA, 3);
+        xmetro.setYThorRewardWeightBps(3_333);
+        assertEq(xmetro.totalRewardWeight(), 0);
+        usdc.mint(address(this), 2);
+        vm.expectRevert(XMetroCore.InvalidConfiguration.selector);
+        xmetro.depositRewards(1);
+        _stake(userB, 1);
+        xmetro.depositRewards(1);
+        assertEq(xmetro.claimable(userB), 1);
+        assertEq(xmetro.claimable(userA), 0);
+        assertEq(xmetro.claimable(forfeitureRecipient), 0);
+    }
+
+    function test_YThorOneWeiExitsBeforeAndAtMaturity() public {
+        uint256 start = vm.getBlockTimestamp();
+        for (uint256 i; i < 4; ++i) {
+            xmetro.creditYThorFromMigration(userA, 1);
+        }
+        for (uint256 i; i < 4; ++i) {
+            bool mature = i >= 2;
+            bool stakeMode = i % 2 == 1;
+            vm.warp(start + 14400 seconds + 43200 seconds - (mature ? 0 : 1));
+            vm.prank(userA);
+            (uint256 payout, uint256 forfeited) =
+                xmetro.exitYThor(i, stakeMode ? XMetroCore.ExitMode.Stake : XMetroCore.ExitMode.Liquid);
+            assertEq(payout, mature ? 1 : 0);
+            assertEq(forfeited, mature ? 0 : 1);
+            vm.prank(userA);
+            vm.expectRevert(XMetroCore.InvalidConfiguration.selector);
+            xmetro.exitYThor(i, XMetroCore.ExitMode.Liquid);
+        }
+        assertEq(xmetro.balanceOf(userA), 1);
+        assertEq(xmetro.unstakeRequestCountYThor(userA), 1);
+        assertEq(metro.balanceOf(forfeitureRecipient), 2);
+        vm.warp(block.timestamp + 1800 seconds);
+        vm.prank(userA);
+        assertEq(xmetro.withdrawYThor(0), 1);
+        assertEq(metro.totalSupply(), 4);
+    }
+
+    function test_TreasuryRewardSettlementPathsConsumeOnlyOrdinaryRewards() public {
+        address treasury = forfeitureRecipient;
+        xmetro.creditThorFromMigration(treasury, 100 ether);
+        xmetro.creditYThorFromMigration(treasury, 100 ether);
+        _stake(treasury, 10 ether);
+        _stake(userA, 10 ether);
+        _depositRewards(20e6);
+        MockXMetroDeFiAdapter adapter = _setMockAdapter(1e12, 1);
+        metro.mint(address(adapter), 100 ether);
+        xmetro.setAutoCompoundOperator(address(this), true);
+        address[] memory users = new address[](2);
+        users[0] = treasury;
+        users[1] = treasury;
+        for (uint256 route; route < 6; ++route) {
+            uint256 snapshot = vm.snapshotState();
+            if (route == 0) {
+                vm.prank(treasury);
+                assertEq(xmetro.claimRewards(), 10e6);
+            } else if (route == 1) {
+                xmetro.pause();
+                assertEq(xmetro.emergencyDistribute(users), 10e6);
+            } else if (route == 2) {
+                vm.prank(treasury);
+                assertEq(xmetro.autocompound(10 ether, block.timestamp + 1, ""), 10 ether);
+                assertEq(xmetro.balanceOf(treasury), 20 ether);
+            } else if (route == 3) {
+                vm.prank(treasury);
+                xmetro.enableAutocompound();
+                assertEq(xmetro.autocompoundBatch(users, 10 ether, block.timestamp + 1, ""), 10 ether);
+                assertEq(xmetro.balanceOf(treasury), 20 ether);
+            } else {
+                // Mock the protocol result; this unit test checks Core reward consumption and routing.
+                bytes32 id = keccak256("treasury-protocol-test");
+                IXMetroDeFiAdapter.StrategyInfo memory info = IXMetroDeFiAdapter.StrategyInfo(
+                    IXMetroDeFiAdapter.StrategyKind.AaveV3, true, true, 1, 1, 1, address(usdc)
+                );
+                vm.mockCall(address(adapter), abi.encodeCall(IXMetroDeFiAdapter.strategyInfo, (id)), abi.encode(info));
+                IXMetroDeFiAdapter.ExecutionResult memory result =
+                    IXMetroDeFiAdapter.ExecutionResult(address(usdc), 10e6, 10e6);
+                if (route == 4) {
+                    vm.mockCall(
+                        address(adapter),
+                        abi.encodeWithSelector(IXMetroDeFiAdapter.execute.selector),
+                        abi.encode(result)
+                    );
+                    vm.prank(treasury);
+                    (uint256 consumed, uint256 out) = xmetro.claimAndExecute(id, 10e6, block.timestamp + 1, "");
+                    assertEq(consumed, 10e6);
+                    assertEq(out, 10e6);
+                } else {
+                    vm.mockCall(
+                        address(adapter),
+                        abi.encodeWithSelector(IXMetroDeFiAdapter.executeBatch.selector),
+                        abi.encode(result)
+                    );
+                    vm.prank(treasury);
+                    xmetro.enableAutoStrategy(id);
+                    (uint256 consumed, uint256 out) =
+                        xmetro.executeAutoStrategyBatch(id, users, 10e6, new uint256[](0), block.timestamp + 1, "");
+                    assertEq(consumed, 10e6);
+                    assertEq(out, 10e6);
+                }
+                assertEq(usdc.balanceOf(address(adapter)), 10e6);
+                vm.clearMockedCalls();
+            }
+            assertEq(xmetro.claimable(treasury), 0);
+            assertEq(xmetro.claimable(userA), 10e6);
+            assertEq(usdc.balanceOf(address(xmetro)), 10e6);
+            assertTrue(vm.revertToState(snapshot));
+        }
     }
 }

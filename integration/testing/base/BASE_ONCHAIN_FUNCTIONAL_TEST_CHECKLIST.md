@@ -1,6 +1,20 @@
 # Base On-Chain Functional Test Checklist
 
-## October 21 update: local validation only
+## October 24 source acceptance: future on-chain checks
+
+These items apply to a future deployment of the updated source. The existing QA addresses, transactions and permissions below remain historical deployment facts and have not been changed. Local tests do not mark an on-chain checkbox as passed.
+
+| Check | Status |
+| --- | --- |
+| yTHOR pays 20/40/60/80/100% of converted principal at 4/7/10/13/16 hours, including adjacent-second boundaries | [ ] Not deployed |
+| 100 yTHOR at a 0.5 test ratio creates 50 principal and pays 10 at the start or 50 at maturity; actual QA ratios remain configured | [ ] Not deployed |
+| Fixed exclusion address matches the explicitly selected initial QA treasury; changing the forfeiture recipient leaves the exclusion unchanged | [ ] Not deployed |
+| Treasury migration principal has zero weight; ordinary stakes, Contributor shares and exit-to-stake payouts retain rewards | [ ] Not deployed |
+| Normal treasury exits, self-recipient forfeitures, queue cooldowns and no retroactive rewards | [ ] Not deployed |
+
+
+
+## October 21 update: historical local-validation scope
 
 The deployment records below describe existing QA contracts. This source update does not redeploy them or change their addresses or permissions. Use their matching deployed revision's ABI. New indexed interfaces are validated locally and require a later project-requested deployment for on-chain acceptance.
 
@@ -196,7 +210,7 @@ The following 87 transactions belong to the fresh Base QA deployment (deployer n
 | N-02 | [ ] | THOR/yTHOR migration start, deadlines, conversion ratios, per-path caps, and mint/accounting results. | — |
 | N-03 | [ ] | THOR position preview and early/mid/full exit, liquid vs stake, payout, forfeiture, Owner-only QA recipient update, and independent withdrawal queue. | — |
 | N-04 | [ ] | yTHOR position preview and early/mid/full exit, liquid vs stake, payout, forfeiture, pending rewards, and queue; specifically check the historical one-micro-USDC discrepancy. | — |
-| N-05 | [ ] | Adjustable yTHOR reward weight: historical rewards settle first, all unexited holders receive future weight, and accounting stays conserved. | — |
+| N-05 | [ ] | Adjustable yTHOR reward weight: accrued rewards remain unchanged; future weight applies only to eligible active yTHOR principal, excluding the fixed treasury's migration positions; accounting stays conserved. | — |
 | N-06 | [ ] | `previewWithdrawableNow` includes the intended matured sources and excludes unrelated or queued amounts. | — |
 | N-07 | [ ] | Distributor commission split to the new Vault and net reward to xMETRO; test zero/partial/full shortfall and both funding paths. | — |
 | N-08 | [ ] | Adapter Proxy binding, initialization guard, router and strategy configuration, enable/disable, revisions, and adding ExtraToken. | — |

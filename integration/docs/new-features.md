@@ -4,7 +4,9 @@ This guide explains how frontend and backend clients construct calls for the new
 
 ## Dynamic yTHOR reward weight and METRO cap
 
-Read `xMETRO.yThorRewardWeightBps()` (`10,000=1x`, `20,000=2x`). The owner may call `setYThorRewardWeightBps(weightBps)` without pausing. Zero and values below 1x are supported; the contract's technical maximum is `uint128.max`, not an arbitrary fixed 5x business cap. A change affects **future reward deposits for all active yTHOR positions**, including already-migrated holders, and never reprices accrued pending rewards. Listen for `YThorRewardWeightBpsUpdated`, then refresh `rewardWeightOf(user)` and `totalRewardWeight()`. `totalSharesOf(user)` is principal, not reward weight. If no positive reward weight remains, a reward deposit cannot be allocated and reverts.
+Read `xMETRO.yThorRewardWeightBps()` (`10,000=1x`, `20,000=2x`). The owner may call `setYThorRewardWeightBps(weightBps)` without pausing. Zero and values below 1x are supported; the contract's technical maximum is `uint128.max`, not an arbitrary fixed 5x business cap. A change affects **future reward deposits for all eligible active yTHOR positions**, including already-migrated holders, and never reprices accrued pending rewards. Listen for `YThorRewardWeightBpsUpdated`, then refresh `rewardWeightOf(user)` and `totalRewardWeight()`. `totalSharesOf(user)` is principal, not reward weight. If no positive reward weight remains, a reward deposit cannot be allocated and reverts.
+
+The fixed `migrationRewardExcludedAddress()` is excluded only for its THOR/yTHOR migration positions. Ordinary stakes and payouts exited into staking remain eligible; see [the treasury rules](contract-api.md#treasury-migration-reward-exclusion).
 
 METRO `cap()` and `MAX_SUPPLY()` are permanently `100_000_000 ether`. All minters share that cap; migration principal consumes mint capacity, while reward multipliers do not. Check both Escrow caps and remaining global METRO supply.
 

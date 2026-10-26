@@ -1,6 +1,19 @@
 # Ethereum Mainnet Fork Functional Test Checklist
 
-## October 21 source acceptance
+## October 24 source acceptance
+
+| Updated coverage | Required evidence |
+| --- | --- |
+| E-01: new Core runtime/initcode lengths, unchanged size limits, initial bindings | Actual production-artifact deployment and size tests |
+| E-13: 20%-100% of converted yTHOR principal, one-time exits, balances and cooldown | Unit/fuzz/mock tests and production `MigrationExit.t.sol` |
+| E-14: treasury migration exclusion, normal ordinary rewards, exit-to-stake and preserved historical accrual | Unit/integration/fuzz/invariant tests and production `YThorRewardWeight.t.sol` |
+| Reward settlement and rollback | Claims, emergency payments, manual/batch actions, positive-net-reward rollback and commission-only routing |
+
+Results are recorded in [RESULTS.md](RESULTS.md). QA compiles the production fork suite and runs its own accelerated unit/core tests. These are local checks, with no on-chain deployment or GitHub publication implied.
+
+
+
+## October 21 source acceptance (historical)
 
 The checked tables below are historical results for the previous revision. They do not certify this update. Current commands and results are recorded separately in [RESULTS.md](RESULTS.md).
 

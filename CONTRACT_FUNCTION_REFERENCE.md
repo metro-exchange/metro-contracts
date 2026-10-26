@@ -22,17 +22,23 @@ xMETRO is immutable. `XMetroCoreLogic.sol` is internal code compiled into it, no
 - Escrow-only `creditYThorFromMigration(address,uint256)`; user `previewYThorExit(address,uint256)`, `exitYThor(uint256,ExitMode)`, `withdrawYThor(uint256)`
 - Contributor `stakeContributor(uint256,address)`, `requestWithdrawUnlockedContributor(uint256)`, `claimAndStakeUnlockedContributor(uint256)`, `withdrawContributor(uint256)`
 
-This Base QA build has `UNSTAKE_DELAY = 30 minutes`, THOR exit from 50% at 1 hour to 100% at 3 hours, and yTHOR exit from 10% at 4 hours to 50% over the next 12 hours. Production uses 72 hours, days 30–90, and day 120 plus four years (4 * 365 days) respectively. `previewWithdrawableNow(address)` aggregates currently exit-eligible THOR/yTHOR payouts and unlocked Contributor value; it excludes every already-requested withdrawal queue. Queue information is available through the corresponding `unstakeRequestCount*`, `unstakeRequest*`, and `unstakeCursor*` getters.
+This Base QA build has `UNSTAKE_DELAY = 30 minutes`, THOR exit from 50% at 1 hour to 100% at 3 hours, and yTHOR exit from 20% of converted principal at 4 hours to 100% over the next 12 hours. Production uses 72 hours, days 30–90, and day 120 plus four years (4 * 365 days) respectively. `previewWithdrawableNow(address)` aggregates currently exit-eligible THOR/yTHOR payouts and unlocked Contributor value; it excludes every already-requested withdrawal queue. Queue information is available through the corresponding `unstakeRequestCount*`, `unstakeRequest*`, and `unstakeCursor*` getters.
 
 ### Reward accounting
 
 - `depositRewards(uint256)` accepts calls only from the bound RewardDistributor.
 - `claimRewards()` claims the caller's USDC pending balance.
 - `claimable(address)` and `claimableMany(address[])` provide quotes; the latter is per input element and does not deduplicate.
-- `rewardWeightOf(address)` and `totalRewardWeight()` include the current yTHOR reward multiplier.
+- `rewardWeightOf(address)` and `totalRewardWeight()` apply the current yTHOR multiplier after excluding the fixed treasury's migration principal.
+- `migrationRewardExcludedAddress()` returns the immutable migration-only exclusion address.
+- `YTHOR_EXIT_START_BPS()` is `2000`; `YTHOR_EXIT_MAX_BPS()` is `10000`, both relative to converted METRO principal.
 - `totalSharesOf(address)` and `totalShares()` report actual METRO-principal shares, not multiplied reward weight.
 
-Ordinary shares and yTHOR have separate reward accumulators, so changing the current multiplier does not reprice already-accrued rewards.
+Ordinary shares and eligible yTHOR principal have separate reward accumulators, so changing the multiplier does not reprice accrued rewards. The excluded address keeps normal ordinary-stake, Contributor, transfer and exit-to-stake rewards.
+
+The constructor fixes `migrationRewardExcludedAddress` from the existing `forfeitureRecipient_` argument; no constructor argument or user-action signature changes. For production, configure `FORFEITURE_RECIPIENT=0x7D8911eB1C72F0Ba29302bE30301B75Cec81F622`. Both production addresses are immutable. The treasury keeps normal migration and exit rights. If it exits early, forfeited METRO returns to that same recipient and only the payout is queued or staked; the project's intention not to exit early is not an on-chain restriction.
+
+For a future Base QA deployment, explicitly set the existing `BASE_QA_FORFEITURE_RECIPIENT` before creating the deployment plan. The script rejects missing addresses or a different address in a saved plan. QA `setForfeitureRecipient()` changes only the forfeiture recipient; it never changes the fixed migration reward exclusion address or historical rewards. The existing on-chain QA deployment has not acquired these changes.
 
 ### Manual Adapter action
 
@@ -61,7 +67,7 @@ Legacy compound and general auto strategies are mutually exclusive. A batch swap
 ### Administration
 
 - `setDeFiAdapter(address proxy)` checks runtime code, core/USDC/METRO binding, Adapter family, valid configuration, and logic version. A full replacement increments `deFiAdapterEpoch`.
-- `setYThorRewardWeightBps(uint256)` changes future rewards for all active yTHOR positions without pausing. `10,000=1x`; zero and sub-1x values are valid up to the technical bound.
+- `setYThorRewardWeightBps(uint256)` changes future rewards for all eligible active yTHOR positions without pausing. `10,000=1x`; zero and sub-1x values are valid up to the technical bound.
 - `setForfeitureRecipient(address)` is Base QA-only and lets the current owner redirect future THOR/yTHOR exit forfeitures to a nonzero address. Production has an immutable recipient and no setter.
 - `setAutoCompoundOperator(address,bool)`; `setMigrationEscrow(address)`; `setRewardDistributor(address)`; `setContributor(address,bool)`; `setDefaultMaxVestingSchedules(uint256)`
 - `pause()`; `unpause()`; `rescueERC20(address,address,uint256)` (principal-backing METRO is protected)

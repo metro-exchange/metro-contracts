@@ -39,9 +39,9 @@ Before migration, read `migrationStartTime`, `deadlineThor`, `ratioThor`, `capTh
 
 `migrateYThor(amountIn)` appends a new position on every successful call. Read `yThorPositionCount(user)` and `yThorPositions(user, positionId)`. `exitYThor(positionId, 0)` requests a liquid exit followed by `withdrawYThor(maxRequests)`; `exitYThor(positionId, 1)` stakes the payout immediately. Each position exits only once; other positions remain independent. `creditYThorFromMigration` remains Escrow-only.
 
-Principal is `floor(amountIn * ratioYThor / 1e18)`; the reward multiplier does not increase redeemable principal. In this Base QA build, payout starts at 10% after 4 hours and grows to 50% during the following 12 hours. Production uses day 120 followed by four years (4 * 365 days). Unreturned principal goes to `forfeitureRecipient`, not to a burn address. Position IDs are independent for each user and asset.
+Principal is `floor(amountIn * ratioYThor / 1e18)`; the reward multiplier does not increase redeemable principal. In this Base QA build, payout starts at 20% of converted principal after 4 hours and grows to 100% during the following 12 hours. Production uses day 120 followed by four years (4 * 365 days). Unreturned principal goes to `forfeitureRecipient`, not to a burn address. Position IDs are independent for each user and asset.
 
-For reward UI, read `rewardWeightOf(user)` and `totalRewardWeight()`. `totalSharesOf(user)` reports actual principal shares and must not be mistaken for weighted reward shares. Do not hardcode a 2x yTHOR multiplier: the current owner-set weight affects future rewards for all active yTHOR positions without repricing historical pending.
+For reward UI, read `rewardWeightOf(user)` and `totalRewardWeight()`. `totalSharesOf(user)` reports actual principal shares and must not be mistaken for weighted reward shares. Do not hardcode a 2x yTHOR multiplier: the current owner-set weight affects future rewards for all eligible active yTHOR positions without repricing historical pending.
 
 ## Changed management parameter meanings
 
@@ -91,11 +91,11 @@ Decode each log with the ABI of the contract version that emitted it. Do not rei
 
 | Time from this position's migration | Production payout | QA time |
 | --- | ---: | --- |
-| 120 days | 10% | 4 hours |
-| 120 days + 365 days | 20% | 7 hours |
-| 120 days + 2 * 365 days | 30% | 10 hours |
-| 120 days + 3 * 365 days | 40% | 13 hours |
-| 120 days + 4 * 365 days or later | 50% | 16 hours or later |
+| 120 days | 20% | 4 hours |
+| 120 days + 365 days | 40% | 7 hours |
+| 120 days + 2 * 365 days | 60% | 10 hours |
+| 120 days + 3 * 365 days | 80% | 13 hours |
+| 120 days + 4 * 365 days or later | 100% | 16 hours or later |
 
 Times use fixed seconds, not calendar/leap years. Intermediate payouts follow integer BPS rounding. At exit, unpaid principal goes to `forfeitureRecipient`; the position is fully closed. Liquid payouts are fixed when queued, with the existing 72-hour production / 30-minute QA cooldown. They do not increase during that cooldown.
 
@@ -110,3 +110,13 @@ Read `thorPositionCount(user)` / `yThorPositionCount(user)` before querying `tho
 ## Reward accounting precision
 
 Core tracks signed reward debt at the existing `1e24` accumulator precision. Share changes retain the full debt product. Claims, emergency payments, manual actions, and automatic batches consume only whole USDC base units and retain the fractional remainder. Zero-value claims preserve that remainder. `rewardDebt(user)` keeps its ABI and displays USDC base units, truncating negative fractions toward zero; use `claimable` / `claimableMany` for payable amounts instead of reconstructing them from the display getter. Adapter inputs and event amounts remain in token base units.
+
+## Converted-principal example and treasury migration rewards
+
+With a configured yTHOR conversion ratio of `0.5e18`, 100 yTHOR creates 50 METRO principal. An eligible ordinary user initially has 100 reward-weight units at 2x, receives 10 METRO at the earliest exit (20% of principal), or 50 METRO at maturity (100%). Conversion ratios and the adjustable reward multiplier remain configuration values. The weight multiplier does not multiply the exit payout.
+
+The fixed treasury's migration positions have zero reward weight, while their full principal remains recorded and backed. Ordinary stakes, Contributor balances and free-share transfers keep their existing behavior. Exiting into staking adds only the payout as ordinary reward-bearing shares at the current accumulator, with no retroactive migration rewards.
+
+The constructor fixes `migrationRewardExcludedAddress` from the existing `forfeitureRecipient_` argument; no constructor argument or user-action signature changes. For production, configure `FORFEITURE_RECIPIENT=0x7D8911eB1C72F0Ba29302bE30301B75Cec81F622`. Both production addresses are immutable. The treasury keeps normal migration and exit rights. If it exits early, forfeited METRO returns to that same recipient and only the payout is queued or staked; the project's intention not to exit early is not an on-chain restriction.
+
+For a future Base QA deployment, explicitly set the existing `BASE_QA_FORFEITURE_RECIPIENT` before creating the deployment plan. The script rejects missing addresses or a different address in a saved plan. QA `setForfeitureRecipient()` changes only the forfeiture recipient; it never changes the fixed migration reward exclusion address or historical rewards. The existing on-chain QA deployment has not acquired these changes.

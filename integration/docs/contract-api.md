@@ -20,8 +20,8 @@ Owners do not automatically receive these business permissions. `true` grants an
 | Contract / caller | Function | Parameters and effect |
 | --- | --- | --- |
 | METRO owner | `setMinter(minter,allowed)` | Controls mint access; no owner setter can change the 100,000,000 METRO cap. |
-| xMETRO owner | `setYThorRewardWeightBps(weightBps)` | `10,000=1x`, `20,000=2x`; values from zero to the contract technical bound. Applies to future reward deposits for all active yTHOR positions, never reprices accrued rewards; no pause required. |
-| xMETRO owner (Base QA only) | `setForfeitureRecipient(newRecipient)` | Nonzero address receiving future THOR/yTHOR exit forfeitures; does not move prior transfers. The production Core has an immutable recipient and no setter. |
+| xMETRO owner | `setYThorRewardWeightBps(weightBps)` | `10,000=1x`, `20,000=2x`; values from zero to the contract technical bound. Applies to future reward deposits for all eligible active yTHOR positions, never reprices accrued rewards; no pause required. |
+| xMETRO owner (Base QA only) | `setForfeitureRecipient(newRecipient)` | Nonzero address receiving future THOR/yTHOR exit forfeitures; does not move prior transfers or change the fixed migration reward exclusion address. The production Core has an immutable recipient and no setter. |
 | xMETRO owner | `setContributor(account,allowed)`; `setAutoCompoundOperator(account,allowed)` | Contributor and Keeper allowlists. |
 | xMETRO owner | `setDeFiAdapter(proxy)` | Must be the current-family proxy correctly bound to this core, USDC, and METRO. Use the proxy address, not the implementation. |
 | xMETRO owner | `setMigrationEscrow(escrow)`; `setRewardDistributor(distributor)` | Requires binding to this core; Distributor must use the same USDC. |
@@ -79,7 +79,7 @@ QA protocol administration is also owner-controlled: Aave V3 Pool, V4 Spoke, Giv
 
 The Base QA Maple pool bitmaps are `P:deposit=16`, `P:transfer=0`, and `P:transferFrom=0`. This matches the Adapter's transferability check. Receiving TestSyrupUSDC no longer requires setting a bitmap of 16 for each recipient wallet. Deposit authorization for the actual Adapter proxy is a separate requirement and remains in effect. The pool bitmap correction was previously applied in transaction `0x21604b865a2824333c39dc471a856be5f750531c9f623f615489b9e1b9eb236c`; the October 20 readback at Base block 52,860,584 confirmed `16/0/0`. The QA deployment script now uses those same values. This source update performs no chain configuration transactions.
 
-Before project addresses are provided, the fresh QA deployment keeps these temporary owner/minter roles locally. `integration/config/base-qa.json` records each actual address and current role; transferring ownership later requires separate on-chain transactions and a new config readback. Historical Base QA addresses are not reusable.
+The Base QA branch's `integration/config/base-qa.json` contains deployment-time address and role records, not a current chain readback; the production branch keeps an unpopulated template. Later ownership or permission changes require separate transaction evidence and a verified readback. Use the matching deployed-revision ABI with existing QA addresses, and keep records from different deployments separate.
 
 ## Two-address handover
 
@@ -105,7 +105,7 @@ The new xMETRO and the other project contracts use one-step ownership transfer; 
 
 ## Readback checklist
 
-After each confirmed transaction, read `owner()` from each contract; `METRO.isMinter`, `Distributor.operators`, `xMETRO.autoCompoundOperators`, `xMETRO.contributorWhitelist`, `xMETRO.yThorRewardWeightBps`, QA `xMETRO.forfeitureRecipient`, core bindings and pause status, Escrow start/deadline/ratio/cap getters, Distributor Vault/split getters, Adapter `configuration`/`strategyInfo`/`aaveV4Giver`, and each user's auto preference when relevant. For QA, also read each TestToken/Mock `owner()` and public mint rights. A local `.env` edit, UI status, or dry run does not change chain state.
+After each confirmed transaction, read `owner()` from each contract; `METRO.isMinter`, `Distributor.operators`, `xMETRO.autoCompoundOperators`, `xMETRO.contributorWhitelist`, `xMETRO.yThorRewardWeightBps`, `xMETRO.migrationRewardExcludedAddress`, QA `xMETRO.forfeitureRecipient`, core bindings and pause status, Escrow start/deadline/ratio/cap getters, Distributor Vault/split getters, Adapter `configuration`/`strategyInfo`/`aaveV4Giver`, and each user's auto preference when relevant. For QA, also read each TestToken/Mock `owner()` and public mint rights. A local `.env` edit, UI status, or dry run does not change chain state.
 
 ## Position queries and events
 
@@ -119,14 +119,34 @@ Read `thorPositionCount(user)` / `yThorPositionCount(user)` before querying `tho
 
 Core tracks signed reward debt at the existing `1e24` accumulator precision. Share changes retain the full debt product. Claims, emergency payments, manual actions, and automatic batches consume only whole USDC base units and retain the fractional remainder. Zero-value claims preserve that remainder. `rewardDebt(user)` keeps its ABI and displays USDC base units, truncating negative fractions toward zero; use `claimable` / `claimableMany` for payable amounts instead of reconstructing them from the display getter. Adapter inputs and event amounts remain in token base units.
 
-`YTHOR_EXIT_RAMP()` is a compiled duration in seconds with no Owner setter: production `126144000`, QA `43200`. Production reaches its 50% cap 1,580 days after each migration.
+`YTHOR_EXIT_RAMP()` is a compiled duration in seconds with no Owner setter: production `126144000`, QA `43200`. Production reaches its 100% cap 1,580 days after each migration.
 
 | Time from this position's migration | Production payout | QA time |
 | --- | ---: | --- |
-| 120 days | 10% | 4 hours |
-| 120 days + 365 days | 20% | 7 hours |
-| 120 days + 2 * 365 days | 30% | 10 hours |
-| 120 days + 3 * 365 days | 40% | 13 hours |
-| 120 days + 4 * 365 days or later | 50% | 16 hours or later |
+| 120 days | 20% | 4 hours |
+| 120 days + 365 days | 40% | 7 hours |
+| 120 days + 2 * 365 days | 60% | 10 hours |
+| 120 days + 3 * 365 days | 80% | 13 hours |
+| 120 days + 4 * 365 days or later | 100% | 16 hours or later |
 
 Times use fixed seconds, not calendar/leap years. Intermediate payouts follow integer BPS rounding. At exit, unpaid principal goes to `forfeitureRecipient`; the position is fully closed. Liquid payouts are fixed when queued, with the existing 72-hour production / 30-minute QA cooldown. They do not increase during that cooldown.
+
+## Treasury migration reward exclusion
+
+Read `migrationRewardExcludedAddress()` to identify the fixed excluded wallet. Its active THOR and yTHOR migration positions earn no rewards. Normal staking, Contributor balances, free-share transfers, and migration payouts converted to staking retain rewards. `claimable` and all settlement actions still pay legitimate accrued ordinary rewards.
+
+Let `Y` be all active yTHOR principal, `Y_excluded` that wallet's active yTHOR principal, and `T_excluded` its active THOR principal. Reward allocation uses:
+
+```text
+eligibleBase = totalShares() - Y - T_excluded
+eligibleYThor = Y - Y_excluded
+totalWeight = eligibleBase + floor(eligibleYThor * yThorRewardWeightBps / 10000)
+```
+
+Exclude principal before rounding. The yTHOR accumulator divides only by eligible yTHOR principal. `totalShares()` and per-user principal balances still include excluded migration backing. The sum of individually rounded weight quotes need not equal the globally rounded denominator.
+
+`YTHOR_EXIT_START_BPS()` is `2000` and `YTHOR_EXIT_MAX_BPS()` is `10000`. Production reaches full converted principal at 1,580 days from each migration; QA at 16 hours.
+
+The constructor fixes `migrationRewardExcludedAddress` from the existing `forfeitureRecipient_` argument; no constructor argument or user-action signature changes. For production, configure `FORFEITURE_RECIPIENT=0x7D8911eB1C72F0Ba29302bE30301B75Cec81F622`. Both production addresses are immutable. The treasury keeps normal migration and exit rights. If it exits early, forfeited METRO returns to that same recipient and only the payout is queued or staked; the project's intention not to exit early is not an on-chain restriction.
+
+For a future Base QA deployment, explicitly set the existing `BASE_QA_FORFEITURE_RECIPIENT` before creating the deployment plan. The script rejects missing addresses or a different address in a saved plan. QA `setForfeitureRecipient()` changes only the forfeiture recipient; it never changes the fixed migration reward exclusion address or historical rewards. The existing on-chain QA deployment has not acquired these changes.

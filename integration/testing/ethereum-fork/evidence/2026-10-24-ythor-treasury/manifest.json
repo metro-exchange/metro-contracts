@@ -1,0 +1,128 @@
+{
+  "date": "2026-10-24",
+  "branch": "xmetro-v2-base-qa",
+  "baselineCommit": "f51d19e6e6a2680bc972665609c2b81676409737",
+  "workingTree": "uncommitted local changes",
+  "broadcast": false,
+  "githubSubmitted": false,
+  "sourceFiles": [
+    "src/XMetroCoreLogic.sol",
+    "src/xMETRO.sol"
+  ],
+  "rules": {
+    "yThorPrincipalExitBps": [
+      2000,
+      10000
+    ],
+    "treasury": "0x7D8911eB1C72F0Ba29302bE30301B75Cec81F622",
+    "exclusion": "active THOR/yTHOR migration positions only",
+    "constructor": "unchanged; initial forfeitureRecipient fixes migrationRewardExcludedAddress"
+  },
+  "tools": {
+    "forge": "1.7.1-Homebrew",
+    "solc": "0.8.30"
+  },
+  "profilesUnchanged": true,
+  "sizes": {
+    "coreRuntime": 23394,
+    "coreCreationBeforeArguments": 24998,
+    "projectLimit": 23552,
+    "adapterRuntime": 20487
+  },
+  "storage": {
+    "existingFieldsUnchanged": 30,
+    "addedField": "_rewardExcludedThorPrincipal",
+    "addedSlot": 28,
+    "accumulatorSlots": [
+      7,
+      8
+    ]
+  },
+  "abi": {
+    "added": [
+      "migrationRewardExcludedAddress()"
+    ],
+    "removed": [],
+    "changedExistingEntries": []
+  },
+  "results": [
+    {
+      "command": "FOUNDRY_PROFILE=regression forge test -vv",
+      "passed": 148,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "command": "FOUNDRY_PROFILE=core forge test -vv",
+      "passed": 53,
+      "failed": 0,
+      "skipped": 2
+    },
+    {
+      "command": "FOUNDRY_PROFILE=adapter forge test -vv",
+      "passed": 43,
+      "failed": 0,
+      "skipped": 2
+    },
+    {
+      "command": "FOUNDRY_PROFILE=deployment-test forge test -vv",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    }
+  ],
+  "forkCompilePassed": true,
+  "formatChecksPassed": true,
+  "qaPlanValidationCases": 5,
+  "artifacts": {
+    "xMETRO": {
+      "artifactSha256": "96022ae431993d3b612ce8f52b64ef8987b5145855d01aad2f1b7a3e8a997526",
+      "sourceSha256": "53ee141e3b217e48a6e8d5575bfa04e708960c78bfdcc5c13577f3b7a21748d0"
+    },
+    "XMetroCoreLogic": {
+      "artifactSha256": "bb4aedae53af5264eb59c177c074c0b0343b1d572dd3eafa5fd43d547558bc9f",
+      "sourceSha256": "0dc16407eab900523770d1a57f4b36ce6a5cc2293ff7f6d731c713c1e24fdf8b"
+    }
+  },
+  "changedTrackedFiles": {
+    ".env.example": "70f5ae9404347f0bde0ec71c53ef9bb26956a280570181f576e1a6ce3e47d8c0",
+    "CONTRACT_FUNCTION_REFERENCE.md": "49b15a988ed2f0c13735e2056efd532be953be317a36bb8d30894738ed6e2552",
+    "README.md": "c566dac3386632b0815453b33ae8d7fa569eb2d837301a78606d4368a54fd9f9",
+    "integration/README.md": "1f6d910621f711a2058d3fa0321396512afc9a22b14f1466c038373390534bc7",
+    "integration/abi/xMETRO.json": "644d000205137e50dd1e698284a5cf7122385fa7fb24bbc8757a8d6398171e9d",
+    "integration/docs/contract-api.md": "09caab4fa8b0038a5d22071590ece54d1c2443465bedd1d92d4968c70ac9c125",
+    "integration/docs/existing-features.md": "531cd474cc40ec3cc68255858e9bdb6aa6ef250e3781ecf1c79377e552844641",
+    "integration/docs/new-features.md": "7fe622b6460f4f48efa9b94e4d8e1566cfd35e66547b726d539fba88a1ed48a5",
+    "integration/examples/README.md": "1b64734062b014db19ec596e3ccff1fa4f93812926a5b13349dc87bd7c5333b9",
+    "integration/testing/base/BASE_ONCHAIN_FUNCTIONAL_TEST_CHECKLIST.md": "7fce484aaf7b1f038649bd2e29092793f4316226c3bcee272f655f2bcbac82ef",
+    "integration/testing/ethereum-fork/CHECKLIST.md": "8169f9dbbe640c973849149bda6d3dd682fa2b7731c4bdf7b1e5a648af29d0b3",
+    "integration/testing/ethereum-fork/RESULTS.md": "b21901124fc25725e9d554de51ae0c0edf98238907a9f9b1ccdd205b0aebf103",
+    "script/Deploy.s.sol": "ca436ced640198e1cacc213caeecc1ba90a90c49c459ded2df0f2b80ff44fc95",
+    "script/VerifyDeployment.s.sol": "b16159c5ef9df6eb61c002f8aa56e44b6db7527f766b3e24bcf0f142bb515848",
+    "script/base-qa/deploy.mjs": "a727f9196653aa2d4472e2c7fdd74600fd36f2696d9f97231c250673c8191a85",
+    "src/XMetroCoreLogic.sol": "0dc16407eab900523770d1a57f4b36ce6a5cc2293ff7f6d731c713c1e24fdf8b",
+    "src/xMETRO.sol": "53ee141e3b217e48a6e8d5575bfa04e708960c78bfdcc5c13577f3b7a21748d0",
+    "test/core/XMetroCore.adapter.t.sol": "72f482e6b865a5ecafe6e65b062bd10b0329be7a84d111e89ffb005ceef71a6a",
+    "test/deployment/DeployScript.t.sol": "bb54af15a6a52f83b8afaccfba61cf4906ef3acb9d27414539863ff4319df720",
+    "test/fork-v2/XMetroForkBase.sol": "09215a871f03df3fa8193f09d1ab87036712454f8cd2570bec9899510c5f42d8",
+    "test/fork-v2/mainnet/DeploymentGovernance.t.sol": "87ac58ed015c30f5b82c2221ea8078b598671d9d8425ef6a4cdb99c5effc0b5e",
+    "test/fork-v2/mainnet/MigrationExit.t.sol": "b547f91820377b548cf322209018fb69e9622d33b2cce9019b80d9b5e91d3050",
+    "test/fork-v2/mainnet/YThorRewardWeight.t.sol": "a58362a76fcd0050fbbf4c63990c43e9ca80dab28083c995bb9104f53c47c868",
+    "test/fuzz/xMETRO.fuzz.t.sol": "a58f18827380476bb0fc30a916d75550e8e7ee4aa2d6a8c03679c0216118d520",
+    "test/invariant/xMETRO.invariant.t.sol": "989dd896ea3653d88a9be64f52142e01c487325992d4490fd0be34d3df4c9e85",
+    "test/mock/XChainAndCore.t.sol": "a9347a1f5f9eebd9169508770fe481975d3a66bcd5b5718ddd6ed00a941c9226",
+    "test/unit/YThorWeight.integration.t.sol": "35ac71555f94afa38019770863b683f54a62e93e60e97c3bc88fdc7cd951dba2",
+    "test/unit/xMETRO.unit.t.sol": "a4255a49698ab71a12febd1513f5432eed5e66fe1638bde484db18d1727a0c96"
+  },
+  "evidenceSha256": {
+    "validation.log": "3539079307da5ae540a03a11dbd12d49198f666eb5ca18437e06a489248dc4c1",
+    "core-storage-layout.json": "47625fcdeb48042f0253afb2f5615b1c094e18bc8cf30a3de06851bf4c1475ab"
+  },
+  "notes": [
+    "The production fork initially failed sandbox DNS resolution; its permitted network retry passed. QA fork suites were compiled only.",
+    "Four optional pinned RPC tests per branch were skipped, not passed.",
+    "Runtime size limits were not increased.",
+    "Only the proposed code and local tests changed; existing Base deployment records remain intact."
+  ],
+  "coreBuildSizesPassed": true
+}

@@ -68,6 +68,7 @@ contract VerifyDeployment is DeFiAdapterScriptBase {
         require(
             address(core.METRO()) == metroAddress && address(core.rewardToken()) == usdc
                 && core.forfeitureRecipient() == record.readAddress(".forfeitureRecipient")
+                && core.migrationRewardExcludedAddress() == record.readAddress(".migrationRewardExcludedAddress")
                 && core.rewardDistributor() == distributorAddress && core.migrationEscrow() == escrowAddress
                 && core.deFiAdapter() == proxy && core.deFiAdapterEpoch() == record.readUint(".adapterEpoch")
                 && core.yThorRewardWeightBps() == record.readUint(".yThorRewardWeightBps"),
