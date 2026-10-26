@@ -1,41 +1,81 @@
 name: CI
-  permissions:
-    contents: read
-  on:
-    push:
-    pull_request:
-    workflow_dispatch:
 
-  env:
-    FOUNDRY_PROFILE: ci
+permissions:
+  contents: read
 
-  jobs:
-    check:
-      name: Foundry project
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v5
-          with:
-            persist-credentials: false
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
 
-        - name: Install Foundry
-          uses: foundry-rs/foundry-toolchain@v1
+jobs:
+  check:
+    name: Release artifacts and tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
-        - name: Show Forge version
-          run: forge --version
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1.9.1
+        with:
+          version: v1.7.1
 
-        - name: Install dependencies
-          run: |
-            forge install --no-commit foundry-rs/forge-std@v1.12.0
-            forge install --no-commit OpenZeppelin/openzeppelin-contracts@v5.5.0
-            forge install --no-commit LayerZero-Labs/LayerZero-v2@ab9b083410b9359285a5756807e1b6145d4711a7
-            forge install --no-commit GNSPS/solidity-bytes-utils@v0.8.1
+      - name: Show Forge version
+        run: forge --version
 
-        - name: Run Forge fmt
-          run: forge fmt --check
+      - name: Install dependencies
+        run: |
+          forge install foundry-rs/forge-std@v1.12.0
+          forge install OpenZeppelin/openzeppelin-contracts@v5.5.0
 
-        - name: Run Forge build
-          run: forge build --sizes
+      - name: Run Forge fmt
+        run: |
+          forge fmt --check \
+            src/xMETRO.sol \
+            src/ThorMigrationEscrow.sol \
+            src/XMetroCoreLogic.sol \
+            src/XMetroDeFiAdapter.sol \
+            src/interfaces \
+            script/DeFiAdapterScriptBase.sol \
+            script/Deploy.s.sol \
+            script/UpgradeDeFiAdapter.s.sol \
+            script/ReplaceDeFiAdapter.s.sol \
+            test/core/XMetroCore.adapter.invariant.t.sol \
+            test/core/XMetroCore.adapter.t.sol \
+            test/deployment/DeployScript.t.sol \
+            test/fork-v2/XMetroForkBase.sol \
+            test/fork-v2/mainnet/AutoCompound.t.sol \
+            test/fork-v2/mainnet/DeploymentGovernance.t.sol \
+            test/fork-v2/mainnet/MigrationExit.t.sol \
+            test/fork-v2/mainnet/TokenStakeRewards.t.sol \
+            test/fork-v2/mainnet/YThorRewardWeight.t.sol \
+            test/fuzz/ThorMigrationEscrow.fuzz.t.sol \
+            test/fuzz/xMETRO.fuzz.t.sol \
+            test/invariant/xMETRO.invariant.t.sol \
+            test/mock/XChainAndCore.t.sol \
+            test/unit/ThorMigrationEscrow.unit.t.sol \
+            test/unit/YThorWeight.integration.t.sol \
+            test/unit/xMETRO.unit.t.sol
 
-        - name: Run Forge tests
-          run: forge test -vvv
+      - name: Build production xMETRO artifact
+        run: FOUNDRY_PROFILE=core forge build --sizes
+
+      - name: Build production Adapter artifact
+        run: FOUNDRY_PROFILE=adapter forge build --sizes
+
+      - name: Compile Ethereum fork tests
+        run: FOUNDRY_PROFILE=fork-v2 forge build
+
+      - name: Run legacy business regression
+        run: FOUNDRY_PROFILE=regression forge test -vv
+
+      - name: Run Core tests
+        run: FOUNDRY_PROFILE=core forge test -vv
+
+      - name: Run Adapter tests
+        run: FOUNDRY_PROFILE=adapter forge test -vv
+
+      - name: Run deployment-script tests
+        run: FOUNDRY_PROFILE=deployment-test forge test -vv

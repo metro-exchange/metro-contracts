@@ -1,0 +1,133 @@
+{
+  "date": "2026-10-24",
+  "branch": "xmetro-v2",
+  "baselineCommit": "bc7db02b19cef17c42dd829c856ddc026cfbd218",
+  "workingTree": "uncommitted local changes",
+  "broadcast": false,
+  "githubSubmitted": false,
+  "sourceFiles": [
+    "src/XMetroCoreLogic.sol",
+    "src/xMETRO.sol"
+  ],
+  "rules": {
+    "yThorPrincipalExitBps": [
+      2000,
+      10000
+    ],
+    "treasury": "0x7D8911eB1C72F0Ba29302bE30301B75Cec81F622",
+    "exclusion": "active THOR/yTHOR migration positions only",
+    "constructor": "unchanged; initial forfeitureRecipient fixes migrationRewardExcludedAddress"
+  },
+  "tools": {
+    "forge": "1.7.1-Homebrew",
+    "solc": "0.8.30"
+  },
+  "profilesUnchanged": true,
+  "sizes": {
+    "coreRuntime": 23510,
+    "coreCreationBeforeArguments": 25146,
+    "projectLimit": 23552,
+    "adapterRuntime": 20487
+  },
+  "storage": {
+    "existingFieldsUnchanged": 29,
+    "addedField": "_rewardExcludedThorPrincipal",
+    "addedSlot": 27,
+    "accumulatorSlots": [
+      7,
+      8
+    ]
+  },
+  "abi": {
+    "added": [
+      "migrationRewardExcludedAddress()"
+    ],
+    "removed": [],
+    "changedExistingEntries": []
+  },
+  "results": [
+    {
+      "command": "FOUNDRY_PROFILE=regression forge test -vv",
+      "passed": 146,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "command": "FOUNDRY_PROFILE=core forge test -vv",
+      "passed": 53,
+      "failed": 0,
+      "skipped": 2
+    },
+    {
+      "command": "FOUNDRY_PROFILE=adapter forge test -vv",
+      "passed": 43,
+      "failed": 0,
+      "skipped": 2
+    },
+    {
+      "command": "FOUNDRY_PROFILE=deployment-test forge test -vv",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "command": "ETH_RPC_URL=https://eth.drpc.org FOUNDRY_PROFILE=fork-v2 forge test --match-contract 'MigrationExitMainnetTest|YThorRewardWeightMainnetTest|DeploymentGovernanceMainnetTest' -vv",
+      "passed": 49,
+      "failed": 0,
+      "skipped": 0
+    }
+  ],
+  "forkCompilePassed": true,
+  "formatChecksPassed": true,
+  "qaPlanValidationCases": null,
+  "artifacts": {
+    "xMETRO": {
+      "artifactSha256": "b16e2dcf8838a5a06088bff0e6a51867e5dab495e77c24dd854736ab50711570",
+      "sourceSha256": "5fafce4096f5f0da638914b58fbc37efd44d432dd5c35060020e7095c22d2a98"
+    },
+    "XMetroCoreLogic": {
+      "artifactSha256": "43d9d5f35cfca465105e4c7e2a553277097ab3515d18c52d4b2ee2df45a20bfb",
+      "sourceSha256": "daaa076086c26ba61f30103fb19330547222d9a76ce214446759212cc3851c1d"
+    }
+  },
+  "changedTrackedFiles": {
+    ".env.example": "dc7e9291972769bb5a8367517f244fa426b49dde6eea66da0194f83eb297197b",
+    "CONTRACT_FUNCTION_REFERENCE.md": "c169d5a812304bb13db7a7a38954017fcfdbb9b4d51b9d89faa21b4122440096",
+    "README.md": "2f46c3c422db350235c4649e108e9cf38fafe3232636d14186ba85278aaeb950",
+    "integration/README.md": "f4b6c7356390bd44d409ecab1d53dcc879c803792a583197768eafd7c4e17efc",
+    "integration/abi/xMETRO.json": "007839e718a974e892dae22649c23ad517ca494edb45912994f6aca51505cb1e",
+    "integration/docs/contract-api.md": "62aba427699e20292337da05d4657487993d12da139068d24a084543b95b62d2",
+    "integration/docs/existing-features.md": "db3156539e66efc5af8362bf708df98a3a1b6d37f49726951e7f344397a659e6",
+    "integration/docs/new-features.md": "7fe622b6460f4f48efa9b94e4d8e1566cfd35e66547b726d539fba88a1ed48a5",
+    "integration/examples/README.md": "1b64734062b014db19ec596e3ccff1fa4f93812926a5b13349dc87bd7c5333b9",
+    "integration/testing/base/BASE_ONCHAIN_FUNCTIONAL_TEST_CHECKLIST.md": "edba8afebcec4c1f0b0cfc5c03c225df03062a989e8d446384141f4856fba986",
+    "integration/testing/ethereum-fork/CHECKLIST.md": "8169f9dbbe640c973849149bda6d3dd682fa2b7731c4bdf7b1e5a648af29d0b3",
+    "integration/testing/ethereum-fork/RESULTS.md": "2c5df832de6e5d6d57f22984d264fd89a82236aca6fa0691b10f75658a339b1a",
+    "script/Deploy.s.sol": "ca436ced640198e1cacc213caeecc1ba90a90c49c459ded2df0f2b80ff44fc95",
+    "script/VerifyDeployment.s.sol": "b16159c5ef9df6eb61c002f8aa56e44b6db7527f766b3e24bcf0f142bb515848",
+    "src/XMetroCoreLogic.sol": "daaa076086c26ba61f30103fb19330547222d9a76ce214446759212cc3851c1d",
+    "src/xMETRO.sol": "5fafce4096f5f0da638914b58fbc37efd44d432dd5c35060020e7095c22d2a98",
+    "test/core/XMetroCore.adapter.t.sol": "e15ce6dfc95b6082c472262f63c6f2f3a0f520b338d293ea9699d34d08de26e2",
+    "test/deployment/DeployScript.t.sol": "507f8fcedb7a8c2b723a520dd131bff3687781c9cf9d889bfcd42707b3483102",
+    "test/fork-v2/XMetroForkBase.sol": "9ed96957adb43511f4af75537e1af1f6709dedcb35564b101a04d493da1b047f",
+    "test/fork-v2/mainnet/DeploymentGovernance.t.sol": "39535b33155c03a1b8c851f4db2c1954fae2a1dc24b13774c07f3ab5b9e5b2f1",
+    "test/fork-v2/mainnet/MigrationExit.t.sol": "b547f91820377b548cf322209018fb69e9622d33b2cce9019b80d9b5e91d3050",
+    "test/fork-v2/mainnet/YThorRewardWeight.t.sol": "a58362a76fcd0050fbbf4c63990c43e9ca80dab28083c995bb9104f53c47c868",
+    "test/fuzz/xMETRO.fuzz.t.sol": "407a1f5337bf0efb0730b34ae16dddd073bfba85706af5ce0a9fa43b2633294d",
+    "test/invariant/xMETRO.invariant.t.sol": "65843d499144fd21cc98eeb3d22b60f5ddbb87c91ba7c7fd10fe551d51ec4dfb",
+    "test/mock/XChainAndCore.t.sol": "891c1f0f38c025f591a56d0df76b8cc3aa0f031d8912cd6b120acab120aabd15",
+    "test/unit/YThorWeight.integration.t.sol": "35ac71555f94afa38019770863b683f54a62e93e60e97c3bc88fdc7cd951dba2",
+    "test/unit/xMETRO.unit.t.sol": "1ea24ff6d8f7b397b6d2d19d4b8f8550371b376a7ee0bde2ab9d701f0f409379"
+  },
+  "evidenceSha256": {
+    "validation.log": "c36b52396b22dca57bb9dbb3958ece505de5b3e0f9e0cb6be04b2cbb5f4f5e77",
+    "core-storage-layout.json": "2fe80f5fb8f445aab44789ae2652c43c3047acfe8a63c202c0fa1a8f21cfa173"
+  },
+  "notes": [
+    "The production fork initially failed sandbox DNS resolution; its permitted network retry passed. QA fork suites were compiled only.",
+    "Four optional pinned RPC tests per branch were skipped, not passed.",
+    "Runtime size limits were not increased.",
+    "Only the proposed code and local tests changed; existing Base deployment records remain intact."
+  ],
+  "coreBuildSizesPassed": true
+}

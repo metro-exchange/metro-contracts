@@ -1,0 +1,71 @@
+{
+  "source": "1inch.com Classic Swap frontend BFF",
+  "requestedAtUtc": "2026-09-29T08:01:10.163Z",
+  "chainId": 1,
+  "forkBlock": 26077998,
+  "proxy": "0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9",
+  "amountIn": "100000000",
+  "gasPrice": "673643233",
+  "routes": [
+    {
+      "symbol": "USDT",
+      "tokenOut": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "walletAddress": "0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9",
+      "receiver": "0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9",
+      "status": "quote_only",
+      "expectedReturnAmount": "100041496",
+      "build": {
+        "httpStatus": 500,
+        "error": "Internal server error"
+      }
+    },
+    {
+      "symbol": "WBTC",
+      "tokenOut": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+      "walletAddress": "0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9",
+      "receiver": "0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9",
+      "status": "quote_only",
+      "expectedReturnAmount": "119007",
+      "build": {
+        "httpStatus": 500,
+        "error": "Internal server error"
+      }
+    },
+    {
+      "symbol": "GHO",
+      "tokenOut": "0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f",
+      "walletAddress": "0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9",
+      "receiver": "0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9",
+      "status": "quote_only",
+      "expectedReturnAmount": "99995751802741439016",
+      "build": {
+        "httpStatus": 500,
+        "error": "Internal server error"
+      }
+    },
+    {
+      "symbol": "XAUT",
+      "tokenOut": "0x68749665ff8d2d112fa859aa293f07a622782f38",
+      "walletAddress": "0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9",
+      "receiver": "0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9",
+      "status": "quote_only",
+      "expectedReturnAmount": "24128",
+      "build": {
+        "httpStatus": 500,
+        "error": "Internal server error"
+      }
+    },
+    {
+      "symbol": "syrupUSDC",
+      "tokenOut": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+      "walletAddress": "0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9",
+      "receiver": "0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9",
+      "status": "quote_only",
+      "expectedReturnAmount": "84354445",
+      "build": {
+        "httpStatus": 500,
+        "error": "Internal server error"
+      }
+    }
+  ]
+}

@@ -1,312 +1,346 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-/**
- * @title ThorMigrationEscrow.unit.t.sol
- * @notice Unit tests for same-chain ThorMigrationEscrow (schedule selection + migration calls).
- */
-
 import "forge-std/Test.sol";
 
-import { ThorMigrationEscrow } from "../../src/ThorMigrationEscrow.sol";
+import {ThorMigrationEscrow} from "../../src/ThorMigrationEscrow.sol";
+import {ERC20Mintable} from "../mocks/ERC20Mintable.sol";
 
-import { ERC20Mintable } from "../mocks/ERC20Mintable.sol";
-
-contract MockXMetroMigration {
+contract MockXMetroMigrationV2 {
     address public lastThorUser;
-    uint256 public lastThorAmount;
-    uint256 public lastThorLockMonths;
+    uint256 public lastThorPrincipal;
+    address public lastYThorUser;
+    uint256 public lastYThorPrincipal;
+    uint256 public thorCredits;
+    uint256 public yThorCredits;
+    bool public revertCredits;
 
-    address public lastVestingUser;
-    uint256 public lastVestingAmount;
-
-    function creditLockedTHORFromMigration(address user, uint256 amount, uint256 lockMonths) external {
-        lastThorUser = user;
-        lastThorAmount = amount;
-        lastThorLockMonths = lockMonths;
+    function setRevertCredits(bool value) external {
+        revertCredits = value;
     }
 
-    function creditLockedVestingFromMigration(address user, uint256 amount) external {
-        lastVestingUser = user;
-        lastVestingAmount = amount;
+    function creditThorFromMigration(address user, uint256 principal) external {
+        require(!revertCredits, "MockXMetro: rejected");
+        lastThorUser = user;
+        lastThorPrincipal = principal;
+        thorCredits++;
+    }
+
+    function creditYThorFromMigration(address user, uint256 principal) external {
+        require(!revertCredits, "MockXMetro: rejected");
+        lastYThorUser = user;
+        lastYThorPrincipal = principal;
+        yThorCredits++;
     }
 }
 
 contract ThorMigrationEscrowUnitTest is Test {
     ERC20Mintable internal thor;
-    ERC20Mintable internal ythor;
-    MockXMetroMigration internal xmetro;
+    ERC20Mintable internal yThor;
+    ERC20Mintable internal other;
+    MockXMetroMigrationV2 internal xmetro;
     ThorMigrationEscrow internal escrow;
 
     address internal owner = address(this);
     address internal user = makeAddr("user");
+    address internal user2 = makeAddr("user2");
+
+    uint256 internal constant RATIO_THOR = 11e17;
+    uint256 internal constant RATIO_YTHOR = 8e17;
+    uint256 internal constant CAP_THOR = 1_000_000 ether;
+    uint256 internal constant CAP_YTHOR = 500_000 ether;
 
     function setUp() public {
         thor = new ERC20Mintable("THOR", "THOR", 18);
-        ythor = new ERC20Mintable("yTHOR", "yTHOR", 18);
-        xmetro = new MockXMetroMigration();
+        yThor = new ERC20Mintable("yTHOR", "yTHOR", 18);
+        other = new ERC20Mintable("OTHER", "OTHER", 18);
+        xmetro = new MockXMetroMigrationV2();
 
-        escrow = new ThorMigrationEscrow(owner, address(xmetro), address(thor), address(ythor), block.timestamp);
-
-        escrow.setCaps(50_000_000 ether, 50_000_000 ether);
-        escrow.setRatios(1_200_000_000_000_000_000, 1_000_000_000_000_000_000, 1_000_000_000_000_000_000);
-        escrow.setDeadlines(block.timestamp + 364 days, block.timestamp + 365 days);
-        escrow.setYThorLimits(50_000_000 ether, block.timestamp + 365 days);
+        escrow = new ThorMigrationEscrow(owner, address(xmetro), address(thor), address(yThor), block.timestamp);
+        escrow.setCaps(CAP_THOR, CAP_YTHOR);
+        escrow.setRatios(RATIO_THOR, RATIO_YTHOR);
+        escrow.setDeadlines(block.timestamp + 365 days, block.timestamp + 365 days);
     }
 
-    function test_SetRatios_BadRatio_Revert() public {
+    function _approveAndFund(address account, ERC20Mintable token, uint256 amount) internal {
+        token.mint(account, amount);
+        vm.prank(account);
+        token.approve(address(escrow), amount);
+    }
+
+    function test_ConstructorRejectsInvalidInputs() public {
+        vm.expectRevert(bytes("ThorEscrow: zero xMETRO"));
+        new ThorMigrationEscrow(owner, address(0), address(thor), address(yThor), block.timestamp);
+
+        vm.expectRevert(bytes("ThorEscrow: zero token"));
+        new ThorMigrationEscrow(owner, address(xmetro), address(0), address(yThor), block.timestamp);
+
+        vm.expectRevert(bytes("ThorEscrow: bad start time"));
+        new ThorMigrationEscrow(owner, address(xmetro), address(thor), address(yThor), block.timestamp - 1);
+    }
+
+    function test_ConfigurationPermissionsValidationAndEvents() public {
+        ThorMigrationEscrow fresh =
+            new ThorMigrationEscrow(owner, address(xmetro), address(thor), address(yThor), block.timestamp + 10);
+
+        vm.prank(user);
+        vm.expectRevert();
+        fresh.setCaps(1, 1);
+
+        vm.expectRevert(bytes("ThorEscrow: bad cap"));
+        fresh.setCaps(0, 1);
+        vm.expectEmit(false, false, false, true);
+        emit ThorMigrationEscrow.CapsUpdated(10, 20);
+        fresh.setCaps(10, 20);
+
         vm.expectRevert(bytes("ThorEscrow: bad ratio"));
-        escrow.setRatios(0, 1e18, 1e18);
-    }
-
-    function test_SetRatios_OnlyOwner_AndEmits() public {
-        ThorMigrationEscrow e = new ThorMigrationEscrow(owner, address(xmetro), address(thor), address(ythor), block.timestamp);
-
-        vm.prank(user);
-        vm.expectRevert();
-        e.setRatios(2e18, 1e18, 1e18);
-
+        fresh.setRatios(0, 1e18);
         vm.expectEmit(false, false, false, true);
-        emit ThorMigrationEscrow.RatiosUpdated(2e18, 1e18, 3e18);
-        e.setRatios(2e18, 1e18, 3e18);
-        assertEq(e.ratio10M(), 2e18);
-        assertEq(e.ratio3M(), 1e18);
-        assertEq(e.ratioYThor(), 3e18);
-
+        emit ThorMigrationEscrow.RatiosUpdated(2e18, 3e18);
+        fresh.setRatios(2e18, 3e18);
         vm.expectRevert(bytes("ThorEscrow: ratios locked"));
-        e.setRatios(1e18, 1e18, 1e18);
-    }
+        fresh.setRatios(1e18, 1e18);
 
-    function test_SetDeadlines_OnlyOwner_AndEmits() public {
-        uint256 deadline10M = block.timestamp + 11;
-        uint256 deadline3M = block.timestamp + 22;
-
-        vm.prank(user);
-        vm.expectRevert();
-        escrow.setDeadlines(deadline10M, deadline3M);
+        vm.expectRevert(bytes("ThorEscrow: deadline before start"));
+        fresh.setDeadlines(block.timestamp + 5, block.timestamp + 20);
+        vm.expectEmit(false, false, false, true);
+        emit ThorMigrationEscrow.DeadlinesUpdated(block.timestamp + 20, block.timestamp + 30);
+        fresh.setDeadlines(block.timestamp + 20, block.timestamp + 30);
 
         vm.expectEmit(false, false, false, true);
-        emit ThorMigrationEscrow.DeadlinesUpdated(deadline10M, deadline3M);
-        escrow.setDeadlines(deadline10M, deadline3M);
-        assertEq(escrow.deadline10M(), deadline10M);
-        assertEq(escrow.deadline3M(), deadline3M);
-    }
+        emit ThorMigrationEscrow.MigrationStartTimeUpdated(block.timestamp + 20);
+        fresh.setMigrationStartTime(block.timestamp + 20);
 
-    function test_SetMigrationStartTime_OnlyOwner() public {
-        uint256 startTimeA = block.timestamp + 123;
-        uint256 startTimeB = block.timestamp + 456;
-
-        vm.prank(user);
-        vm.expectRevert();
-        escrow.setMigrationStartTime(startTimeA);
-
-        escrow.setMigrationStartTime(startTimeB);
-        assertEq(escrow.migrationStartTime(), startTimeB);
-    }
-
-    function test_SetYThorLimits_OnlyOwner_AndEmits() public {
-        uint256 deadlineA = block.timestamp + 123;
-        uint256 deadlineB = block.timestamp + 456;
-
-        vm.prank(user);
-        vm.expectRevert();
-        escrow.setYThorLimits(1 ether, deadlineA);
-
+        // Preserve the audited baseline: the owner may reschedule to a future timestamp even after the old start.
+        vm.warp(block.timestamp + 20);
         vm.expectEmit(false, false, false, true);
-        emit ThorMigrationEscrow.YThorLimitsUpdated(2 ether, deadlineB);
-        escrow.setYThorLimits(2 ether, deadlineB);
-        assertEq(escrow.capYThor(), 2 ether);
-        assertEq(escrow.deadlineYThor(), deadlineB);
+        emit ThorMigrationEscrow.MigrationStartTimeUpdated(block.timestamp + 1);
+        fresh.setMigrationStartTime(block.timestamp + 1);
     }
 
-    function test_MigrateYThor_CapNotSet_Revert() public {
-        ThorMigrationEscrow e = new ThorMigrationEscrow(owner, address(xmetro), address(thor), address(ythor), block.timestamp);
-        e.setRatios(1e18, 1e18, 1e18);
-        e.setCaps(1 ether, 1 ether);
-        e.setDeadlines(block.timestamp + 364 days, block.timestamp + 365 days);
+    function test_MigrateThorUsesUnifiedRatioAndCreatesIndependentCredits() public {
+        uint256 amountIn = 100 ether;
+        uint256 principal = amountIn * RATIO_THOR / 1e18;
+        _approveAndFund(user, thor, amountIn * 2);
 
-        ythor.mint(user, 1 ether);
+        vm.expectEmit(true, false, false, true);
+        emit ThorMigrationEscrow.MigratedThor(user, amountIn, principal);
         vm.prank(user);
-        ythor.approve(address(e), 1 ether);
+        escrow.migrateThor(amountIn);
+
+        assertEq(thor.balanceOf(address(escrow)), amountIn);
+        assertEq(escrow.migratedThor(), principal);
+        assertEq(xmetro.lastThorUser(), user);
+        assertEq(xmetro.lastThorPrincipal(), principal);
+        assertEq(xmetro.thorCredits(), 1);
 
         vm.prank(user);
-        vm.expectRevert(bytes("ThorEscrow: ythor cap not set"));
-        e.migrateYThor(1 ether);
+        escrow.migrateThor(amountIn);
+        assertEq(escrow.migratedThor(), principal * 2);
+        assertEq(thor.balanceOf(address(escrow)), amountIn * 2);
+        assertEq(xmetro.thorCredits(), 2);
     }
 
-    function test_MigrateYThor_Expired_Revert() public {
-        uint256 expiredDeadline = block.timestamp + 1;
-        escrow.setYThorLimits(50_000_000 ether, expiredDeadline);
-        vm.warp(expiredDeadline + 1);
+    function test_MigrateYThorUsesPrincipalCapAndCreditsPrincipal() public {
+        escrow.setCaps(CAP_THOR, 100 ether);
+        uint256 amountIn = 125 ether;
+        uint256 principal = 100 ether;
+        _approveAndFund(user, yThor, amountIn);
 
-        ythor.mint(user, 1 ether);
+        vm.expectEmit(true, false, false, true);
+        emit ThorMigrationEscrow.MigratedYThor(user, amountIn, principal);
         vm.prank(user);
-        ythor.approve(address(escrow), 1 ether);
+        escrow.migrateYThor(amountIn);
 
-        vm.prank(user);
-        vm.expectRevert(bytes("ThorEscrow: ythor expired"));
-        escrow.migrateYThor(1 ether);
-    }
-
-    function test_MigrateYThor_CapExceeded_Revert() public {
-        escrow.setYThorLimits(1 ether, block.timestamp + 365 days);
-
-        uint256 amountIn = 2 ether; // ratioYThor = 1e18 => mintAmount = 2 ether > cap
-        ythor.mint(user, amountIn);
-        vm.prank(user);
-        ythor.approve(address(escrow), amountIn);
+        assertEq(escrow.migratedYThor(), principal);
+        assertEq(escrow.capYThor(), principal);
+        assertEq(xmetro.lastYThorUser(), user);
+        assertEq(xmetro.lastYThorPrincipal(), principal);
 
         vm.prank(user);
         vm.expectRevert(bytes("ThorEscrow: ythor cap"));
-        escrow.migrateYThor(amountIn);
+        escrow.migrateYThor(1 ether);
+        assertEq(xmetro.yThorCredits(), 1);
     }
 
-    function test_Pause_Unpause_OnlyOwner() public {
+    function test_ThorAndYThorRepeatedMigrationsAreIndependent() public {
+        _approveAndFund(user, thor, 20 ether);
+        _approveAndFund(user, yThor, 20 ether);
+        for (uint256 i; i < 2; ++i) {
+            vm.prank(user);
+            escrow.migrateThor(10 ether);
+            vm.prank(user);
+            escrow.migrateYThor(10 ether);
+        }
+        assertEq(xmetro.thorCredits(), 2);
+        assertEq(xmetro.yThorCredits(), 2);
+        assertEq(escrow.migratedThor(), 22 ether);
+        assertEq(escrow.migratedYThor(), 16 ether);
+    }
+
+    function test_DifferentAddressesHaveIndependentCredits() public {
+        _approveAndFund(user, thor, 1 ether);
+        _approveAndFund(user2, thor, 2 ether);
+
+        vm.prank(user);
+        escrow.migrateThor(1 ether);
+        vm.prank(user2);
+        escrow.migrateThor(2 ether);
+
+        assertEq(xmetro.thorCredits(), 2);
+    }
+
+    function test_MigrationIsAllowedExactlyAtStartAndDeadline() public {
+        uint256 startTime = block.timestamp + 1 days;
+        uint256 deadline = startTime + 1 days;
+        ThorMigrationEscrow bounded =
+            new ThorMigrationEscrow(owner, address(xmetro), address(thor), address(yThor), startTime);
+        bounded.setCaps(10 ether, 10 ether);
+        bounded.setRatios(1e18, 1e18);
+        bounded.setDeadlines(deadline, deadline);
+
+        thor.mint(user, 1 ether);
+        yThor.mint(user2, 1 ether);
+        vm.prank(user);
+        thor.approve(address(bounded), 1 ether);
+        vm.prank(user2);
+        yThor.approve(address(bounded), 1 ether);
+
+        vm.warp(startTime);
+        vm.prank(user);
+        bounded.migrateThor(1 ether);
+        assertEq(bounded.migratedThor(), 1 ether);
+
+        vm.warp(deadline);
+        vm.prank(user2);
+        bounded.migrateYThor(1 ether);
+        assertEq(bounded.migratedYThor(), 1 ether);
+    }
+
+    function test_FailedTokenTransferDoesNotConsumeCreditOrCap() public {
+        thor.mint(user, 10 ether);
+
         vm.prank(user);
         vm.expectRevert();
-        escrow.pause();
+        escrow.migrateThor(10 ether);
 
-        escrow.pause();
-        assertTrue(escrow.paused());
-
-        escrow.unpause();
-        assertFalse(escrow.paused());
+        assertEq(xmetro.thorCredits(), 0);
+        assertEq(escrow.migratedThor(), 0);
+        assertEq(thor.balanceOf(address(escrow)), 0);
     }
 
-    function test_Migrate_NotStarted_RevertEarly() public {
-        escrow.setMigrationStartTime(block.timestamp + 1 days);
+    function test_FailedXMetroCreditRollsBackTokensCreditAndCap() public {
+        _approveAndFund(user, yThor, 10 ether);
+        xmetro.setRevertCredits(true);
 
         vm.prank(user);
+        vm.expectRevert(bytes("MockXMetro: rejected"));
+        escrow.migrateYThor(10 ether);
+
+        assertEq(xmetro.yThorCredits(), 0);
+        assertEq(escrow.migratedYThor(), 0);
+        assertEq(yThor.balanceOf(user), 10 ether);
+        assertEq(yThor.balanceOf(address(escrow)), 0);
+    }
+
+    function test_MigrationValidationStartDeadlineCapZeroAndZeroMint() public {
+        ThorMigrationEscrow future =
+            new ThorMigrationEscrow(owner, address(xmetro), address(thor), address(yThor), block.timestamp + 1 days);
+        future.setCaps(1 ether, 1 ether);
+        future.setRatios(1e18, 1e18);
+        future.setDeadlines(block.timestamp + 2 days, block.timestamp + 2 days);
+
         vm.expectRevert(bytes("ThorEscrow: not started"));
-        escrow.migrateYThor(1 ether);
-    }
+        future.migrateThor(1);
 
-    function test_Migrate_ZeroAmount_Revert() public {
-        vm.prank(user);
         vm.expectRevert(bytes("ThorEscrow: zero amount"));
-        escrow.migrateThor10m(0);
-
-        vm.prank(user);
-        vm.expectRevert(bytes("ThorEscrow: zero amount"));
-        escrow.migrateThor3m(0);
-
-        vm.prank(user);
+        escrow.migrateThor(0);
         vm.expectRevert(bytes("ThorEscrow: zero amount"));
         escrow.migrateYThor(0);
-    }
 
-    function test_MigrateThor_Success_TransfersToken_AndCallsXmetro() public {
-        escrow.setMigrationStartTime(block.timestamp);
-        escrow.setDeadlines(block.timestamp + 364 days, block.timestamp + 365 days);
+        ThorMigrationEscrow noConfig =
+            new ThorMigrationEscrow(owner, address(xmetro), address(thor), address(yThor), block.timestamp);
+        vm.expectRevert(bytes("ThorEscrow: thor config not set"));
+        noConfig.migrateThor(1);
 
-        uint256 amountIn = 10 ether;
-        thor.mint(user, amountIn);
+        ThorMigrationEscrow tinyRatio =
+            new ThorMigrationEscrow(owner, address(xmetro), address(thor), address(yThor), block.timestamp);
+        tinyRatio.setCaps(1 ether, 1 ether);
+        tinyRatio.setRatios(1, 1);
+        tinyRatio.setDeadlines(block.timestamp + 1 days, block.timestamp + 1 days);
+        thor.mint(user, 1);
         vm.prank(user);
-        thor.approve(address(escrow), amountIn);
-
-        uint256 expectedMint = (amountIn * escrow.ratio10M()) / 1e18;
-
-        vm.prank(user);
-        escrow.migrateThor10m(amountIn);
-
-        assertEq(thor.balanceOf(address(escrow)), amountIn);
-        assertEq(escrow.minted10M(), expectedMint);
-
-        assertEq(xmetro.lastThorUser(), user);
-        assertEq(xmetro.lastThorAmount(), expectedMint);
-        assertEq(xmetro.lastThorLockMonths(), 10);
-    }
-
-    function test_MigrateThor10m_RevertThenMigrateThor3m_When10mCapExceeded() public {
-        ThorMigrationEscrow e = new ThorMigrationEscrow(owner, address(xmetro), address(thor), address(ythor), block.timestamp);
-        e.setCaps(50_000_000 ether, 50_000_000 ether);
-        e.setRatios(e.cap10M() + 1, 1e18, 1e18);
-        e.setDeadlines(block.timestamp + 364 days, block.timestamp + 365 days);
-        e.setYThorLimits(50_000_000 ether, block.timestamp + 365 days);
-
-        uint256 amountIn = 1 ether;
-        thor.mint(user, amountIn);
-        vm.prank(user);
-        thor.approve(address(e), amountIn);
-
-        vm.prank(user);
-        vm.expectRevert(bytes("ThorEscrow: 10m cap"));
-        e.migrateThor10m(amountIn);
-
-        vm.prank(user);
-        e.migrateThor3m(amountIn);
-
-        assertEq(xmetro.lastThorLockMonths(), 3);
-    }
-
-    function test_MigrateThor3m_RevertWhen10mAvailable() public {
-        escrow.setMigrationStartTime(block.timestamp);
-        escrow.setDeadlines(block.timestamp + 364 days, block.timestamp + 365 days);
-
-        uint256 amountIn = 1 ether;
-        thor.mint(user, amountIn);
-        vm.prank(user);
-        thor.approve(address(escrow), amountIn);
-
-        vm.prank(user);
-        vm.expectRevert(bytes("ThorEscrow: 10m available"));
-        escrow.migrateThor3m(amountIn);
-    }
-
-    function test_MigrateYThor_Success_TransfersToken_AndCallsXmetro() public {
-        escrow.setMigrationStartTime(block.timestamp);
-
-        uint256 amountIn = 5 ether;
-        ythor.mint(user, amountIn);
-        vm.prank(user);
-        ythor.approve(address(escrow), amountIn);
-
-        uint256 expectedMint = (amountIn * escrow.ratioYThor()) / 1e18;
-
-        vm.prank(user);
-        escrow.migrateYThor(amountIn);
-
-        assertEq(ythor.balanceOf(address(escrow)), amountIn);
-        assertEq(xmetro.lastVestingUser(), user);
-        assertEq(xmetro.lastVestingAmount(), expectedMint);
-    }
-
-    function test_MigrateYThor_ZeroMint_Revert() public {
-        ThorMigrationEscrow e = new ThorMigrationEscrow(owner, address(xmetro), address(thor), address(ythor), block.timestamp);
-        e.setCaps(1 ether, 1 ether);
-        e.setRatios(1e18, 1e18, 1);
-        e.setDeadlines(block.timestamp + 364 days, block.timestamp + 365 days);
-        e.setYThorLimits(1 ether, block.timestamp + 365 days);
-
-        ythor.mint(user, 1);
-        vm.prank(user);
-        ythor.approve(address(e), 1);
-
+        thor.approve(address(tinyRatio), 1);
         vm.prank(user);
         vm.expectRevert(bytes("ThorEscrow: zero mint"));
-        e.migrateYThor(1);
+        tinyRatio.migrateThor(1);
+
+        escrow.setCaps(1 ether, 1 ether);
+        _approveAndFund(user, thor, 2 ether);
+        vm.prank(user);
+        vm.expectRevert(bytes("ThorEscrow: thor cap"));
+        escrow.migrateThor(2 ether);
+
+        uint256 deadline = block.timestamp + 1;
+        escrow.setDeadlines(deadline, deadline);
+        vm.warp(deadline + 1);
+        vm.prank(user2);
+        vm.expectRevert(bytes("ThorEscrow: thor expired"));
+        escrow.migrateThor(1);
+        vm.prank(user2);
+        vm.expectRevert(bytes("ThorEscrow: ythor expired"));
+        escrow.migrateYThor(1);
+        assertEq(xmetro.yThorCredits(), 0);
     }
 
-    function test_RescueTokens_OnlyOwner_AndBadToRevert() public {
-        ERC20Mintable other = new ERC20Mintable("OTHER", "OTHER", 18);
-        other.mint(address(escrow), 123);
+    function test_CapsRemainOwnerConfigurableAfterMigration() public {
+        _approveAndFund(user, thor, 10 ether);
+        vm.prank(user);
+        escrow.migrateThor(10 ether);
 
+        uint256 migrated = escrow.migratedThor();
+        escrow.setCaps(migrated - 1, CAP_YTHOR);
+        assertEq(escrow.capThor(), migrated - 1);
+        assertEq(escrow.migratedThor(), migrated);
+    }
+
+    function test_PauseAndRescueProtections() public {
         vm.prank(user);
         vm.expectRevert();
-        escrow.rescueTokens(address(other), user, 1);
+        escrow.pause();
 
+        escrow.pause();
+        _approveAndFund(user, thor, 1 ether);
+        vm.prank(user);
+        vm.expectRevert();
+        escrow.migrateThor(1 ether);
+        escrow.unpause();
+
+        other.mint(address(escrow), 100);
         vm.expectRevert(bytes("ThorEscrow: cannot rescue migration tokens"));
         escrow.rescueTokens(address(thor), user, 1);
-
         vm.expectRevert(bytes("ThorEscrow: cannot rescue migration tokens"));
-        escrow.rescueTokens(address(ythor), user, 1);
-
+        escrow.rescueTokens(address(yThor), user, 1);
         vm.expectRevert(bytes("ThorEscrow: bad to"));
         escrow.rescueTokens(address(other), address(0), 1);
 
         vm.expectEmit(true, true, false, true);
-        emit ThorMigrationEscrow.TokensRescued(address(other), user, 23);
-        escrow.rescueTokens(address(other), user, 23);
-        assertEq(other.balanceOf(user), 23);
+        emit ThorMigrationEscrow.TokensRescued(address(other), user, 40);
+        escrow.rescueTokens(address(other), user, 40);
+        assertEq(other.balanceOf(user), 40);
+    }
+
+    function test_FailedLaterCreditPreservesEarlierMigration() public {
+        _approveAndFund(user, thor, 20 ether);
+        vm.prank(user);
+        escrow.migrateThor(10 ether);
+        xmetro.setRevertCredits(true);
+        vm.prank(user);
+        vm.expectRevert(bytes("MockXMetro: rejected"));
+        escrow.migrateThor(10 ether);
+        assertEq(xmetro.thorCredits(), 1);
+        assertEq(escrow.migratedThor(), 11 ether);
+        assertEq(thor.balanceOf(user), 10 ether);
+        assertEq(thor.balanceOf(address(escrow)), 10 ether);
     }
 }
