@@ -28,11 +28,31 @@ contract AutoCompoundMainnetTest is MainnetForkBase {
         outsider = makeAddr("compound-outsider");
     }
 
-    function _route() internal view returns (bytes memory) {
+    function test_E07_StaleInputCapRollsBackAndFreshQuoteCompounds() public {
+        _mintAndStake(alice, 100 ether);
+        _distribute(100e6);
+        bytes memory oldData = _route(100e6);
+        uint256 oldMinimum = _quote(100e6);
+        _distribute(100e6);
+        uint256 pairBefore = IERC20(USDC).balanceOf(pair);
+        vm.prank(alice);
+        vm.expectRevert(bytes4(keccak256("InvalidExecutionRequest()")));
+        core.autocompound(oldMinimum, block.timestamp + 1 hours, oldData);
+        assertEq(core.claimable(alice), 200e6);
+        assertEq(IERC20(USDC).balanceOf(address(core)), 200e6);
+        assertEq(IERC20(USDC).balanceOf(pair), pairBefore);
+        assertEq(IERC20(USDC).allowance(proxy, V2_ROUTER), 0);
+        uint256 freshMinimum = _quote(200e6);
+        vm.prank(alice);
+        assertEq(core.autocompound(freshMinimum, block.timestamp + 1 hours, _route(200e6)), freshMinimum);
+        assertEq(core.claimable(alice), 0);
+    }
+
+    function _route(uint256 cap) internal view returns (bytes memory) {
         address[] memory path = new address[](2);
         path[0] = USDC;
         path[1] = address(metro);
-        return abi.encode(uint8(0), abi.encode(path));
+        return abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(0), cap, abi.encode(path));
     }
 
     function _quote(uint256 amount) internal view returns (uint256) {
@@ -81,7 +101,7 @@ contract AutoCompoundMainnetTest is MainnetForkBase {
         vm.expectEmit(true, false, false, true, address(core));
         emit AutoCompounded(alice, 100e6, expected);
         vm.prank(alice);
-        uint256 received = core.autocompound(expected, block.timestamp + 1 hours, _route());
+        uint256 received = core.autocompound(expected, block.timestamp + 1 hours, _route(100e6));
         assertEq(received, expected);
         assertEq(core.balanceOf(alice) - sharesBefore, received);
         assertEq(metro.balanceOf(address(core)) - coreMetroBefore, received);
@@ -99,7 +119,7 @@ contract AutoCompoundMainnetTest is MainnetForkBase {
         assertFalse(core.autocompoundEnabled(alice));
         uint256 firstQuote = _quote(30e6);
         vm.prank(alice);
-        assertEq(core.autocompound(firstQuote, block.timestamp + 1 hours, _route()), firstQuote);
+        assertEq(core.autocompound(firstQuote, block.timestamp + 1 hours, _route(30e6)), firstQuote);
         assertFalse(core.autocompoundEnabled(alice));
         vm.prank(alice);
         core.enableAutocompound();
@@ -110,7 +130,7 @@ contract AutoCompoundMainnetTest is MainnetForkBase {
         assertEq(core.claimable(alice), secondPending);
         uint256 secondQuote = _quote(secondPending);
         vm.prank(alice);
-        assertEq(core.autocompound(secondQuote, block.timestamp + 1 hours, _route()), secondQuote);
+        assertEq(core.autocompound(secondQuote, block.timestamp + 1 hours, _route(secondPending)), secondQuote);
         assertTrue(core.autocompoundEnabled(alice));
         vm.prank(alice);
         core.disableAutocompound();
@@ -122,7 +142,7 @@ contract AutoCompoundMainnetTest is MainnetForkBase {
         assertLe(thirdPending, IERC20(USDC).balanceOf(address(core)));
         uint256 thirdQuote = _quote(thirdPending);
         vm.prank(alice);
-        assertEq(core.autocompound(thirdQuote, block.timestamp + 1 hours, _route()), thirdQuote);
+        assertEq(core.autocompound(thirdQuote, block.timestamp + 1 hours, _route(thirdPending)), thirdQuote);
         assertFalse(core.autocompoundEnabled(alice));
         assertEq(core.claimable(alice), 0);
         assertEq(IERC20(USDC).balanceOf(address(core)), 30e6 - secondPending - thirdPending);
@@ -159,21 +179,23 @@ contract AutoCompoundMainnetTest is MainnetForkBase {
         _mintAndStake(alice, 100 ether);
         vm.prank(alice);
         vm.expectRevert();
-        core.autocompound(1, block.timestamp + 1 hours, _route());
+        core.autocompound(1, block.timestamp + 1 hours, _route(100e6));
         _distribute(100e6);
         uint256 beforeCore = IERC20(USDC).balanceOf(address(core));
         vm.prank(alice);
         vm.expectRevert();
-        core.autocompound(type(uint256).max, block.timestamp + 1 hours, _route());
+        core.autocompound(type(uint256).max, block.timestamp + 1 hours, _route(100e6));
         vm.prank(alice);
         vm.expectRevert();
-        core.autocompound(1, block.timestamp, _route());
+        core.autocompound(1, block.timestamp, _route(100e6));
         address[] memory wrong = new address[](2);
         wrong[0] = address(metro);
         wrong[1] = USDC;
         vm.prank(alice);
         vm.expectRevert();
-        core.autocompound(1, block.timestamp + 1 hours, abi.encode(uint8(0), abi.encode(wrong)));
+        core.autocompound(
+            1, block.timestamp + 1 hours, abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(0), 100e6, abi.encode(wrong))
+        );
         assertEq(core.claimable(alice), 100e6);
         assertEq(IERC20(USDC).balanceOf(address(core)), beforeCore);
         assertEq(IERC20(USDC).balanceOf(proxy), 0);
@@ -186,14 +208,14 @@ contract AutoCompoundMainnetTest is MainnetForkBase {
         _prepareThree();
         vm.prank(outsider);
         vm.expectRevert();
-        core.autocompoundBatch(_three(), 1, block.timestamp + 1 hours, _route());
+        core.autocompoundBatch(_three(), 1, block.timestamp + 1 hours, _route(100e6));
         core.setAutoCompoundOperator(address(this), false);
         vm.expectRevert();
-        core.autocompoundBatch(_three(), 1, block.timestamp + 1 hours, _route());
+        core.autocompoundBatch(_three(), 1, block.timestamp + 1 hours, _route(100e6));
         assertEq(core.claimable(alice), 20e6);
         core.setAutoCompoundOperator(address(this), true);
         uint256 expected = _quote(100e6);
-        assertEq(core.autocompoundBatch(_three(), 1, block.timestamp + 1 hours, _route()), expected);
+        assertEq(core.autocompoundBatch(_three(), 1, block.timestamp + 1 hours, _route(100e6)), expected);
     }
 
     /// E-08.02/.04: Tests one real swap pro rata and largest remainder.
@@ -205,7 +227,7 @@ contract AutoCompoundMainnetTest is MainnetForkBase {
         uint256 beforeBob = core.balanceOf(bob);
         uint256 beforeCarol = core.balanceOf(carol);
         vm.recordLogs();
-        uint256 received = core.autocompoundBatch(_three(), expected, block.timestamp + 1 hours, _route());
+        uint256 received = core.autocompoundBatch(_three(), expected, block.timestamp + 1 hours, _route(100e6));
         Vm.Log[] memory logs = vm.getRecordedLogs();
         assertEq(received, expected);
         uint256 aliceAdded = core.balanceOf(alice) - beforeAlice;
@@ -258,15 +280,15 @@ contract AutoCompoundMainnetTest is MainnetForkBase {
         candidates[6] = outsider;
         candidates[7] = address(0);
         uint256 expected = _quote(100e6);
-        assertEq(core.autocompoundBatch(candidates, 1, block.timestamp + 1 hours, _route()), expected);
+        assertEq(core.autocompoundBatch(candidates, 1, block.timestamp + 1 hours, _route(100e6)), expected);
         assertEq(core.claimable(alice), 0);
         assertEq(core.claimable(bob), 0);
         assertEq(core.claimable(carol), 0);
         assertEq(core.claimable(outsider), 10e6);
         vm.expectRevert();
-        core.autocompoundBatch(new address[](0), 1, block.timestamp + 1 hours, _route());
+        core.autocompoundBatch(new address[](0), 1, block.timestamp + 1 hours, _route(100e6));
         vm.expectRevert();
-        core.autocompoundBatch(_three(), 1, block.timestamp + 1 hours, _route());
+        core.autocompoundBatch(_three(), 1, block.timestamp + 1 hours, _route(100e6));
         _distribute(110e6);
         uint256 pendingAlice = core.claimable(alice);
         uint256 pendingBob = core.claimable(bob);
@@ -274,7 +296,7 @@ contract AutoCompoundMainnetTest is MainnetForkBase {
         IXMetroAdapterAdminFork(proxy).setSwapMetroConfig(false, false);
         IXMetroAdapterAdminFork(proxy).setSwapMetroConfig(true, true);
         vm.expectRevert();
-        core.autocompoundBatch(_three(), 1, block.timestamp + 1 hours, _route());
+        core.autocompoundBatch(_three(), 1, block.timestamp + 1 hours, _route(100e6));
         assertEq(core.claimable(alice), pendingAlice);
         assertEq(core.claimable(bob), pendingBob);
         assertEq(core.claimable(carol), pendingCarol);
@@ -303,7 +325,7 @@ contract AutoCompoundMainnetTest is MainnetForkBase {
         users[1] = bob;
         uint256 pairBefore = IERC20(USDC).balanceOf(tinyPair);
         vm.expectRevert();
-        core.autocompoundBatch(users, 1, block.timestamp + 1 hours, _route());
+        core.autocompoundBatch(users, 1, block.timestamp + 1 hours, _route(100e6 + 1));
         assertEq(core.claimable(alice), 1);
         assertEq(core.claimable(bob), 100e6);
         assertEq(IERC20(USDC).balanceOf(tinyPair), pairBefore);
@@ -316,15 +338,15 @@ contract AutoCompoundMainnetTest is MainnetForkBase {
         core.enableAutocompound();
         _distribute(100e6);
         vm.expectRevert();
-        core.autocompoundBatch(_one(alice), type(uint256).max, block.timestamp + 1 hours, _route());
+        core.autocompoundBatch(_one(alice), type(uint256).max, block.timestamp + 1 hours, _route(100e6));
         assertEq(core.claimable(alice), 100e6);
         assertEq(IERC20(USDC).balanceOf(address(core)), 100e6);
         assertEq(IERC20(USDC).allowance(proxy, V2_ROUTER), 0);
         uint256 snapshot = vm.snapshotState();
-        uint256 batchOut = core.autocompoundBatch(_one(alice), 1, block.timestamp + 1 hours, _route());
+        uint256 batchOut = core.autocompoundBatch(_one(alice), 1, block.timestamp + 1 hours, _route(100e6));
         assertTrue(vm.revertToState(snapshot));
         vm.prank(alice);
-        uint256 manualOut = core.autocompound(1, block.timestamp + 1 hours, _route());
+        uint256 manualOut = core.autocompound(1, block.timestamp + 1 hours, _route(100e6));
         assertEq(batchOut, manualOut);
     }
 
@@ -335,7 +357,7 @@ contract AutoCompoundMainnetTest is MainnetForkBase {
         uint256 bobShares = core.balanceOf(bob);
         uint256 carolShares = core.balanceOf(carol);
         vm.expectRevert();
-        core.autocompoundBatch(_three(), type(uint256).max, block.timestamp + 1 hours, _route());
+        core.autocompoundBatch(_three(), type(uint256).max, block.timestamp + 1 hours, _route(100e6));
         assertEq(core.claimable(alice), 20e6);
         assertEq(core.claimable(bob), 30e6);
         assertEq(core.claimable(carol), 50e6);

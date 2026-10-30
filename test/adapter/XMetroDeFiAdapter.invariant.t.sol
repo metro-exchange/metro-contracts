@@ -56,7 +56,7 @@ contract CompactAdapterInvariantHandler is Test {
             amountIn: amount,
             minAmountOut: amount,
             deadline: block.timestamp + 1,
-            executionData: abi.encode(uint8(0), abi.encode(path))
+            executionData: abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(0), amount, abi.encode(path))
         });
         core.runManual(usdc, request);
         totalInput += amount;
@@ -82,11 +82,32 @@ contract CompactAdapterInvariantHandler is Test {
             minTotalAmountOut: total,
             minUserAmountsOut: new uint256[](0),
             deadline: block.timestamp + 1,
-            executionData: abi.encode(uint8(0), abi.encode(path))
+            executionData: abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(0), total, abi.encode(path))
         });
         core.runBatch(usdc, request);
         totalInput += total;
         totalOutput += total;
+    }
+
+    function staleQuoteThenRetry(uint96 amountSeed) external {
+        uint256 amount = bound(uint256(amountSeed), 2, 1e24);
+        usdc.mint(address(core), amount);
+        IXMetroDeFiAdapter.ManualExecution memory request = IXMetroDeFiAdapter.ManualExecution({
+            strategyId: strategy,
+            account: users[0],
+            amountIn: amount,
+            minAmountOut: amount,
+            deadline: block.timestamp + 1,
+            executionData: abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(0), amount - 1, abi.encode(_path()))
+        });
+        uint256 coreBefore = usdc.balanceOf(address(core));
+        vm.expectRevert(XMetroDeFiAdapter.InvalidExecutionRequest.selector);
+        core.runManual(usdc, request);
+        assertEq(usdc.balanceOf(address(core)), coreBefore);
+        request.executionData = abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(0), amount, abi.encode(_path()));
+        core.runManual(usdc, request);
+        totalInput += amount;
+        totalOutput += amount;
     }
 
     function user(uint256 index) external view returns (address) {

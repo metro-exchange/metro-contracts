@@ -42,6 +42,17 @@ jobs:
             script/Deploy.s.sol \
             script/UpgradeDeFiAdapter.s.sol \
             script/ReplaceDeFiAdapter.s.sol \
+            test/adapter/XMetroDeFiAdapter.flows.t.sol \
+            test/adapter/XMetroDeFiAdapter.fuzz.t.sol \
+            test/adapter/XMetroDeFiAdapter.invariant.t.sol \
+            test/adapter/XMetroDeFiAdapter.uups.t.sol \
+            test/adapter/XMetroDeFiAdapterV2.sol \
+            test/core/XMetroSystem.integration.t.sol \
+            test/fork-v2/mainnet/AdapterLifecycle.t.sol \
+            test/fork-v2/mainnet/CommissionNetPaths.t.sol \
+            test/fork-v2/mainnet/CrossSourcePaths.t.sol \
+            test/fork-v2/mainnet/OneInchSwap.t.sol \
+            test/fork-v2/mainnet/SwapRoutes.t.sol \
             test/core/XMetroCore.adapter.invariant.t.sol \
             test/core/XMetroCore.adapter.t.sol \
             test/deployment/DeployScript.t.sol \
@@ -79,3 +90,9 @@ jobs:
 
       - name: Run deployment-script tests
         run: FOUNDRY_PROFILE=deployment-test forge test -vv
+
+      - name: Check integration example syntax
+        run: |
+          node --check integration/examples/user-actions.mjs
+          node --check integration/examples/backend-actions.mjs
+          node --check script/run-mainnet-fork-gas.mjs

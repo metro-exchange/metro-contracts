@@ -70,7 +70,7 @@ The current xMETRO uses original one-step ownership, allows renouncing, and star
 | Keeper compound batch | `autocompoundBatch(users,minMetroOut,deadline,swapData)` | One swap; shares allocated in proportion to pending rewards. |
 | Reward injection | `distribute`, `distributeFromBalance` | Same operator entrypoints, now with optional commission diversion; Core receives net rewards. |
 
-V2/V3 compound data remains `abi.encode(uint8 dexType, bytes routeData)`. `previewWithdrawableNow(user)` still has four return fields, but its THOR/yTHOR components now mean the sum of payouts from all eligible, unexited positions. It includes unlocked Contributor value and excludes all withdrawal queues, even matured ones. Read each queue through its `unstakeRequestCount*`, `unstakeRequest*`, and `unstakeCursor*` getters.
+All V2/V3/1inch compound and swap data now uses the version-2 [swap envelope](new-features.md#swap-execution-data), including a nonzero quoted USDC input cap. Core function signatures remain unchanged; old encoded data is rejected by the new Adapter. `previewWithdrawableNow(user)` still has four return fields, but its THOR/yTHOR components now mean the sum of payouts from all eligible, unexited positions. It includes unlocked Contributor value and excludes all withdrawal queues, even matured ones. Read each queue through its `unstakeRequestCount*`, `unstakeRequest*`, and `unstakeCursor*` getters.
 
 ## Events and indexing
 

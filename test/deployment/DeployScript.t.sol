@@ -29,7 +29,7 @@ contract DeployScriptTest is Test {
     using stdJson for string;
 
     uint256 internal constant DEPLOYER_KEY = 0xD3F10;
-    uint256 internal constant ADAPTER_RUNTIME = 20_487;
+    uint256 internal constant ADAPTER_RUNTIME = 20_574;
     uint256 internal constant CORE_RUNTIME = 23_510;
     bytes32 internal constant P_DEPOSIT = bytes32("P:deposit");
     bytes32 internal constant IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
@@ -176,7 +176,7 @@ contract DeployScriptTest is Test {
         assertEq(adapter.USDC(), address(usdc));
         assertEq(adapter.METRO(), address(metro));
         assertEq(adapter.logicEpoch(), 1);
-        assertEq(adapter.implementationVersion(), 1);
+        assertEq(adapter.implementationVersion(), 2);
         assertEq(json.readAddress(".routerV2"), address(usdt));
         assertEq(json.readAddress(".routerV3"), address(wbtc));
         assertEq(json.readAddress(".oneInchRouter"), address(gho));
@@ -243,11 +243,11 @@ contract DeployScriptTest is Test {
         assertEq(upgradeJson.readAddress(".newImplementation"), predictedV2);
         assertEq(predictedV2.code.length, ADAPTER_RUNTIME);
         assertEq(adapter.logicEpoch(), 2);
-        assertEq(adapter.implementationVersion(), 2);
+        assertEq(adapter.implementationVersion(), 3);
         assertEq(upgradeJson.readUint(".oldLogicEpoch"), 1);
         assertEq(upgradeJson.readUint(".newLogicEpoch"), 2);
-        assertEq(upgradeJson.readUint(".oldImplementationVersion"), 1);
-        assertEq(upgradeJson.readUint(".newImplementationVersion"), 2);
+        assertEq(upgradeJson.readUint(".oldImplementationVersion"), 2);
+        assertEq(upgradeJson.readUint(".newImplementationVersion"), 3);
         assertEq(core.deFiAdapter(), proxy);
         assertFalse(core.paused());
         {
@@ -257,7 +257,7 @@ contract DeployScriptTest is Test {
             assertEq(activeAddresses.readAddress(".proxyImplementationReadback"), predictedV2);
             assertEq(activeAddresses.readUint(".adapterEpoch"), 1);
             assertEq(activeAddresses.readUint(".adapterLogicEpoch"), 2);
-            assertEq(activeAddresses.readUint(".adapterImplementationVersion"), 2);
+            assertEq(activeAddresses.readUint(".adapterImplementationVersion"), 3);
         }
 
         bytes32 disabledAaveV3Id = vm.readFile(_deploymentPath()).readBytes32(".aaveV3StrategyId");
@@ -321,7 +321,7 @@ contract DeployScriptTest is Test {
         assertTrue(core.paused());
         IXMetroDeFiAdapterAdmin replacementAdapter = IXMetroDeFiAdapterAdmin(predictedReplacementProxy);
         assertEq(replacementAdapter.logicEpoch(), 1);
-        assertEq(replacementAdapter.implementationVersion(), 2);
+        assertEq(replacementAdapter.implementationVersion(), 3);
         assertEq(replacementAdapter.xMETRO(), address(core));
         _assertAaveV3Cleared(replacementAdapter);
         assertFalse(replacementAdapter.strategyInfo(disabledAaveV3Id).enabled);
@@ -334,7 +334,7 @@ contract DeployScriptTest is Test {
             assertEq(activeAddresses.readAddress(".proxyImplementationReadback"), predictedReplacementImplementation);
             assertEq(activeAddresses.readUint(".adapterEpoch"), 2);
             assertEq(activeAddresses.readUint(".adapterLogicEpoch"), 1);
-            assertEq(activeAddresses.readUint(".adapterImplementationVersion"), 2);
+            assertEq(activeAddresses.readUint(".adapterImplementationVersion"), 3);
             assertFalse(activeAddresses.readBool(".aaveV3Enabled"));
             assertEq(activeAddresses.readAddress(".aaveV3Pool"), address(0));
             assertEq(activeAddresses.readAddress(".aaveV3AUsdc"), address(0));

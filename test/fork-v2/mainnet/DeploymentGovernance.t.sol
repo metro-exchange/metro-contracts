@@ -37,7 +37,7 @@ contract DeploymentGovernanceMainnetTest is MainnetForkBase {
         assertEq(block.number, FORK_BLOCK);
         assertGt(address(metro).code.length, 0);
         assertEq(address(core).code.length, 23_510);
-        assertEq(implementation.code.length, 20_487);
+        assertEq(implementation.code.length, 20_574);
         assertEq(proxy.code.length, 76);
         assertGt(address(distributor).code.length, 0);
         assertGt(address(escrow).code.length, 0);
@@ -527,7 +527,7 @@ contract DeploymentGovernanceMainnetTest is MainnetForkBase {
         address[] memory path = new address[](2);
         path[0] = USDC;
         path[1] = address(metro);
-        bytes memory executionData = abi.encode(uint8(0), abi.encode(path));
+        bytes memory executionData = abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(0), uint256(100e6), abi.encode(path));
         vm.expectRevert();
         core.autocompoundBatch(users, 1, block.timestamp + 1 hours, executionData);
         vm.prank(newKeeper);

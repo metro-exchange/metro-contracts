@@ -141,3 +141,19 @@ The gas harness used a local Anvil fork and submitted actual transactions to `12
 Example 100-user successful gas used on the recorded routes: Auto-Compound `5,114,294` for the first batch and `3,370,094` for a later batch; Auto-Swap USDT `7,471,923`/`4,051,923`; WBTC `7,322,861`/`3,902,857`; GHO `7,239,705`/`3,801,552`. See the raw receipt records for the other paths, versions and prior balances. The Auto-Compound later state can still exhibit F-01; successful receipt status is not an accounting acceptance.
 
 The original gas study and later XAUT retry did not always use identical Core artifacts; the [artifact variant record](evidence/2026-09-29-eth26077998-01/gas-artifact-variants.json) separates them. Do not mix their gas figures as one exact build. Public RPC timeouts also affected some retries, and those attempts remain in the evidence rather than being converted into passes.
+
+## October 30 local remediation: Sherlock #13
+
+Validated locally with Solidity 0.8.30 before the subsequent compiler/ownership remediations. No commit, publication or on-chain transaction was made. Tracked sources were copied to an isolated directory using the existing local dependencies; untracked diagnostic tests were excluded and preserved.
+
+| Command (FOUNDRY_PROFILE) | Result |
+| --- | --- |
+| adapter: forge test -vv | 45 passed, 0 failed, 2 RPC-dependent tests skipped |
+| core: forge test -vv | 59 passed, 0 failed, 2 RPC-dependent tests skipped |
+| regression: forge test -vv | 146 passed, 0 failed |
+| deploy: forge build --sizes | Passed |
+| deployment-test: forge test -vv | 1 scenario suite passed, 0 failed |
+| fork-v2: forge build | Passed; actual mainnet fork scenarios not run |
+| Node syntax and local stub-provider assertions | Passed: all DEX envelope encodings agree with cast, version/binding/cap rejection, eligible candidates and unchanged quote data |
+
+Adapter runtime/initcode: 20,574/20,777 bytes. Core runtime remains 23,510 bytes. Existing size limits were retained. Core and Adapter ABI comparisons against the delivered JSON were equal; the Adapter storage namespace/canary regression passed and no storage fields were changed. No ETH_RPC_URL or BASE_RPC_URL was available, so RPC-dependent tests are not claimed as passed. Final combined remediation artifacts must be revalidated after later changes.

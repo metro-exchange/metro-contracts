@@ -623,7 +623,11 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         path[1] = address(metro);
         uint256 quote = IUniswapV2RouterMainnet(V2_ROUTER).getAmountsOut(200e6, path)[1];
         vm.prank(alice);
-        uint256 received = core.autocompound(quote, block.timestamp + 1 hours, abi.encode(uint8(0), abi.encode(path)));
+        uint256 received = core.autocompound(
+            quote,
+            block.timestamp + 1 hours,
+            abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(0), uint256(200e6), abi.encode(path))
+        );
         assertEq(received, quote);
         assertEq(core.balanceOf(alice), received);
         assertEq(core.claimable(alice), 0);

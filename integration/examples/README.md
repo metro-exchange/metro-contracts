@@ -15,18 +15,24 @@ These runnable Node.js modules use `ethers` 5.8.0 and the ABI files from this de
 
 Set `CONFIG_FILE` explicitly to a verified environment file for the same contract revision as these ABIs; the example environment has no default configuration path. `loadConfig()` accepts `deployed_pending_handover` and `deployed`; existing deployment JSON remains unchanged. The QA record uses the legacy status `deployed_pending_project_handover`, and belongs to the previous contract revision. Continue testing that deployment with its matching baseline examples. This update does not add status compatibility that would allow new ABIs to be used against old contracts. The Ethereum template remains `not_deployed`.
 
-All balances and minimums are integer base units: METRO/THOR/yTHOR generally use 18 decimals, USDC uses 6, and each output asset has its own decimals. For a V2 swap, `executionData = abi.encode(uint8(0), abi.encode(path))`; the path begins with USDC and ends with the configured output. For a V4 batch, pass a nonzero minimum for each original candidate; for every other batch strategy pass an empty `minUserAmountsOut` array. For Maple first authorization, request the signature for the **Adapter Proxy**; do not ask users to approve USDC to the Adapter.
+All balances and minimums are integer base units: METRO/THOR/yTHOR generally use 18 decimals, USDC uses 6, and each output asset has its own decimals. For a V2 swap, use `buildV2ExecutionData(path, quotedRewardIn)` with the same USDC input as the quote; the path begins with USDC and ends with the configured output. For a V4 batch, pass a nonzero minimum for each original candidate; for every other batch strategy pass an empty `minUserAmountsOut` array. For Maple first authorization, request the signature for the **Adapter Proxy**; do not ask users to approve USDC to the Adapter.
 
-Example imports:
+Swap helpers require the currently bound Adapter to report implementation version 2 and validate the new domain and nonzero cap before sending. Old or unknown versions are rejected; deposits keep their own encoding. Batch helpers retain the submitted quote unchanged and stop if eligible rewards exceed its cap. Requote the complete payload and simulate again; never raise only the cap. See the [encoding reference](../docs/new-features.md#swap-execution-data).
+
+Example imports (the application supplies `quote`):
 
 ```js
 import { ethers } from 'ethers';
-import { loadConfig, approveAndStake, buildV2ExecutionData } from './user-actions.mjs';
+import { loadConfig, approveAndStake, buildV2ExecutionData, buildSwapExecutionData } from './user-actions.mjs';
 
 const config = await loadConfig(process.env.CONFIG_FILE); // A verified local/new deployment matching these ABIs.
 const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL);
 const signer = provider.getSigner(); // Replace with the actual wallet/Safe integration.
-const data = buildV2ExecutionData([config.tokens.TestUSDC, config.tokens.TestUSDT]);
+// Obtain quote.inputAmount, minimum output, route and deadline together from your quoting integration.
+const quotedRewardIn = ethers.BigNumber.from(quote.inputAmount);
+const data = buildV2ExecutionData([config.tokens.TestUSDC, config.tokens.TestUSDT], quotedRewardIn);
+// V3: buildSwapExecutionData(1, quotedRewardIn, quote.packedPath)
+// 1inch: buildSwapExecutionData(2, quotedRewardIn, quote.routerCalldata)
 // await approveAndStake(signer, config, ethers.utils.parseEther('10'));
 ```
 

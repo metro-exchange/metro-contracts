@@ -1,5 +1,7 @@
 # xMETRO Integration Guide
 
+Current swap and compound examples require Adapter implementation version 2 and the [new swap envelope](docs/new-features.md#swap-execution-data). The four Core entrypoint signatures are unchanged. Use the ABI and examples matching the actual deployed revision; existing configuration JSON and historical addresses are not updated by this source change.
+
 ## October 24 source update
 
 This source version changes yTHOR exits to 20%-100% of the converted METRO principal. Production opens exits after 120 days and reaches 100% over the following `4 * 365 days`; Base QA keeps its 4-hour delay and 12-hour ramp. Repeated migrations, independent position IDs, one complete exit per position, and `1e24` reward-debt precision are retained.
