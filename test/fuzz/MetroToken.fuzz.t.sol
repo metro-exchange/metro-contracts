@@ -45,7 +45,7 @@ contract MetroTokenFuzzTest is Test {
 
         vm.prank(minter);
         if (!allowed) {
-            vm.expectRevert(bytes("MetroToken: not minter"));
+            vm.expectRevert(MetroToken.UnauthorizedMinter.selector);
             metro.mint(to, value);
             return;
         }

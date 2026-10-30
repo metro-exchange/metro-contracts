@@ -242,9 +242,9 @@ contract DeploymentGovernanceMainnetTest is MainnetForkBase {
         _fundMigrationToken(YTHOR, YTHOR_HOLDER, address(escrow), 1 ether);
         vm.expectRevert();
         core.rescueERC20(address(metro), recipient, 1);
-        vm.expectRevert("ThorEscrow: cannot rescue migration tokens");
+        vm.expectRevert(ThorMigrationEscrow.MigrationTokenRescueForbidden.selector);
         escrow.rescueTokens(THOR, recipient, 1);
-        vm.expectRevert("ThorEscrow: cannot rescue migration tokens");
+        vm.expectRevert(ThorMigrationEscrow.MigrationTokenRescueForbidden.selector);
         escrow.rescueTokens(YTHOR, recipient, 1);
         vm.prank(recipient);
         vm.expectRevert();

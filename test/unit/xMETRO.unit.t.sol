@@ -1441,7 +1441,7 @@ contract xMETROUnitTest is Test {
         uint256 pending = xmetro.claimable(userA);
         int256 debt = xmetro.rewardDebt(userA);
         metro.setMinter(address(xmetro), false);
-        vm.expectRevert(bytes("MetroToken: not minter"));
+        vm.expectRevert(MetroToken.UnauthorizedMinter.selector);
         xmetro.creditYThorFromMigration(userA, 4 ether);
         assertEq(xmetro.yThorPositionCount(userA), 1);
         assertEq(_activeYThorPrincipal(userA), 2 ether);

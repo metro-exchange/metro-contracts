@@ -435,6 +435,56 @@
   },
   {
     "type": "error",
+    "name": "CommissionDistributorMismatch",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "CommissionSplitEnabled",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "CommissionTokenMismatch",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "CommissionVaultMigrationPending",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "CommissionVaultNotContract",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "CommissionVaultPaused",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InsufficientRewardBalance",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidCommissionSplitBps",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidOperator",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidRecipient",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "OwnableInvalidOwner",
     "inputs": [
       {
@@ -470,5 +520,25 @@
         "internalType": "address"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "UnauthorizedOperator",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ZeroAmount",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ZeroCommissionVault",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ZeroXMetro",
+    "inputs": []
   }
 ]

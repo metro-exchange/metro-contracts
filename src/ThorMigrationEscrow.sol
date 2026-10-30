@@ -18,6 +18,26 @@ interface IxMETROMigration {
 /// @title ThorMigrationEscrow
 /// @notice Custodies migrated THOR/yTHOR and creates the corresponding locked METRO positions.
 contract ThorMigrationEscrow is Ownable2Step, Pausable, ReentrancyGuardTransient {
+    error ZeroXMetro();
+    error ZeroMigrationToken();
+    error InvalidMigrationStartTime();
+    error MigrationNotStarted();
+    error ZeroAmount();
+    error ThorConfigurationMissing();
+    error ThorMigrationExpired();
+    error ZeroMintAmount();
+    error ThorCapExceeded();
+    error YThorConfigurationMissing();
+    error YThorMigrationExpired();
+    error YThorCapExceeded();
+    error InvalidMigrationDeadline();
+    error DeadlineNotAfterMigrationStart();
+    error InvalidMigrationRatio();
+    error MigrationRatiosLocked();
+    error InvalidMigrationCap();
+    error MigrationTokenRescueForbidden();
+    error InvalidRecipient();
+
     using SafeERC20 for IERC20;
 
     IxMETROMigration public immutable xMETRO;
@@ -48,9 +68,9 @@ contract ThorMigrationEscrow is Ownable2Step, Pausable, ReentrancyGuardTransient
     constructor(address owner_, address xMETRO_, address thor_, address yThor_, uint256 migrationStartTime_)
         Ownable(owner_)
     {
-        require(xMETRO_ != address(0), "ThorEscrow: zero xMETRO");
-        require(thor_ != address(0) && yThor_ != address(0), "ThorEscrow: zero token");
-        require(migrationStartTime_ >= block.timestamp, "ThorEscrow: bad start time");
+        require(xMETRO_ != address(0), ZeroXMetro());
+        require(thor_ != address(0) && yThor_ != address(0), ZeroMigrationToken());
+        require(migrationStartTime_ >= block.timestamp, InvalidMigrationStartTime());
 
         xMETRO = IxMETROMigration(xMETRO_);
         thorToken = IERC20(thor_);
@@ -60,14 +80,14 @@ contract ThorMigrationEscrow is Ownable2Step, Pausable, ReentrancyGuardTransient
 
     /// @notice Migrate THOR through the single project-configured conversion path.
     function migrateThor(uint256 amountIn) external nonReentrant whenNotPaused {
-        require(block.timestamp >= migrationStartTime, "ThorEscrow: not started");
-        require(amountIn > 0, "ThorEscrow: zero amount");
-        require(capThor != 0 && ratioThor != 0, "ThorEscrow: thor config not set");
-        require(block.timestamp <= deadlineThor, "ThorEscrow: thor expired");
+        require(block.timestamp >= migrationStartTime, MigrationNotStarted());
+        require(amountIn > 0, ZeroAmount());
+        require(capThor != 0 && ratioThor != 0, ThorConfigurationMissing());
+        require(block.timestamp <= deadlineThor, ThorMigrationExpired());
 
         uint256 principal = Math.mulDiv(amountIn, ratioThor, 1e18);
-        require(principal > 0, "ThorEscrow: zero mint");
-        require(migratedThor + principal <= capThor, "ThorEscrow: thor cap");
+        require(principal > 0, ZeroMintAmount());
+        require(migratedThor + principal <= capThor, ThorCapExceeded());
 
         migratedThor += principal;
 
@@ -79,14 +99,14 @@ contract ThorMigrationEscrow is Ownable2Step, Pausable, ReentrancyGuardTransient
 
     /// @notice Migrate yTHOR into an active position whose future reward multiplier is managed by xMETRO.
     function migrateYThor(uint256 amountIn) external nonReentrant whenNotPaused {
-        require(block.timestamp >= migrationStartTime, "ThorEscrow: not started");
-        require(amountIn > 0, "ThorEscrow: zero amount");
-        require(capYThor != 0 && ratioYThor != 0, "ThorEscrow: ythor config not set");
-        require(block.timestamp <= deadlineYThor, "ThorEscrow: ythor expired");
+        require(block.timestamp >= migrationStartTime, MigrationNotStarted());
+        require(amountIn > 0, ZeroAmount());
+        require(capYThor != 0 && ratioYThor != 0, YThorConfigurationMissing());
+        require(block.timestamp <= deadlineYThor, YThorMigrationExpired());
 
         uint256 principal = Math.mulDiv(amountIn, ratioYThor, 1e18);
-        require(principal > 0, "ThorEscrow: zero mint");
-        require(migratedYThor + principal <= capYThor, "ThorEscrow: ythor cap");
+        require(principal > 0, ZeroMintAmount());
+        require(migratedYThor + principal <= capYThor, YThorCapExceeded());
         migratedYThor += principal;
 
         yThorToken.safeTransferFrom(msg.sender, address(this), amountIn);
@@ -97,17 +117,17 @@ contract ThorMigrationEscrow is Ownable2Step, Pausable, ReentrancyGuardTransient
 
     /// @notice Set migration start time (onlyOwner).
     function setMigrationStartTime(uint256 newStartTime) external onlyOwner {
-        require(newStartTime >= block.timestamp, "ThorEscrow: bad start time");
+        require(newStartTime >= block.timestamp, InvalidMigrationStartTime());
         migrationStartTime = newStartTime;
         emit MigrationStartTimeUpdated(newStartTime);
     }
 
     /// @notice Configure THOR and yTHOR migration deadlines.
     function setDeadlines(uint256 newDeadlineThor, uint256 newDeadlineYThor) external onlyOwner {
-        require(newDeadlineThor >= block.timestamp && newDeadlineYThor >= block.timestamp, "ThorEscrow: bad deadline");
+        require(newDeadlineThor >= block.timestamp && newDeadlineYThor >= block.timestamp, InvalidMigrationDeadline());
         require(
             newDeadlineThor > migrationStartTime && newDeadlineYThor > migrationStartTime,
-            "ThorEscrow: deadline before start"
+            DeadlineNotAfterMigrationStart()
         );
 
         deadlineThor = newDeadlineThor;
@@ -117,8 +137,8 @@ contract ThorMigrationEscrow is Ownable2Step, Pausable, ReentrancyGuardTransient
 
     /// @notice Configure the one-time, 1e18-scaled conversion ratios.
     function setRatios(uint256 newRatioThor, uint256 newRatioYThor) external onlyOwner {
-        require(newRatioThor > 0 && newRatioYThor > 0, "ThorEscrow: bad ratio");
-        require(ratioThor == 0 && ratioYThor == 0, "ThorEscrow: ratios locked");
+        require(newRatioThor > 0 && newRatioYThor > 0, InvalidMigrationRatio());
+        require(ratioThor == 0 && ratioYThor == 0, MigrationRatiosLocked());
 
         ratioThor = newRatioThor;
         ratioYThor = newRatioYThor;
@@ -127,7 +147,7 @@ contract ThorMigrationEscrow is Ownable2Step, Pausable, ReentrancyGuardTransient
 
     /// @notice Configure principal caps, denominated in minted METRO.
     function setCaps(uint256 newCapThor, uint256 newCapYThor) external onlyOwner {
-        require(newCapThor > 0 && newCapYThor > 0, "ThorEscrow: bad cap");
+        require(newCapThor > 0 && newCapYThor > 0, InvalidMigrationCap());
 
         capThor = newCapThor;
         capYThor = newCapYThor;
@@ -148,10 +168,8 @@ contract ThorMigrationEscrow is Ownable2Step, Pausable, ReentrancyGuardTransient
 
     /// @notice Rescue unrelated tokens. Migration tokens are intentionally non-rescuable.
     function rescueTokens(address token, address to, uint256 amount) external onlyOwner {
-        require(
-            token != address(thorToken) && token != address(yThorToken), "ThorEscrow: cannot rescue migration tokens"
-        );
-        require(to != address(0), "ThorEscrow: bad to");
+        require(token != address(thorToken) && token != address(yThorToken), MigrationTokenRescueForbidden());
+        require(to != address(0), InvalidRecipient());
         IERC20(token).safeTransfer(to, amount);
         emit TokensRescued(token, to, amount);
     }
