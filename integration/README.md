@@ -1,6 +1,6 @@
 # xMETRO Integration Guide
 
-Current swap and compound examples require Adapter implementation version 2 and the [new swap envelope](docs/new-features.md#swap-execution-data). The four Core entrypoint signatures are unchanged. Use the ABI and examples matching the actual deployed revision; existing configuration JSON and historical addresses are not updated by this source change.
+Current swap and compound examples require Adapter implementation version 2 and the [new swap envelope](docs/new-features.md#swap-execution-data). Core, Escrow and Distributor now expose two-step ownership interfaces; regenerate clients from the corresponding ABI. The four Core reward entrypoint signatures are unchanged. Use the ABI and examples matching the actual deployed revision; existing configuration JSON and historical addresses are not updated by this source change.
 
 ## October 24 source update
 
@@ -12,7 +12,7 @@ The existing Base QA deployment and its address/configuration records remain unc
 
 This directory is the entry point for frontend, backend, and operations integration. The documentation does not imply that every external-protocol scenario has passed; use the linked execution records for actual status.
 
-Build with the pinned Solidity 0.8.38 / Osaka profiles; the target chain must support transient storage and all emitted instructions. See the [build and validation notes](../README.md#october-30-audit-remediation).
+Build with the pinned Solidity 0.8.38 / Osaka profiles; the target chain must support transient storage and all emitted instructions. [Build and validation notes](../README.md#october-30-audit-remediation) describe the current source.
 
 ## Reading order
 

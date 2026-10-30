@@ -63,6 +63,81 @@ contract ThorMigrationEscrowUnitTest is Test {
         escrow.setDeadlines(block.timestamp + 365 days, block.timestamp + 365 days);
     }
 
+    event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    function test_TwoStepOwnershipAcceptReplaceCancelAndPermissions() public {
+        address next = makeAddr("pending-owner");
+        address replaced = makeAddr("replacement-owner");
+        assertEq(escrow.owner(), address(this));
+        assertEq(escrow.pendingOwner(), address(0));
+        vm.prank(next);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", next));
+        escrow.acceptOwnership();
+        vm.prank(next);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", next));
+        escrow.transferOwnership(replaced);
+        vm.expectEmit(true, true, false, true, address(escrow));
+        emit OwnershipTransferStarted(address(this), next);
+        escrow.transferOwnership(next);
+        assertEq(escrow.owner(), address(this));
+        assertEq(escrow.pendingOwner(), next);
+        vm.prank(next);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", next));
+        escrow.setCaps(CAP_THOR, CAP_YTHOR);
+        escrow.setCaps(CAP_THOR, CAP_YTHOR);
+        escrow.transferOwnership(replaced);
+        vm.prank(next);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", next));
+        escrow.acceptOwnership();
+        escrow.transferOwnership(address(0));
+        assertEq(escrow.owner(), address(this));
+        assertEq(escrow.pendingOwner(), address(0));
+        vm.prank(replaced);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", replaced));
+        escrow.acceptOwnership();
+        escrow.transferOwnership(next);
+        vm.expectEmit(true, true, false, true, address(escrow));
+        emit OwnershipTransferred(address(this), next);
+        vm.prank(next);
+        escrow.acceptOwnership();
+        assertEq(escrow.owner(), next);
+        assertEq(escrow.pendingOwner(), address(0));
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", address(this)));
+        escrow.setCaps(CAP_THOR, CAP_YTHOR);
+        vm.prank(next);
+        escrow.setCaps(CAP_THOR, CAP_YTHOR);
+        vm.prank(next);
+        escrow.transferOwnership(replaced);
+        vm.prank(next);
+        escrow.renounceOwnership();
+        assertEq(escrow.owner(), address(0));
+        assertEq(escrow.pendingOwner(), address(0));
+        vm.prank(replaced);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", replaced));
+        escrow.acceptOwnership();
+    }
+
+    function test_PausedRenounceRejectedAndOwnershipCanStillBeAccepted() public {
+        address next = makeAddr("paused-next-owner");
+        escrow.pause();
+        escrow.transferOwnership(next);
+        vm.expectRevert(bytes4(keccak256("EnforcedPause()")));
+        escrow.renounceOwnership();
+        assertEq(escrow.owner(), address(this));
+        assertEq(escrow.pendingOwner(), next);
+        assertTrue(escrow.paused());
+        escrow.transferOwnership(address(0));
+        assertEq(escrow.pendingOwner(), address(0));
+        escrow.transferOwnership(next);
+        vm.prank(next);
+        escrow.acceptOwnership();
+        assertTrue(escrow.paused());
+        vm.prank(next);
+        escrow.unpause();
+        assertFalse(escrow.paused());
+    }
+
     function _approveAndFund(address account, ERC20Mintable token, uint256 amount) internal {
         token.mint(account, amount);
         vm.prank(account);
@@ -116,6 +191,8 @@ contract ThorMigrationEscrowUnitTest is Test {
     }
 
     function test_ConstructorRejectsInvalidInputs() public {
+        vm.expectRevert(abi.encodeWithSignature("OwnableInvalidOwner(address)", address(0)));
+        new ThorMigrationEscrow(address(0), address(xmetro), address(thor), address(yThor), block.timestamp);
         vm.expectRevert(bytes("ThorEscrow: zero xMETRO"));
         new ThorMigrationEscrow(owner, address(0), address(thor), address(yThor), block.timestamp);
 

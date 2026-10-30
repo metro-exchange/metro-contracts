@@ -5,6 +5,7 @@
 | Coverage | Evidence / status |
 | --- | --- |
 | E-07/E-08/E-17: capped V2/V3/1inch data; stale quotes preserve rewards; fresh quotes succeed | Adapter/Core unit and invariant tests; `AutoCompound.t.sol::test_E07_StaleInputCapRollsBackAndFreshQuoteCompounds`; see current results for executed scope |
+| E-01/E-09: pending ownership, acceptance, paused renounce protection | Updated governance and deployment-script tests |
 | E-21/E-22/X-07: implementation version 2, unchanged epoch rules, ABI/storage compatibility and size | Existing Adapter, Core and deployment tests |
 | E-21/E-22/X-07: Solidity 0.8.38 / Osaka artifacts and transient guards on the target fork | Rebuild all profiles; run callback/retry tests locally and protocol scenarios with an available RPC |
 

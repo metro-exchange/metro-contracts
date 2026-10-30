@@ -7,6 +7,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 
@@ -21,7 +22,7 @@ interface IBoundRewardDistributor {
     function rewardToken() external view returns (address);
 }
 
-contract xMETRO is ERC20, Pausable, ReentrancyGuardTransient, Ownable {
+contract xMETRO is ERC20, Pausable, ReentrancyGuardTransient, Ownable2Step {
     error Unauthorized();
     error NoRewards();
     error InvalidAddress();
@@ -247,11 +248,7 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuardTransient, Ownable {
 
     /// @notice Stake METRO and receive 1:1 free shares (xMETRO ERC20).
     function stake(uint256 amount) external nonReentrant whenNotPaused returns (uint256 mintedShares) {
-        if (amount == 0) revert InvalidAmount();
-        IERC20(address(METRO)).safeTransferFrom(msg.sender, address(this), amount);
-        _mintFreeShares(msg.sender, amount);
-        mintedShares = amount;
-        emit Staked(msg.sender, amount, mintedShares);
+        return _stake(amount);
     }
 
     /// @notice Stake METRO and enable autocompounding in a single transaction.
@@ -261,12 +258,16 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuardTransient, Ownable {
         whenNotPaused
         returns (uint256 mintedShares)
     {
+        mintedShares = _stake(amount);
+        _enableAutocompound(msg.sender);
+    }
+
+    function _stake(uint256 amount) private returns (uint256) {
         if (amount == 0) revert InvalidAmount();
         IERC20(address(METRO)).safeTransferFrom(msg.sender, address(this), amount);
         _mintFreeShares(msg.sender, amount);
-        mintedShares = amount;
-        emit Staked(msg.sender, amount, mintedShares);
-        _enableAutocompound(msg.sender);
+        emit Staked(msg.sender, amount, amount);
+        return amount;
     }
 
     /// @notice Request unstake for free shares; burns shares immediately and starts a cooldown.
@@ -295,8 +296,11 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuardTransient, Ownable {
             if (r.unlockTime > block.timestamp) break;
 
             totalToSend += uint256(r.amount);
-            cursor++;
-            processedCount++;
+            // cursor < len; processedCount <= cursor, so neither increment can overflow.
+            unchecked {
+                ++cursor;
+                ++processedCount;
+            }
 
             if (maxRequests != 0 && processedCount >= maxRequests) break;
         }
@@ -526,6 +530,10 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuardTransient, Ownable {
         }
         if (processedUsers == 0) revert NoRewards();
         emit EmergencyBatchExecuted(msg.sender, processedUsers, totalDistributed);
+    }
+
+    function renounceOwnership() public override onlyOwner whenNotPaused {
+        super.renounceOwnership();
     }
 
     function pause() external onlyOwner {

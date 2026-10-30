@@ -2,7 +2,7 @@
 
 ## October 30 audit remediation
 
-The source includes capped swap inputs (Adapter implementation version 2) and transient reentrancy guards.
+The local source includes capped swap inputs (Adapter implementation version 2), two-step ownership for Core/Escrow/Distributor, and transient reentrancy guards. Existing deployed instances and historical configuration files retain their original behavior.
 
 Build with the pinned Solidity **0.8.38** compiler and **Osaka** EVM target in `foundry.toml`. Core, Escrow and Distributor use OpenZeppelin `ReentrancyGuardTransient`; their target chain must support EIP-1153 and the other instructions emitted for Osaka. Adapter keeps its existing proxy-local guard. Rebuild Core, Adapter and deployment artifacts together and recompute approved initcode hashes; old artifacts must not be mixed with this source. See [validation results](integration/testing/ethereum-fork/RESULTS.md) for executed checks and remaining RPC coverage.
 
@@ -46,7 +46,7 @@ User / frontend / Keeper
           +--> Maple SyrupRouter
 ```
 
-xMETRO uses one-step `transferOwnership`, permits `renounceOwnership`, and starts unpaused. Renouncing is irreversible: configuration, reward-weight changes, and Adapter upgrades would become unavailable. If xMETRO is paused at that point, it could not be unpaused.
+xMETRO, ThorMigrationEscrow and RewardDistributor use two-step ownership. `transferOwnership(target)` nominates a pending owner; only that address can call `acceptOwnership()` to receive authority. A zero target cancels the nomination. Core and Escrow reject `renounceOwnership()` while paused, but still permit ownership handover and subsequent unpause. Renouncing while unpaused remains irreversible; Distributor retains its existing renounce behavior. MetroToken remains one-step and the Core starts unpaused.
 
 Aave V4 users authorize the configured official GiverPositionManager on the Spoke. The Adapter supplies USDC through that Giver; the Adapter proxy itself does not require separate Spoke activation. A replacement Adapter proxy does not require users to repeat their Giver approval if the Spoke and Giver remain unchanged. Maple authorization, by contrast, is specific to the Adapter proxy and must be obtained again for a new proxy.
 
@@ -91,7 +91,7 @@ The Distributor transfers the commission directly to the Vault and deposits the 
 
 ## Production and Base QA versions
 
-The production branch retains the full time constants and is the audit/mainnet baseline. The project-facing Base QA branch shortens seven waiting periods: 30-minute unstake delay; THOR exit at 1–3 hours; yTHOR exit starting at 4 hours with a 12-hour ramp; and a 6-hour Contributor cliff plus 6-hour vesting period. The QA build also allows its owner to change the forfeiture recipient for future exits and accepts a zero Escrow constructor start time as the deployment-block timestamp. The production recipient is immutable, and its Escrow requires an explicit start time. Other business ratios, one-step ownership, and default unpaused state remain aligned; the two builds do not have identical ABIs or bytecode. QA uses freshly deployed owner-mintable TestTokens, Aave/Maple protocol mocks, and real Base Uniswap V2 liquidity. Mock integration does not prove the production protocols are available on Base.
+The production branch retains the full time constants and is the audit/mainnet baseline. The project-facing Base QA branch shortens seven waiting periods: 30-minute unstake delay; THOR exit at 1–3 hours; yTHOR exit starting at 4 hours with a 12-hour ramp; and a 6-hour Contributor cliff plus 6-hour vesting period. The QA build also allows its owner to change the forfeiture recipient for future exits and accepts a zero Escrow constructor start time as the deployment-block timestamp. The production recipient is immutable, and its Escrow requires an explicit start time. Other business ratios, two-step business-contract ownership, and default unpaused state remain aligned; the two builds do not have identical ABIs or bytecode. QA uses freshly deployed owner-mintable TestTokens, Aave/Maple protocol mocks, and real Base Uniswap V2 liquidity. Mock integration does not prove the production protocols are available on Base.
 
 Historical rapid-QA addresses and receipts are test evidence only. The fresh project-facing deployment and its transaction hashes are recorded in the Base QA branch's integration config and checklist. The production branch keeps a Base config template; it must not be mistaken for a second deployment or mixed with historical addresses.
 
@@ -109,7 +109,7 @@ Historical rapid-QA addresses and receipts are test evidence only. The fresh pro
 
 Copy `.env.example` to an untracked local `.env`. Fill in the signing EOA, intended owner, chain-specific tokens and routers, migration ratios/windows, and integrations that are ready to enable. Never commit a private key. Build and inspect the intended release artifacts before broadcasting; a dry run is not evidence that any transaction was sent. Deployment and configuration consist of multiple transactions, so verify every receipt and on-chain binding.
 
-`script/Deploy.s.sol` transfers xMETRO ownership in one step and leaves it unpaused; no `acceptOwnership()` or initial `unpause()` is required. `script/VerifyDeployment.s.sol` can read back the broadcast deployment.
+`script/Deploy.s.sol` nominates the target owner for Core, Escrow and Distributor after configuration, skipping nomination when the target is the deployer. Its JSON `owner` is the target; per-contract Owner/pendingOwner fields record actual deployment-time state. The target must accept each contract separately. `script/VerifyDeployment.s.sol` requires all three live owners to equal the target and all pending owners to be zero, even if the original deployment snapshot still records pending acceptance. Core starts unpaused; MetroToken ownership still transfers in one step.
 
 ```bash
 # Ethereum

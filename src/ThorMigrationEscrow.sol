@@ -6,6 +6,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 
@@ -16,7 +17,7 @@ interface IxMETROMigration {
 
 /// @title ThorMigrationEscrow
 /// @notice Custodies migrated THOR/yTHOR and creates the corresponding locked METRO positions.
-contract ThorMigrationEscrow is Ownable, Pausable, ReentrancyGuardTransient {
+contract ThorMigrationEscrow is Ownable2Step, Pausable, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
 
     IxMETROMigration public immutable xMETRO;
@@ -131,6 +132,10 @@ contract ThorMigrationEscrow is Ownable, Pausable, ReentrancyGuardTransient {
         capThor = newCapThor;
         capYThor = newCapYThor;
         emit CapsUpdated(newCapThor, newCapYThor);
+    }
+
+    function renounceOwnership() public override onlyOwner whenNotPaused {
+        super.renounceOwnership();
     }
 
     function pause() external onlyOwner {

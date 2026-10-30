@@ -54,7 +54,7 @@ For reward UI, read `rewardWeightOf(user)` and `totalRewardWeight()`. `totalShar
 | `setSwapAdapter(address)` | `setDeFiAdapter(proxy)` | Bind the new Adapter **proxy**, not its implementation. |
 | `setDefaultMaxThorLocks(maxLocks)` | Removed | Each exit selects a position ID; no scan limit is needed. |
 
-The current xMETRO uses original one-step ownership, allows renouncing, and starts unpaused; these are not new business features. Already-deployed historical QA contracts still follow their own deployed ABI and must not be silently treated as the new version.
+The current Core, Escrow and Distributor use two-step ownership: nomination preserves the old owner until the pending owner accepts. A zero nomination cancels handover. Core/Escrow forbid renouncing while paused, but allow handover; Distributor has no pause mechanism. Core still starts unpaused. Already-deployed historical QA contracts still follow their own deployed ABI and must not be silently treated as the new version.
 
 ## Preserved behavior and notable differences
 
@@ -82,6 +82,8 @@ All V2/V3/1inch compound and swap data now uses the version-2 [swap envelope](ne
 | `SwapAdapterUpdated` | `DeFiAdapterUpdated(oldAdapter,newAdapter,adapterEpoch)`. |
 | Single-address Distributor/Escrow update events | Old/new-address event formats. |
 | `RewardsDistributed` | Amount is the **net** Core reward; `DistributionRouted` records gross and commission. |
+
+For ownership, `OwnershipTransferStarted` only nominates; `OwnershipTransferred` records the actual change after acceptance (or construction/renounce).
 
 Decode each log with the ABI of the contract version that emitted it. Do not reinterpret historical logs using a new event signature.
 

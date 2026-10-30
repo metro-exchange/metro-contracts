@@ -78,24 +78,6 @@ contract xMETROUnitTest is Test {
         assertEq(usdc.balanceOf(userA), 25e6);
     }
 
-    /// @notice One-step ownership takes effect immediately; zero address and former Owner calls fail.
-    function test_SingleStepOwnershipRejectsZeroAndRevokesOldOwner() public {
-        vm.prank(outsider);
-        vm.expectRevert();
-        xmetro.transferOwnership(userA);
-        vm.expectRevert();
-        xmetro.transferOwnership(address(0));
-        assertEq(xmetro.owner(), address(this));
-
-        xmetro.transferOwnership(userA);
-        assertEq(xmetro.owner(), userA);
-        vm.expectRevert();
-        xmetro.setYThorRewardWeightBps(10_000);
-        vm.prank(userA);
-        xmetro.setYThorRewardWeightBps(10_000);
-        assertEq(xmetro.yThorRewardWeightBps(), 10_000);
-    }
-
     /// @notice Only the current Owner may renounce, and ownership cannot be recovered afterward.
     function test_OnlyOwnerCanRenounceAndCannotRecoverOwnership() public {
         vm.prank(outsider);
@@ -128,14 +110,80 @@ contract xMETROUnitTest is Test {
         assertEq(metro.balanceOf(userA), 100 ether);
     }
 
-    /// @notice Renouncing while paused permanently removes the ability to unpause; test this explicitly.
-    function test_RenounceWhilePausedCannotBeUnpausedByFormerOwner() public {
-        xmetro.pause();
+    event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    function test_TwoStepOwnershipAcceptReplaceCancelAndPermissions() public {
+        address next = makeAddr("pending-owner");
+        address replaced = makeAddr("replacement-owner");
+        assertEq(xmetro.owner(), address(this));
+        assertEq(xmetro.pendingOwner(), address(0));
+        vm.prank(next);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", next));
+        xmetro.acceptOwnership();
+        vm.prank(next);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", next));
+        xmetro.transferOwnership(replaced);
+        vm.expectEmit(true, true, false, true, address(xmetro));
+        emit OwnershipTransferStarted(address(this), next);
+        xmetro.transferOwnership(next);
+        assertEq(xmetro.owner(), address(this));
+        assertEq(xmetro.pendingOwner(), next);
+        vm.prank(next);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", next));
+        xmetro.setYThorRewardWeightBps(10_000);
+        xmetro.setYThorRewardWeightBps(10_000);
+        xmetro.transferOwnership(replaced);
+        vm.prank(next);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", next));
+        xmetro.acceptOwnership();
+        xmetro.transferOwnership(address(0));
+        assertEq(xmetro.owner(), address(this));
+        assertEq(xmetro.pendingOwner(), address(0));
+        vm.prank(replaced);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", replaced));
+        xmetro.acceptOwnership();
+        xmetro.transferOwnership(next);
+        vm.expectEmit(true, true, false, true, address(xmetro));
+        emit OwnershipTransferred(address(this), next);
+        vm.prank(next);
+        xmetro.acceptOwnership();
+        assertEq(xmetro.owner(), next);
+        assertEq(xmetro.pendingOwner(), address(0));
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", address(this)));
+        xmetro.setYThorRewardWeightBps(10_000);
+        vm.prank(next);
+        xmetro.setYThorRewardWeightBps(10_000);
+        vm.prank(next);
+        xmetro.transferOwnership(replaced);
+        vm.prank(next);
         xmetro.renounceOwnership();
-        assertTrue(xmetro.paused());
         assertEq(xmetro.owner(), address(0));
-        vm.expectRevert();
+        assertEq(xmetro.pendingOwner(), address(0));
+        vm.prank(replaced);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", replaced));
+        xmetro.acceptOwnership();
+    }
+
+    /// @notice A pause must remain recoverable by the current or accepted owner.
+    function test_PausedRenounceRejectedAndOwnershipCanStillBeAccepted() public {
+        address next = makeAddr("paused-next-owner");
+        xmetro.pause();
+        xmetro.transferOwnership(next);
+        vm.expectRevert(bytes4(keccak256("EnforcedPause()")));
+        xmetro.renounceOwnership();
+        assertEq(xmetro.owner(), address(this));
+        assertEq(xmetro.pendingOwner(), next);
+        assertTrue(xmetro.paused());
+        xmetro.transferOwnership(address(0));
+        assertEq(xmetro.pendingOwner(), address(0));
+        xmetro.transferOwnership(next);
+        vm.prank(next);
+        xmetro.acceptOwnership();
+        assertTrue(xmetro.paused());
+        vm.prank(next);
         xmetro.unpause();
+        assertFalse(xmetro.paused());
     }
 
     function _depositRewards(uint256 amount) internal {
@@ -185,7 +233,53 @@ contract xMETROUnitTest is Test {
         assertEq(token.balanceOf(address(guarded)), 21 ether);
     }
 
+    function test_OwnershipHandoverPreservesPositionsRewardsBindingsAndRoles() public {
+        _stake(userA, 100 ether);
+        xmetro.creditThorFromMigration(userA, 50 ether);
+        xmetro.creditYThorFromMigration(userA, 20 ether);
+        xmetro.setAutoCompoundOperator(userA, true);
+        xmetro.setContributor(userA, true);
+        _depositRewards(190e6);
+        uint256 pending = xmetro.claimable(userA);
+        int256 debt = xmetro.rewardDebt(userA);
+        xmetro.transferOwnership(userB);
+        assertEq(xmetro.claimable(userA), pending);
+        vm.prank(userB);
+        xmetro.acceptOwnership();
+        assertEq(xmetro.thorPositionCount(userA), 1);
+        assertEq(xmetro.yThorPositionCount(userA), 1);
+        assertEq(xmetro.lockedShares(userA), 70 ether);
+        assertEq(xmetro.balanceOf(userA), 100 ether);
+        assertEq(metro.balanceOf(address(xmetro)), 170 ether);
+        assertEq(xmetro.claimable(userA), pending);
+        assertEq(xmetro.rewardDebt(userA), debt);
+        assertEq(xmetro.migrationEscrow(), address(this));
+        assertEq(xmetro.rewardDistributor(), address(this));
+        assertTrue(xmetro.autoCompoundOperators(userA));
+        assertTrue(xmetro.contributorWhitelist(userA));
+        assertTrue(metro.isMinter(address(xmetro)));
+        vm.prank(userA);
+        assertEq(xmetro.claimRewards(), 190e6);
+        // A separately authorized migration source keeps its permission after losing ownership.
+        xmetro.creditThorFromMigration(userA, 1 ether);
+        assertEq(xmetro.thorPositionCount(userA), 2);
+    }
+
+    function test_OwnershipNominationToContractCanBeCancelledOrAccepted() public {
+        address inert = address(new BoundMigrationEscrowProbe(address(xmetro)));
+        xmetro.transferOwnership(inert);
+        assertEq(xmetro.owner(), address(this));
+        xmetro.transferOwnership(address(0));
+        CoreOwnershipReceiver receiver = new CoreOwnershipReceiver();
+        xmetro.transferOwnership(address(receiver));
+        receiver.accept(address(xmetro));
+        assertEq(xmetro.owner(), address(receiver));
+        assertEq(xmetro.pendingOwner(), address(0));
+    }
+
     function test_ConstructorAndConfigurationValidation() public {
+        vm.expectRevert(abi.encodeWithSignature("OwnableInvalidOwner(address)", address(0)));
+        new XMetroCore(address(0), address(metro), address(usdc), forfeitureRecipient, 20_000);
         assertEq(xmetro.forfeitureRecipient(), forfeitureRecipient);
         assertEq(xmetro.UNSTAKE_DELAY(), 72 hours);
         assertEq(xmetro.CONTRIBUTOR_CLIFF(), 180 days);
@@ -418,6 +512,27 @@ contract xMETROUnitTest is Test {
 
         vm.prank(userA);
         assertEq(xmetro.withdrawFree(0), 0);
+    }
+
+    function testFuzz_FreeQueueCountersStayWithinLength(uint8 countSeed, uint8 limitSeed) public {
+        uint256 count = bound(uint256(countSeed), 1, 16);
+        uint256 limit = bound(uint256(limitSeed), 0, 20);
+        metro.mint(userA, count * 1 ether);
+        vm.startPrank(userA);
+        metro.approve(address(xmetro), type(uint256).max);
+        xmetro.stake(count * 1 ether);
+        for (uint256 i; i < count; ++i) {
+            xmetro.requestUnstake(1 ether);
+        }
+        vm.warp(block.timestamp + xmetro.UNSTAKE_DELAY());
+        uint256 expectedCount = limit == 0 || limit > count ? count : limit;
+        assertEq(xmetro.withdrawFree(limit), expectedCount * 1 ether);
+        assertEq(xmetro.unstakeCursorFree(userA), expectedCount);
+        assertEq(xmetro.unstakeRequestCountFree(userA), count);
+        assertEq(xmetro.withdrawFree(0), (count - expectedCount) * 1 ether);
+        assertEq(xmetro.unstakeCursorFree(userA), count);
+        assertEq(xmetro.withdrawFree(type(uint256).max), 0);
+        vm.stopPrank();
     }
 
     function test_FreeQueueBatchStopsAtMaxRequests() public {
@@ -1596,5 +1711,11 @@ contract xMETROUnitTest is Test {
             assertEq(usdc.balanceOf(address(xmetro)), 10e6);
             assertTrue(vm.revertToState(snapshot));
         }
+    }
+}
+
+contract CoreOwnershipReceiver {
+    function accept(address core) external {
+        XMetroCore(core).acceptOwnership();
     }
 }

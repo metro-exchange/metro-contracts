@@ -61,6 +61,72 @@ contract RewardDistributorTest is Test {
         usdc.approve(address(distributor), type(uint256).max);
     }
 
+    event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    function test_TwoStepOwnershipAcceptReplaceCancelAndPermissions() public {
+        address next = makeAddr("pending-owner");
+        address replaced = makeAddr("replacement-owner");
+        assertEq(distributor.owner(), address(this));
+        assertEq(distributor.pendingOwner(), address(0));
+        vm.prank(next);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", next));
+        distributor.acceptOwnership();
+        vm.prank(next);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", next));
+        distributor.transferOwnership(replaced);
+        vm.expectEmit(true, true, false, true, address(distributor));
+        emit OwnershipTransferStarted(address(this), next);
+        distributor.transferOwnership(next);
+        assertEq(distributor.owner(), address(this));
+        assertEq(distributor.pendingOwner(), next);
+        vm.prank(next);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", next));
+        distributor.setOperator(outsider, true);
+        distributor.setOperator(outsider, true);
+        distributor.transferOwnership(replaced);
+        vm.prank(next);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", next));
+        distributor.acceptOwnership();
+        distributor.transferOwnership(address(0));
+        assertEq(distributor.owner(), address(this));
+        assertEq(distributor.pendingOwner(), address(0));
+        vm.prank(replaced);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", replaced));
+        distributor.acceptOwnership();
+        distributor.transferOwnership(next);
+        vm.expectEmit(true, true, false, true, address(distributor));
+        emit OwnershipTransferred(address(this), next);
+        vm.prank(next);
+        distributor.acceptOwnership();
+        assertEq(distributor.owner(), next);
+        assertEq(distributor.pendingOwner(), address(0));
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", address(this)));
+        distributor.setOperator(outsider, true);
+        vm.prank(next);
+        distributor.setOperator(outsider, true);
+        vm.prank(next);
+        distributor.transferOwnership(replaced);
+        vm.prank(next);
+        distributor.renounceOwnership();
+        assertEq(distributor.owner(), address(0));
+        assertEq(distributor.pendingOwner(), address(0));
+        vm.prank(replaced);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", replaced));
+        distributor.acceptOwnership();
+    }
+
+    function test_AcceptingOwnerRetainsOperatorAndUserRewards() public {
+        address next = makeAddr("distributor-next-owner");
+        distributor.transferOwnership(next);
+        vm.prank(next);
+        distributor.acceptOwnership();
+        assertTrue(distributor.operators(operator));
+        vm.prank(operator);
+        distributor.distribute(10e6);
+        assertEq(xmetro.claimable(user), 10e6);
+    }
+
     function testFuzz_TransientGuardChecksAuthorizedCallbacksAndSameTransactionRetry(
         bool fromBalance,
         bool crossFunction
@@ -110,6 +176,8 @@ contract RewardDistributorTest is Test {
     }
 
     function test_ConstructorAndOperatorPermissions() public {
+        vm.expectRevert(abi.encodeWithSignature("OwnableInvalidOwner(address)", address(0)));
+        new RewardDistributor(address(xmetro), address(0));
         assertEq(address(distributor.rewardToken()), address(usdc));
         assertEq(address(distributor.xMETRO()), address(xmetro));
 

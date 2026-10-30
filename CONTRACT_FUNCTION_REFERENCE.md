@@ -72,7 +72,7 @@ Legacy compound and general auto strategies are mutually exclusive. A batch swap
 - `setYThorRewardWeightBps(uint256)` changes future rewards for all eligible active yTHOR positions without pausing. `10,000=1x`; zero and sub-1x values are valid up to the technical bound.
 - `setAutoCompoundOperator(address,bool)`; `setMigrationEscrow(address)`; `setRewardDistributor(address)`; `setContributor(address,bool)`; `setDefaultMaxVestingSchedules(uint256)`
 - `pause()`; `unpause()`; `rescueERC20(address,address,uint256)` (principal-backing METRO is protected)
-- `transferOwnership(address)` acts in one step; there is no `pendingOwner` or `acceptOwnership()` on the current version. `renounceOwnership()` is irreversible and also prevents later Adapter upgrades. The constructor leaves the core unpaused.
+- Core, Escrow and Distributor expose `pendingOwner()`, `transferOwnership(address)` and `acceptOwnership()`. Nomination preserves the current owner; a zero target cancels it. Acceptance clears pending ownership. `renounceOwnership()` clears both owner fields and is irreversible; Core/Escrow reject it while paused. Paused handovers remain available. MetroToken remains one-step. The Core constructor leaves it unpaused.
 
 Normal configuration and UUPS implementation upgrades do not require a pause. A full proxy replacement should remain paused throughout its multi-transaction handover. A UUPS implementation upgrade increments `logicEpoch` without changing the proxy address; a proxy replacement increments `deFiAdapterEpoch`. Both make older auto preferences stale.
 
