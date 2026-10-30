@@ -5,6 +5,8 @@
 - [ ] On a future version-2 Adapter, exercise V2/V3/1inch input caps and rejection of legacy data.
 - [ ] Fund rewards after quoting; confirm all four Core swap/compound paths revert above the saved cap, preserve rewards and succeed with a complete fresh quote.
 
+- [ ] Verify target-chain support for the pinned Solidity 0.8.38 / Osaka artifacts, including transient storage; exercise callback protection and sequential calls.
+
 No deployment or on-chain transaction was performed for this source change. The historical deployment rows and hashes below remain unchanged.
 
 ## October 24 source acceptance: future on-chain checks

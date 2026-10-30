@@ -12,6 +12,8 @@ The existing Base QA deployment and its address/configuration records remain unc
 
 This directory is the entry point for frontend, backend, and operations integration. The documentation does not imply that every external-protocol scenario has passed; use the linked execution records for actual status.
 
+Build with the pinned Solidity 0.8.38 / Osaka profiles; the target chain must support transient storage and all emitted instructions. See the [build and validation notes](../README.md#october-30-audit-remediation).
+
 ## Reading order
 
 1. [Existing-feature migration](docs/existing-features.md): changed THOR/yTHOR entrypoints and preserved staking, rewards, Contributor, and Auto-Compound behavior.

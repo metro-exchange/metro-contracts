@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import "forge-std/Test.sol";
+import {MaliciousERC20} from "../mocks/MaliciousERC20.sol";
 
 import {RewardDistributor} from "../../src/RewardDistributor.sol";
 import {xMETRO} from "../../src/xMETRO.sol";
@@ -58,6 +59,54 @@ contract RewardDistributorTest is Test {
         usdc.mint(operator, 10_000e6);
         vm.prank(operator);
         usdc.approve(address(distributor), type(uint256).max);
+    }
+
+    function testFuzz_TransientGuardChecksAuthorizedCallbacksAndSameTransactionRetry(
+        bool fromBalance,
+        bool crossFunction
+    ) public {
+        MaliciousERC20 token = new MaliciousERC20("Malicious rewards", "MUSDC", 6);
+        xMETRO guardedCore = new xMETRO(address(this), address(metro), address(token), forfeitureRecipient, 20_000);
+        RewardDistributor guarded = new RewardDistributor(address(guardedCore), address(this));
+        guardedCore.setRewardDistributor(address(guarded));
+        guarded.setOperator(address(this), true);
+        guarded.setOperator(address(token), true); // Reach the lock, not an unrelated operator failure.
+        MockCommissionVault commission = new MockCommissionVault(address(token), 100e6, address(guarded));
+        guarded.setCommissionVault(address(commission));
+        guarded.setMaxCommissionSplitBps(1_000);
+        metro.mint(user, 100 ether);
+        vm.startPrank(user);
+        metro.approve(address(guardedCore), 100 ether);
+        guardedCore.stake(100 ether);
+        vm.stopPrank();
+        token.mint(fromBalance ? address(guarded) : address(this), 30e6);
+        token.approve(address(guarded), type(uint256).max);
+        bool nestedBalance = crossFunction ? !fromBalance : fromBalance;
+        bytes memory nested = nestedBalance
+            ? abi.encodeCall(RewardDistributor.distributeFromBalance, (1))
+            : abi.encodeCall(RewardDistributor.distribute, (1));
+        for (uint256 i; i < 2; ++i) {
+            token.setAttack(address(guarded), nested, true);
+            if (fromBalance) guarded.distributeFromBalance(10e6);
+            else guarded.distribute(10e6);
+            assertTrue(token.attackAttempted());
+            assertFalse(token.attackSucceeded());
+            assertEq(token.attackRevertData(), abi.encodeWithSignature("ReentrancyGuardReentrantCall()"));
+        }
+        assertEq(guardedCore.claimable(user), 18e6);
+        assertEq(token.balanceOf(address(commission)), 2e6);
+        token.setAttack(address(guarded), nested, false);
+        guardedCore.pause();
+        vm.expectRevert(bytes4(keccak256("EnforcedPause()")));
+        if (fromBalance) guarded.distributeFromBalance(10e6);
+        else guarded.distribute(10e6);
+        assertEq(token.balanceOf(address(commission)), 2e6);
+        assertEq(guardedCore.claimable(user), 18e6);
+        guardedCore.unpause();
+        if (fromBalance) guarded.distributeFromBalance(10e6);
+        else guarded.distribute(10e6);
+        assertEq(token.balanceOf(address(commission)), 3e6);
+        assertEq(guardedCore.claimable(user), 27e6);
     }
 
     function test_ConstructorAndOperatorPermissions() public {

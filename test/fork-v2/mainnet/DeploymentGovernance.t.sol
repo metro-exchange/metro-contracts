@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MetroToken} from "../../../src/metro.sol";
@@ -36,8 +36,8 @@ contract DeploymentGovernanceMainnetTest is MainnetForkBase {
         assertEq(block.chainid, 1);
         assertEq(block.number, FORK_BLOCK);
         assertGt(address(metro).code.length, 0);
-        assertEq(address(core).code.length, 23_510);
-        assertEq(implementation.code.length, 20_574);
+        assertEq(address(core).code.length, 23_496);
+        assertEq(implementation.code.length, 20_707);
         assertEq(proxy.code.length, 76);
         assertGt(address(distributor).code.length, 0);
         assertGt(address(escrow).code.length, 0);

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import {ERC20Mintable} from "./ERC20Mintable.sol";
 
@@ -14,6 +14,7 @@ contract MaliciousERC20 is ERC20Mintable {
 
     bool public attackAttempted;
     bool public attackSucceeded;
+    bytes public attackRevertData;
     bool private _attacking;
 
     constructor(string memory name_, string memory symbol_, uint8 decimals_) ERC20Mintable(name_, symbol_, decimals_) {}
@@ -25,6 +26,7 @@ contract MaliciousERC20 is ERC20Mintable {
         attackEnabled = enabled_;
         attackAttempted = false;
         attackSucceeded = false;
+        delete attackRevertData;
     }
 
     function transfer(address to, uint256 amount) public override returns (bool) {
@@ -47,7 +49,8 @@ contract MaliciousERC20 is ERC20Mintable {
         _attacking = true;
         attackAttempted = true;
 
-        (bool ok,) = target.call(attackData);
+        (bool ok, bytes memory reason) = target.call(attackData);
+        if (!ok) attackRevertData = reason;
         if (ok) attackSucceeded = true;
 
         _attacking = false;
