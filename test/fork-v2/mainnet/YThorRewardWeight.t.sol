@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {xMETRO} from "../../../src/xMETRO.sol";
@@ -36,8 +36,8 @@ contract YThorRewardWeightMainnetTest is MainnetForkBase {
     }
 
     function _yAccumulator() internal view returns (uint256) {
-        // After restoring Ownable, compiler storage layout confirms the independent yTHOR accumulator in slot 8.
-        return uint256(vm.load(address(core), bytes32(uint256(8))));
+        // Ownable2Step adds one slot; verify this against the final compiler storage layout.
+        return uint256(vm.load(address(core), bytes32(uint256(9))));
     }
 
     /// E-14.01: Tests initial owner and upper bound.
@@ -52,6 +52,9 @@ contract YThorRewardWeightMainnetTest is MainnetForkBase {
         core.setYThorRewardWeightBps(5_000);
         assertEq(core.yThorRewardWeightBps(), 5_000);
         core.transferOwnership(alice);
+        assertEq(core.pendingOwner(), alice);
+        vm.prank(alice);
+        core.acceptOwnership();
         assertEq(core.owner(), alice);
         vm.expectRevert();
         core.setYThorRewardWeightBps(10_000);

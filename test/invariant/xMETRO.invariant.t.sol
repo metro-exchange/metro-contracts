@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import "forge-std/Test.sol";
 import "forge-std/StdInvariant.sol";
@@ -33,7 +33,13 @@ contract xMETROInvariantTest is StdInvariant, Test {
         xmetro.setRewardDistributor(address(handler));
         xmetro.setContributor(address(handler), true);
         xmetro.transferOwnership(address(handler));
+        vm.prank(address(handler));
+        xmetro.acceptOwnership();
+        assertEq(xmetro.pendingOwner(), address(0));
         assertEq(xmetro.owner(), address(handler));
+
+        handler.setYThorRewardWeight(10_000);
+        assertEq(xmetro.yThorRewardWeightBps(), 10_000);
 
         // Seed successful excluded migrations and both exit modes before random operations.
         handler.creditThor(0, 100 ether);

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IXMetroDeFiAdapter} from "../../../src/interfaces/IXMetroDeFiAdapter.sol";
@@ -40,8 +40,11 @@ contract CrossSourcePathsMainnetTest is MainnetForkBase {
         additionalSwapIds[3] = IXMetroAdapterAdminFork(proxy).setSwapTokenConfig(XAUT, true, true);
         v3Id = IXMetroAdapterAdminFork(proxy).setAaveV3Config(AAVE_V3_POOL, A_USDC, 37, true, true);
         IXMetroAdapterAdminFork(proxy).setAaveV4Config(V4_SPOKE, V4_GIVER, V4_USDC_RESERVE, true, true);
-        v4Id = keccak256(abi.encode(block.chainid, keccak256("XMETRO_DEFI_STRATEGY_V1"),
-            IXMetroDeFiAdapter.StrategyKind.AaveV4, address(0)));
+        v4Id = keccak256(
+            abi.encode(
+                block.chainid, keccak256("XMETRO_DEFI_STRATEGY_V1"), IXMetroDeFiAdapter.StrategyKind.AaveV4, address(0)
+            )
+        );
         mapleId = IXMetroAdapterAdminFork(proxy).setMapleConfig(MAPLE_ROUTER, bytes32(0), true, true);
         _createMetroPool(10_000 ether, 10_000e6);
         core.unpause();
@@ -70,11 +73,15 @@ contract CrossSourcePathsMainnetTest is MainnetForkBase {
     }
 
     function _source(uint8 source) private {
-        if (source == 0) _mintAndStake(user, 100 ether);
-        else if (source == 1) _fundAndMigrate(THOR, THOR_HOLDER, false);
-        else if (source == 2) _fundAndMigrate(YTHOR, YTHOR_HOLDER, true);
-        else if (source == 3) _contribute();
-        else if (source == 4) {
+        if (source == 0) {
+            _mintAndStake(user, 100 ether);
+        } else if (source == 1) {
+            _fundAndMigrate(THOR, THOR_HOLDER, false);
+        } else if (source == 2) {
+            _fundAndMigrate(YTHOR, YTHOR_HOLDER, true);
+        } else if (source == 3) {
+            _contribute();
+        } else if (source == 4) {
             _mintAndStake(user, 100 ether);
             _fundAndMigrate(THOR, THOR_HOLDER, false);
             _fundAndMigrate(YTHOR, YTHOR_HOLDER, true);
@@ -91,26 +98,32 @@ contract CrossSourcePathsMainnetTest is MainnetForkBase {
         if (!pendingPrepared) assertGt(core.totalSharesOf(user), 0);
     }
 
-    function _route() private view returns (bytes memory) {
+    function _route(uint256 cap) private view returns (bytes memory) {
         address[] memory path = new address[](2);
         path[0] = USDC;
         path[1] = address(metro);
-        return abi.encode(uint8(0), abi.encode(path));
+        return abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(0), cap, abi.encode(path));
     }
 
     function _mapleAuthorization() private view returns (bytes memory) {
         string memory json = vm.readFile(MAPLE_FIXTURE);
-        return abi.encode(vm.parseJsonUint(json, ".bitmap"), vm.parseJsonUint(json, ".deadline"),
-            uint8(vm.parseJsonUint(json, ".v")), vm.parseJsonBytes32(json, ".r"), vm.parseJsonBytes32(json, ".s"));
+        return abi.encode(
+            vm.parseJsonUint(json, ".bitmap"),
+            vm.parseJsonUint(json, ".deadline"),
+            uint8(vm.parseJsonUint(json, ".v")),
+            vm.parseJsonBytes32(json, ".r"),
+            vm.parseJsonBytes32(json, ".s")
+        );
     }
 
     function _oneInchExecutionData(uint8 pathKind) private view returns (bytes memory) {
         string memory json = vm.readFile(pathKind == 2 ? ONEINCH_FIXTURE : FORCED_FIXTURE);
-        string memory routePath = pathKind == 2 ? ".routes[4].calldata"
+        string memory routePath = pathKind == 2
+            ? ".routes[4].calldata"
             : string.concat(".routes[", vm.toString(uint256(pathKind - 6)), "].calldata");
         bytes memory oneInchCalldata = vm.parseJsonBytes(json, routePath);
         assertEq(bytes4(oneInchCalldata), bytes4(0x07ed2379));
-        return abi.encode(uint8(2), oneInchCalldata);
+        return abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(2), uint256(100e6), oneInchCalldata);
     }
 
     function _strategy(uint8 pathKind) private view returns (bytes32) {
@@ -137,14 +150,18 @@ contract CrossSourcePathsMainnetTest is MainnetForkBase {
 
     function _assertReceived(uint8 pathKind, uint256 amountOut) private view {
         assertGt(amountOut, 0);
-        if (pathKind == 1) assertGt(core.balanceOf(user), 0);
-        else if (pathKind == 2 || pathKind == 5) assertEq(IERC20(SYRUP_USDC).balanceOf(user), amountOut);
-        else if (pathKind >= 6) {
+        if (pathKind == 1) {
+            assertGt(core.balanceOf(user), 0);
+        } else if (pathKind == 2 || pathKind == 5) {
+            assertEq(IERC20(SYRUP_USDC).balanceOf(user), amountOut);
+        } else if (pathKind >= 6) {
             address[4] memory tokens = [USDT, WBTC, GHO, XAUT];
             assertEq(IERC20(tokens[pathKind - 6]).balanceOf(user), amountOut);
+        } else if (pathKind == 3) {
+            assertGt(IERC20(A_USDC).balanceOf(user), 0);
+        } else if (pathKind == 4) {
+            assertEq(ICrossSpoke(V4_SPOKE).getUserSuppliedShares(V4_USDC_RESERVE, user), amountOut);
         }
-        else if (pathKind == 3) assertGt(IERC20(A_USDC).balanceOf(user), 0);
-        else if (pathKind == 4) assertEq(ICrossSpoke(V4_SPOKE).getUserSuppliedShares(V4_USDC_RESERVE, user), amountOut);
         assertEq(core.claimable(user), 0);
     }
 
@@ -155,14 +172,15 @@ contract CrossSourcePathsMainnetTest is MainnetForkBase {
             if (automatic) {
                 address[] memory one = new address[](1);
                 one[0] = user;
-                amountOut = core.autocompoundBatch(one, 1, block.timestamp + 1 hours, _route());
+                amountOut = core.autocompoundBatch(one, 1, block.timestamp + 1 hours, _route(100e6));
             } else {
                 vm.prank(user);
-                amountOut = core.autocompound(1, block.timestamp + 1 hours, _route());
+                amountOut = core.autocompound(1, block.timestamp + 1 hours, _route(100e6));
             }
         } else {
             bytes32 id = _strategy(pathKind);
-            bytes memory data = pathKind == 2 || pathKind >= 6 ? _oneInchExecutionData(pathKind)
+            bytes memory data = pathKind == 2 || pathKind >= 6
+                ? _oneInchExecutionData(pathKind)
                 : pathKind == 5 ? _mapleAuthorization() : bytes("");
             uint256 deadline = pathKind == 2 || pathKind >= 6 ? block.timestamp + 1 hours : 0;
             if (automatic) {
@@ -170,8 +188,7 @@ contract CrossSourcePathsMainnetTest is MainnetForkBase {
                 one[0] = user;
                 uint256[] memory minima = pathKind == 4 ? new uint256[](1) : new uint256[](0);
                 if (pathKind == 4) minima[0] = 1;
-                (uint256 rewardIn, uint256 output) =
-                    core.executeAutoStrategyBatch(id, one, 1, minima, deadline, data);
+                (uint256 rewardIn, uint256 output) = core.executeAutoStrategyBatch(id, one, 1, minima, deadline, data);
                 assertEq(rewardIn, 100e6);
                 amountOut = output;
             } else {
@@ -198,21 +215,40 @@ contract CrossSourcePathsMainnetTest is MainnetForkBase {
                     vm.prank(user);
                     assertEq(core.claimRewards(), 100e6);
                     assertEq(IERC20(USDC).balanceOf(user), 100e6);
-                } else _execute(pathKind, mode == 1);
+                } else {
+                    _execute(pathKind, mode == 1);
+                }
             }
         }
     }
 
     /// X-01: Tests stake reachable paths.
-    function test_X01_StakeReachablePaths() public { _matrix(0); }
+    function test_X01_StakeReachablePaths() public {
+        _matrix(0);
+    }
+
     /// X-01: Tests THOR reachable paths.
-    function test_X01_ThorReachablePaths() public { _matrix(1); }
+    function test_X01_ThorReachablePaths() public {
+        _matrix(1);
+    }
+
     /// X-01: Tests yTHOR reachable paths.
-    function test_X01_YThorReachablePaths() public { _matrix(2); }
+    function test_X01_YThorReachablePaths() public {
+        _matrix(2);
+    }
+
     /// X-01: Tests contributor reachable paths.
-    function test_X01_ContributorReachablePaths() public { _matrix(3); }
+    function test_X01_ContributorReachablePaths() public {
+        _matrix(3);
+    }
+
     /// X-01: Tests mixed reachable paths.
-    function test_X01_MixedReachablePaths() public { _matrix(4); }
+    function test_X01_MixedReachablePaths() public {
+        _matrix(4);
+    }
+
     /// X-01: Tests exited with old pending reachable paths.
-    function test_X01_ExitedWithOldPendingReachablePaths() public { _matrix(5); }
+    function test_X01_ExitedWithOldPendingReachablePaths() public {
+        _matrix(5);
+    }
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import "forge-std/Test.sol";
 import "forge-std/StdInvariant.sol";
@@ -40,7 +40,13 @@ contract RewardDistributorInvariantTest is StdInvariant, Test {
         handler = new RewardDistributorHandler(distributor, xmetro, usdc, vault);
         distributor.setOperator(address(handler), true);
         distributor.transferOwnership(address(handler));
+        vm.prank(address(handler));
+        distributor.acceptOwnership();
+        assertEq(distributor.pendingOwner(), address(0));
+        assertEq(distributor.owner(), address(handler));
 
+        handler.setBps(1_000);
+        assertEq(distributor.maxCommissionSplitBps(), 1_000);
         targetContract(address(handler));
         bytes4[] memory selectors = new bytes4[](3);
         selectors[0] = handler.distribute.selector;

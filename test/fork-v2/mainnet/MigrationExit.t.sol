@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
+
+import {MetroToken} from "../../../src/metro.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {xMETRO} from "../../../src/xMETRO.sol";
@@ -172,11 +174,11 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         _fundAndApprove(YTHOR, YTHOR_HOLDER, bob, address(fresh), 100 ether);
         vm.warp(start - 1);
         vm.prank(alice);
-        vm.expectRevert("ThorEscrow: not started");
+        vm.expectRevert(ThorMigrationEscrow.MigrationNotStarted.selector);
         fresh.migrateThor(100 ether);
         vm.warp(start);
         vm.prank(alice);
-        vm.expectRevert("ThorEscrow: zero mint");
+        vm.expectRevert(ThorMigrationEscrow.ZeroMintAmount.selector);
         fresh.migrateThor(1);
         vm.prank(alice);
         fresh.migrateThor(100 ether);
@@ -184,7 +186,7 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         assertEq(_thorPrincipal(alice), 50 ether);
         _fundAndApprove(THOR, THOR_HOLDER, carol, address(fresh), 1 ether);
         vm.prank(carol);
-        vm.expectRevert("ThorEscrow: thor cap");
+        vm.expectRevert(ThorMigrationEscrow.ThorCapExceeded.selector);
         fresh.migrateThor(1 ether);
         vm.warp(start + 2 days);
         vm.prank(bob);
@@ -195,7 +197,7 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         _fundAndApprove(YTHOR, YTHOR_HOLDER, late, address(fresh), 1 ether);
         vm.warp(start + 2 days + 1);
         vm.prank(late);
-        vm.expectRevert("ThorEscrow: ythor expired");
+        vm.expectRevert(ThorMigrationEscrow.YThorMigrationExpired.selector);
         fresh.migrateYThor(1 ether);
         assertEq(IERC20(THOR).balanceOf(address(fresh)), 100 ether);
         assertEq(IERC20(YTHOR).balanceOf(address(fresh)), 100 ether);
@@ -214,7 +216,7 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         escrow.migrateThor(2 ether);
         metro.setMinter(address(core), false);
         vm.prank(alice);
-        vm.expectRevert("MetroToken: not minter");
+        vm.expectRevert(MetroToken.UnauthorizedMinter.selector);
         escrow.migrateThor(1 ether);
         metro.setMinter(address(core), true);
         metro.setMinter(address(this), true);
@@ -230,7 +232,7 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         IERC20(YTHOR).approve(address(escrow), 1 ether);
         metro.setMinter(address(core), false);
         vm.prank(bob);
-        vm.expectRevert("MetroToken: not minter");
+        vm.expectRevert(MetroToken.UnauthorizedMinter.selector);
         escrow.migrateYThor(1 ether);
         metro.setMinter(address(core), true);
         vm.prank(bob);
@@ -281,7 +283,7 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         vm.prank(alice);
         vm.expectRevert();
         escrow.setMigrationStartTime(block.timestamp + 1 days);
-        vm.expectRevert("ThorEscrow: bad start time");
+        vm.expectRevert(ThorMigrationEscrow.InvalidMigrationStartTime.selector);
         escrow.setMigrationStartTime(block.timestamp - 1);
         escrow.setMigrationStartTime(block.timestamp + 1 days);
         assertEq(escrow.migrationStartTime(), block.timestamp + 1 days);
@@ -295,9 +297,9 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         vm.prank(alice);
         vm.expectRevert();
         escrow.setDeadlines(block.timestamp + 2 days, block.timestamp + 2 days);
-        vm.expectRevert("ThorEscrow: bad deadline");
+        vm.expectRevert(ThorMigrationEscrow.InvalidMigrationDeadline.selector);
         escrow.setDeadlines(block.timestamp - 1, block.timestamp + 2 days);
-        vm.expectRevert("ThorEscrow: deadline before start");
+        vm.expectRevert(ThorMigrationEscrow.DeadlineNotAfterMigrationStart.selector);
         escrow.setDeadlines(block.timestamp + 1 days, block.timestamp + 2 days);
         escrow.setDeadlines(block.timestamp + 2 days, block.timestamp + 3 days);
         assertEq(escrow.deadlineThor(), block.timestamp + 2 days);
@@ -310,7 +312,7 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         vm.prank(alice);
         vm.expectRevert();
         escrow.setCaps(20 ether, 20 ether);
-        vm.expectRevert("ThorEscrow: bad cap");
+        vm.expectRevert(ThorMigrationEscrow.InvalidMigrationCap.selector);
         escrow.setCaps(0, 20 ether);
         escrow.setCaps(5 ether, 20 ether);
         assertEq(escrow.migratedThor(), 10 ether);
@@ -320,7 +322,7 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         assertEq(_thorPrincipal(alice), 10 ether);
         _fundAndApprove(THOR, THOR_HOLDER, bob, address(escrow), 1 ether);
         vm.prank(bob);
-        vm.expectRevert("ThorEscrow: thor cap");
+        vm.expectRevert(ThorMigrationEscrow.ThorCapExceeded.selector);
         escrow.migrateThor(1 ether);
         escrow.setCaps(11 ether, 20 ether);
         vm.prank(bob);
@@ -334,12 +336,12 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         vm.prank(alice);
         vm.expectRevert();
         fresh.setRatios(1e18, 1e18);
-        vm.expectRevert("ThorEscrow: bad ratio");
+        vm.expectRevert(ThorMigrationEscrow.InvalidMigrationRatio.selector);
         fresh.setRatios(0, 1e18);
         fresh.setRatios(15e17, 25e17);
         assertEq(fresh.ratioThor(), 15e17);
         assertEq(fresh.ratioYThor(), 25e17);
-        vm.expectRevert("ThorEscrow: ratios locked");
+        vm.expectRevert(ThorMigrationEscrow.MigrationRatiosLocked.selector);
         fresh.setRatios(1e18, 1e18);
         assertLt(block.timestamp, fresh.migrationStartTime());
     }
@@ -623,7 +625,11 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         path[1] = address(metro);
         uint256 quote = IUniswapV2RouterMainnet(V2_ROUTER).getAmountsOut(200e6, path)[1];
         vm.prank(alice);
-        uint256 received = core.autocompound(quote, block.timestamp + 1 hours, abi.encode(uint8(0), abi.encode(path)));
+        uint256 received = core.autocompound(
+            quote,
+            block.timestamp + 1 hours,
+            abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(0), uint256(200e6), abi.encode(path))
+        );
         assertEq(received, quote);
         assertEq(core.balanceOf(alice), received);
         assertEq(core.claimable(alice), 0);

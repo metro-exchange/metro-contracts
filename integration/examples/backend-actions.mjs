@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import ethersPackage from 'ethers';
-import { address, assertChain } from './user-actions.mjs';
+import { address, assertChain, validateSwapExecution } from './user-actions.mjs';
 
 const { ethers } = ethersPackage;
 const coreAbi = JSON.parse(await readFile(new URL('../abi/xMETRO.json', import.meta.url)));
@@ -74,6 +74,7 @@ export async function runAutoBatch(signer, config, options) {
       })
     : [];
   const [totalPending] = await core.claimableMany(users);
+  await validateSwapExecution(signer.provider, config, strategyId, executionData, totalPending);
   const estimatedGas = await core.estimateGas.executeAutoStrategyBatch(
     strategyId, users, minTotalAmountOut, minUserAmountsOut, deadline, executionData
   );
@@ -100,12 +101,19 @@ export async function runAutoBatch(signer, config, options) {
 export async function runCompoundBatch(signer, config, candidates, minMetroOut, deadline, swapData) {
   await assertChain(signer, config);
   const core = new ethers.Contract(address(config.contracts.xMETRO, 'xMETRO'), coreAbi, signer);
-  const users = uniqueAddresses(candidates);
+  const strategyId = ethers.utils.keccak256(ethers.utils.defaultAbiCoder.encode(
+    ['uint256', 'bytes32', 'uint8', 'address'],
+    [config.chainId, ethers.utils.id('XMETRO_DEFI_STRATEGY_V1'), 1, address(config.contracts.METRO, 'METRO')]
+  ));
+  const users = await eligibleAutoUsers(signer.provider, config, strategyId, candidates);
   const eligible = [];
   for (const user of users) {
     if (await core.autocompoundEnabled(user) && !(await core.claimable(user)).isZero()) eligible.push(user);
   }
   if (!eligible.length) throw new Error('No eligible compound users');
+  const [totalPending] = await core.claimableMany(eligible);
+  await validateSwapExecution(signer.provider, config, strategyId, swapData, totalPending);
+  await core.callStatic.autocompoundBatch(eligible, minMetroOut, deadline, swapData);
   return (await core.autocompoundBatch(eligible, minMetroOut, deadline, swapData)).wait();
 }
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import {stdJson} from "forge-std/StdJson.sol";
 import {console2} from "forge-std/console2.sol";
@@ -64,7 +64,7 @@ contract VerifyDeployment is DeFiAdapterScriptBase {
         );
         require(metro.isMinter(coreAddress) && !metro.isMinter(deployer), "VerifyDeploy: minter");
         require(!core.paused(), "VerifyDeploy: Core paused");
-        require(core.owner() == owner, "VerifyDeploy: Core ownership");
+        require(core.owner() == owner && core.pendingOwner() == address(0), "VerifyDeploy: Core ownership");
         require(
             address(core.METRO()) == metroAddress && address(core.rewardToken()) == usdc
                 && core.forfeitureRecipient() == record.readAddress(".forfeitureRecipient")
@@ -99,7 +99,9 @@ contract VerifyDeployment is DeFiAdapterScriptBase {
         _requireNoAllowance(usdc, proxy, config.aaveV4Giver);
         _requireNoAllowance(usdc, proxy, config.maple.router);
 
-        require(distributor.owner() == owner, "VerifyDeploy: Distributor owner");
+        require(
+            distributor.owner() == owner && distributor.pendingOwner() == address(0), "VerifyDeploy: Distributor owner"
+        );
         require(
             address(distributor.xMETRO()) == coreAddress && address(distributor.rewardToken()) == usdc
                 && distributor.commissionVault() == record.readAddress(".commissionVault")
@@ -111,7 +113,7 @@ contract VerifyDeployment is DeFiAdapterScriptBase {
         _verifyCommissionVault(record, distributorAddress, usdc);
 
         require(
-            escrow.owner() == owner && address(escrow.xMETRO()) == coreAddress
+            escrow.owner() == owner && escrow.pendingOwner() == address(0) && address(escrow.xMETRO()) == coreAddress
                 && address(escrow.thorToken()) == record.readAddress(".thor")
                 && address(escrow.yThorToken()) == record.readAddress(".yThor")
                 && escrow.migrationStartTime() == record.readUint(".migrationStartTime")

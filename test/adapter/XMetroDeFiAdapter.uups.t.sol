@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import {Test} from "forge-std/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -58,7 +58,7 @@ contract CompactAdapterV2 is Initializable, UUPSUpgradeable {
     }
 
     function implementationVersion() external pure returns (uint64) {
-        return 2;
+        return 3;
     }
 
     function logicEpoch() external view returns (uint64) {
@@ -102,8 +102,8 @@ contract CompactBadUUID {
 contract CompactUUPSDeploymentTest is Test {
     uint256 internal constant EIP170_LIMIT = 24_576;
     uint256 internal constant PROJECT_LIMIT = 23_552;
-    uint256 internal constant EXPECTED_RUNTIME = 20_487;
-    uint256 internal constant EXPECTED_INITCODE = 20_690;
+    uint256 internal constant EXPECTED_RUNTIME = 20_755;
+    uint256 internal constant EXPECTED_INITCODE = 20_958;
     uint256 internal constant EXPECTED_PROXY_RUNTIME = 77;
     uint256 internal constant ETHEREUM_PINNED_BLOCK = 25_838_112;
     uint256 internal constant BASE_PINNED_BLOCK = 50_555_256;
@@ -199,7 +199,7 @@ contract CompactUUPSDeploymentTest is Test {
         core.setAdapter(proxy);
         adapter.upgradeToAndCall(fullV2, bytes(""));
         assertEq(adapter.logicEpoch(), 2);
-        assertEq(adapter.implementationVersion(), 2);
+        assertEq(adapter.implementationVersion(), 3);
         assertEq(address(uint160(uint256(vm.load(proxy, IMPLEMENTATION_SLOT)))), fullV2);
         assertEq(adapter.xMETRO(), address(core));
         assertEq(adapter.USDC(), address(usdc));
@@ -235,7 +235,7 @@ contract CompactUUPSDeploymentTest is Test {
         assertEq(adapter.USDC(), address(usdc));
         assertEq(adapter.METRO(), address(metro));
         assertEq(adapter.logicEpoch(), 1);
-        assertEq(adapter.implementationVersion(), 1);
+        assertEq(adapter.implementationVersion(), 2);
 
         CompactProbeCode routerV2 = new CompactProbeCode();
         CompactProbeCode routerV3 = new CompactProbeCode();
@@ -248,7 +248,7 @@ contract CompactUUPSDeploymentTest is Test {
         adapter.upgradeToAndCall(v2, bytes(""));
         assertFalse(core.paused());
         assertEq(adapter.logicEpoch(), 2);
-        assertEq(adapter.implementationVersion(), 2);
+        assertEq(adapter.implementationVersion(), 3);
         assertEq(proxy.code.length, EXPECTED_PROXY_RUNTIME);
         bytes32 namespace = 0x9bc90f8dcf23c06f51f48cd4ee75e247d4ecbe0523c3d7a0f6ecd330f0cd1f00;
         assertEq(address(uint160(uint256(vm.load(proxy, bytes32(uint256(namespace) + 5))))), address(routerV2));
@@ -284,7 +284,7 @@ contract CompactUUPSDeploymentTest is Test {
     {
         assertEq(vm.load(proxy, IMPLEMENTATION_SLOT), expectedImplementationSlot);
         assertEq(adapter.logicEpoch(), 1);
-        assertEq(adapter.implementationVersion(), 1);
+        assertEq(adapter.implementationVersion(), 2);
     }
 
     function _create(bytes memory initCode) internal returns (address deployed) {

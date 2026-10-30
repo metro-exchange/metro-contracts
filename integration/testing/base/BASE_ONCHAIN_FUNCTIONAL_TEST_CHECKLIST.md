@@ -1,5 +1,16 @@
 # Base On-Chain Functional Test Checklist
 
+## October 30 audit remediation: future on-chain checks
+
+- [ ] On new Core/Escrow/Distributor instances, verify owner/pendingOwner before and after acceptance; reject paused Core/Escrow renounce while allowing handover.
+- [ ] On a future version-2 Adapter, exercise V2/V3/1inch input caps and rejection of legacy data.
+- [ ] Fund rewards after quoting; confirm all four Core swap/compound paths revert above the saved cap, preserve rewards and succeed with a complete fresh quote.
+
+- [ ] Decode initial Escrow/Core configuration logs and the proxy's two disabled strategies at revision 1; confirm stored getter values and rejected reinitialization.
+- [ ] Verify target-chain support for the pinned Solidity 0.8.38 / Osaka artifacts, including transient storage; exercise callback protection and sequential calls.
+
+No deployment or on-chain transaction was performed for this source change. The historical deployment rows and hashes below remain unchanged.
+
 ## October 24 source acceptance: future on-chain checks
 
 These items apply to a future deployment of the updated source. The existing QA addresses, transactions and permissions below remain historical deployment facts and have not been changed. Local tests do not mark an on-chain checkbox as passed.
