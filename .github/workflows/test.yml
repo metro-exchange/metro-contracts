@@ -71,8 +71,12 @@ jobs:
             test/unit/xMETRO.unit.t.sol \
             script/VerifyDeployment.s.sol \
             src/RewardDistributor.sol \
+            src/metro.sol \
+            test/fork-v2/mainnet/CommissionRouting.t.sol \
+            test/fuzz/MetroToken.fuzz.t.sol \
             test/invariant/RewardDistributor.invariant.t.sol \
             test/mocks/MaliciousERC20.sol \
+            test/unit/MetroToken.t.sol \
             test/unit/RewardDistributor.t.sol
 
       - name: Build production xMETRO artifact

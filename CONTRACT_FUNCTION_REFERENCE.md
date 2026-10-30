@@ -149,3 +149,47 @@ Read `thorPositionCount(user)` / `yThorPositionCount(user)` before querying `tho
 Core tracks signed reward debt at the existing `1e24` accumulator precision. Share changes retain the full debt product. Claims, emergency payments, manual actions, and automatic batches consume only whole USDC base units and retain the fractional remainder. Zero-value claims preserve that remainder. `rewardDebt(user)` keeps its ABI and displays USDC base units, truncating negative fractions toward zero; use `claimable` / `claimableMany` for payable amounts instead of reconstructing them from the display getter. Adapter inputs and event amounts remain in token base units.
 
 `YTHOR_EXIT_RAMP()` returns seconds: `126144000` for production, `43200` for QA. These are compiled constants with no Owner setter.
+
+## Business errors
+
+The following errors have no arguments. Decode with the matching contract ABI; external failures and Solidity panics retain their original data. Check ordering and business conditions are unchanged.
+
+| Contract | Error | Trigger |
+| --- | --- | --- |
+| MetroToken | `MinterStatusUnchanged()` | same status |
+| MetroToken | `UnauthorizedMinter()` | not minter |
+| MetroToken | `InvalidRecipient()` | bad to |
+| MetroToken | `ZeroAmount()` | zero amount |
+| ThorMigrationEscrow | `ZeroXMetro()` | zero xMETRO |
+| ThorMigrationEscrow | `ZeroMigrationToken()` | zero token |
+| ThorMigrationEscrow | `InvalidMigrationStartTime()` | bad start time |
+| ThorMigrationEscrow | `MigrationNotStarted()` | not started |
+| ThorMigrationEscrow | `ZeroAmount()` | zero amount |
+| ThorMigrationEscrow | `ThorConfigurationMissing()` | thor config not set |
+| ThorMigrationEscrow | `ThorMigrationExpired()` | thor expired |
+| ThorMigrationEscrow | `ZeroMintAmount()` | zero mint |
+| ThorMigrationEscrow | `ThorCapExceeded()` | thor cap |
+| ThorMigrationEscrow | `YThorConfigurationMissing()` | ythor config not set |
+| ThorMigrationEscrow | `YThorMigrationExpired()` | ythor expired |
+| ThorMigrationEscrow | `YThorCapExceeded()` | ythor cap |
+| ThorMigrationEscrow | `InvalidMigrationDeadline()` | bad deadline |
+| ThorMigrationEscrow | `DeadlineNotAfterMigrationStart()` | deadline before start |
+| ThorMigrationEscrow | `InvalidMigrationRatio()` | bad ratio |
+| ThorMigrationEscrow | `MigrationRatiosLocked()` | ratios locked |
+| ThorMigrationEscrow | `InvalidMigrationCap()` | bad cap |
+| ThorMigrationEscrow | `MigrationTokenRescueForbidden()` | cannot rescue migration tokens |
+| ThorMigrationEscrow | `InvalidRecipient()` | bad to |
+| RewardDistributor | `ZeroXMetro()` | zero xMETRO |
+| RewardDistributor | `UnauthorizedOperator()` | only operator |
+| RewardDistributor | `InvalidOperator()` | bad operator |
+| RewardDistributor | `CommissionSplitEnabled()` | split enabled |
+| RewardDistributor | `InvalidCommissionSplitBps()` | bps > 10000 |
+| RewardDistributor | `ZeroAmount()` | zero amount |
+| RewardDistributor | `InsufficientRewardBalance()` | insufficient balance |
+| RewardDistributor | `ZeroCommissionVault()` | zero vault |
+| RewardDistributor | `CommissionVaultNotContract()` | vault not contract |
+| RewardDistributor | `CommissionTokenMismatch()` | token mismatch |
+| RewardDistributor | `CommissionDistributorMismatch()` | distributor mismatch |
+| RewardDistributor | `CommissionVaultMigrationPending()` | vault migration pending |
+| RewardDistributor | `CommissionVaultPaused()` | vault paused |
+| RewardDistributor | `InvalidRecipient()` | bad to |

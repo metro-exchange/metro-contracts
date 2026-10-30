@@ -82,13 +82,27 @@ contract MetroTokenTest is Test {
         assertTrue(metro.isMinter(minter));
     }
 
+    function test_CustomErrorsPreserveValidationOrder() public {
+        vm.expectRevert(MetroToken.MinterStatusUnchanged.selector);
+        metro.setMinter(minter, false);
+        vm.expectRevert(MetroToken.UnauthorizedMinter.selector);
+        metro.mint(address(0), 0);
+        metro.setMinter(owner, true);
+        vm.expectRevert(MetroToken.InvalidRecipient.selector);
+        metro.mint(address(0), 0);
+        vm.expectRevert(MetroToken.ZeroAmount.selector);
+        metro.mint(user, 0);
+        metro.mint(user, 1);
+        assertEq(metro.balanceOf(user), 1);
+    }
+
     function test_Mint_OnlyMinter() public {
-        vm.expectRevert(bytes("MetroToken: not minter"));
+        vm.expectRevert(MetroToken.UnauthorizedMinter.selector);
         metro.mint(user, 1 ether);
         assertEq(metro.balanceOf(user), 0);
 
         vm.prank(user);
-        vm.expectRevert(bytes("MetroToken: not minter"));
+        vm.expectRevert(MetroToken.UnauthorizedMinter.selector);
         metro.mint(user, 1);
 
         metro.setMinter(owner, true);

@@ -167,5 +167,6 @@ Each row is a separately tested complete source state. Production stages follow 
 | #13 | 251 / 0 / 4 | 23,510 / 25,146 | 20,574 / 20,777 |
 | #16 | 254 / 0 / 4 | 23,496 / 25,112 | 20,707 / 20,910 |
 | #15 | 262 / 0 / 4 | 23,551 / 25,176 | 20,707 / 20,910 |
+| #17 | 265 / 0 / 4 | 23,551 / 25,176 | 20,707 / 20,910 |
 
 Every stage passed the Adapter/Core/regression/deployment-script test profiles, deploy and fork-test compilation, ABI and error-selector checks, deployment artifact comparisons, formatting and JavaScript client assertions. No RPC URL was available: the four RPC-dependent deployment tests were skipped, and real-protocol fork execution was not performed.

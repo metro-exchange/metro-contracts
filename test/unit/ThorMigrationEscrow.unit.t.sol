@@ -193,14 +193,29 @@ contract ThorMigrationEscrowUnitTest is Test {
     function test_ConstructorRejectsInvalidInputs() public {
         vm.expectRevert(abi.encodeWithSignature("OwnableInvalidOwner(address)", address(0)));
         new ThorMigrationEscrow(address(0), address(xmetro), address(thor), address(yThor), block.timestamp);
-        vm.expectRevert(bytes("ThorEscrow: zero xMETRO"));
+        vm.expectRevert(ThorMigrationEscrow.ZeroXMetro.selector);
         new ThorMigrationEscrow(owner, address(0), address(thor), address(yThor), block.timestamp);
 
-        vm.expectRevert(bytes("ThorEscrow: zero token"));
+        vm.expectRevert(ThorMigrationEscrow.ZeroMigrationToken.selector);
         new ThorMigrationEscrow(owner, address(xmetro), address(0), address(yThor), block.timestamp);
 
-        vm.expectRevert(bytes("ThorEscrow: bad start time"));
+        vm.expectRevert(ThorMigrationEscrow.InvalidMigrationStartTime.selector);
         new ThorMigrationEscrow(owner, address(xmetro), address(thor), address(yThor), block.timestamp - 1);
+    }
+
+    function test_CustomErrorsCoverBothConfigurationOperands() public {
+        vm.expectRevert(ThorMigrationEscrow.ZeroMigrationToken.selector);
+        new ThorMigrationEscrow(owner, address(xmetro), address(thor), address(0), block.timestamp);
+        vm.expectRevert(ThorMigrationEscrow.InvalidMigrationCap.selector);
+        escrow.setCaps(1 ether, 0);
+        vm.expectRevert(ThorMigrationEscrow.InvalidMigrationRatio.selector);
+        escrow.setRatios(1 ether, 0);
+        vm.expectRevert(ThorMigrationEscrow.InvalidMigrationDeadline.selector);
+        escrow.setDeadlines(block.timestamp + 10, block.timestamp - 1);
+        vm.expectRevert(ThorMigrationEscrow.DeadlineNotAfterMigrationStart.selector);
+        escrow.setDeadlines(block.timestamp + 10, block.timestamp);
+        vm.expectRevert(ThorMigrationEscrow.InvalidMigrationStartTime.selector);
+        escrow.setMigrationStartTime(block.timestamp - 1);
     }
 
     function test_ConfigurationPermissionsValidationAndEvents() public {
@@ -211,21 +226,21 @@ contract ThorMigrationEscrowUnitTest is Test {
         vm.expectRevert();
         fresh.setCaps(1, 1);
 
-        vm.expectRevert(bytes("ThorEscrow: bad cap"));
+        vm.expectRevert(ThorMigrationEscrow.InvalidMigrationCap.selector);
         fresh.setCaps(0, 1);
         vm.expectEmit(false, false, false, true);
         emit ThorMigrationEscrow.CapsUpdated(10, 20);
         fresh.setCaps(10, 20);
 
-        vm.expectRevert(bytes("ThorEscrow: bad ratio"));
+        vm.expectRevert(ThorMigrationEscrow.InvalidMigrationRatio.selector);
         fresh.setRatios(0, 1e18);
         vm.expectEmit(false, false, false, true);
         emit ThorMigrationEscrow.RatiosUpdated(2e18, 3e18);
         fresh.setRatios(2e18, 3e18);
-        vm.expectRevert(bytes("ThorEscrow: ratios locked"));
+        vm.expectRevert(ThorMigrationEscrow.MigrationRatiosLocked.selector);
         fresh.setRatios(1e18, 1e18);
 
-        vm.expectRevert(bytes("ThorEscrow: deadline before start"));
+        vm.expectRevert(ThorMigrationEscrow.DeadlineNotAfterMigrationStart.selector);
         fresh.setDeadlines(block.timestamp + 5, block.timestamp + 20);
         vm.expectEmit(false, false, false, true);
         emit ThorMigrationEscrow.DeadlinesUpdated(block.timestamp + 20, block.timestamp + 30);
@@ -282,7 +297,7 @@ contract ThorMigrationEscrowUnitTest is Test {
         assertEq(xmetro.lastYThorPrincipal(), principal);
 
         vm.prank(user);
-        vm.expectRevert(bytes("ThorEscrow: ythor cap"));
+        vm.expectRevert(ThorMigrationEscrow.YThorCapExceeded.selector);
         escrow.migrateYThor(1 ether);
         assertEq(xmetro.yThorCredits(), 1);
     }
@@ -374,18 +389,22 @@ contract ThorMigrationEscrowUnitTest is Test {
         future.setRatios(1e18, 1e18);
         future.setDeadlines(block.timestamp + 2 days, block.timestamp + 2 days);
 
-        vm.expectRevert(bytes("ThorEscrow: not started"));
+        vm.expectRevert(ThorMigrationEscrow.MigrationNotStarted.selector);
         future.migrateThor(1);
+        vm.expectRevert(ThorMigrationEscrow.MigrationNotStarted.selector);
+        future.migrateYThor(0);
 
-        vm.expectRevert(bytes("ThorEscrow: zero amount"));
+        vm.expectRevert(ThorMigrationEscrow.ZeroAmount.selector);
         escrow.migrateThor(0);
-        vm.expectRevert(bytes("ThorEscrow: zero amount"));
+        vm.expectRevert(ThorMigrationEscrow.ZeroAmount.selector);
         escrow.migrateYThor(0);
 
         ThorMigrationEscrow noConfig =
             new ThorMigrationEscrow(owner, address(xmetro), address(thor), address(yThor), block.timestamp);
-        vm.expectRevert(bytes("ThorEscrow: thor config not set"));
+        vm.expectRevert(ThorMigrationEscrow.ThorConfigurationMissing.selector);
         noConfig.migrateThor(1);
+        vm.expectRevert(ThorMigrationEscrow.YThorConfigurationMissing.selector);
+        noConfig.migrateYThor(1);
 
         ThorMigrationEscrow tinyRatio =
             new ThorMigrationEscrow(owner, address(xmetro), address(thor), address(yThor), block.timestamp);
@@ -396,23 +415,25 @@ contract ThorMigrationEscrowUnitTest is Test {
         vm.prank(user);
         thor.approve(address(tinyRatio), 1);
         vm.prank(user);
-        vm.expectRevert(bytes("ThorEscrow: zero mint"));
+        vm.expectRevert(ThorMigrationEscrow.ZeroMintAmount.selector);
         tinyRatio.migrateThor(1);
+        vm.expectRevert(ThorMigrationEscrow.ZeroMintAmount.selector);
+        tinyRatio.migrateYThor(1);
 
         escrow.setCaps(1 ether, 1 ether);
         _approveAndFund(user, thor, 2 ether);
         vm.prank(user);
-        vm.expectRevert(bytes("ThorEscrow: thor cap"));
+        vm.expectRevert(ThorMigrationEscrow.ThorCapExceeded.selector);
         escrow.migrateThor(2 ether);
 
         uint256 deadline = block.timestamp + 1;
         escrow.setDeadlines(deadline, deadline);
         vm.warp(deadline + 1);
         vm.prank(user2);
-        vm.expectRevert(bytes("ThorEscrow: thor expired"));
+        vm.expectRevert(ThorMigrationEscrow.ThorMigrationExpired.selector);
         escrow.migrateThor(1);
         vm.prank(user2);
-        vm.expectRevert(bytes("ThorEscrow: ythor expired"));
+        vm.expectRevert(ThorMigrationEscrow.YThorMigrationExpired.selector);
         escrow.migrateYThor(1);
         assertEq(xmetro.yThorCredits(), 0);
     }
@@ -441,11 +462,11 @@ contract ThorMigrationEscrowUnitTest is Test {
         escrow.unpause();
 
         other.mint(address(escrow), 100);
-        vm.expectRevert(bytes("ThorEscrow: cannot rescue migration tokens"));
+        vm.expectRevert(ThorMigrationEscrow.MigrationTokenRescueForbidden.selector);
         escrow.rescueTokens(address(thor), user, 1);
-        vm.expectRevert(bytes("ThorEscrow: cannot rescue migration tokens"));
+        vm.expectRevert(ThorMigrationEscrow.MigrationTokenRescueForbidden.selector);
         escrow.rescueTokens(address(yThor), user, 1);
-        vm.expectRevert(bytes("ThorEscrow: bad to"));
+        vm.expectRevert(ThorMigrationEscrow.InvalidRecipient.selector);
         escrow.rescueTokens(address(other), address(0), 1);
 
         vm.expectEmit(true, true, false, true);

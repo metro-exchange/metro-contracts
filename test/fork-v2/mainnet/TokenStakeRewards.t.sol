@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.38;
 
+import {RewardDistributor} from "../../../src/RewardDistributor.sol";
+
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {MetroToken} from "../../../src/metro.sol";
@@ -106,7 +108,7 @@ contract TokenStakeRewardsMainnetTest is MainnetForkBase {
     /// E-02.04: Tests minter grant revoke and owner not minter.
     function test_E02_MinterGrantRevokeAndOwnerNotMinter() public {
         assertFalse(metro.isMinter(address(this)));
-        vm.expectRevert("MetroToken: not minter");
+        vm.expectRevert(MetroToken.UnauthorizedMinter.selector);
         metro.mint(alice, 1 ether);
         metro.setMinter(spender, true);
         vm.prank(spender);
@@ -114,7 +116,7 @@ contract TokenStakeRewardsMainnetTest is MainnetForkBase {
         assertEq(metro.balanceOf(alice), 1 ether);
         metro.setMinter(spender, false);
         vm.prank(spender);
-        vm.expectRevert("MetroToken: not minter");
+        vm.expectRevert(MetroToken.UnauthorizedMinter.selector);
         metro.mint(alice, 1 ether);
     }
 
@@ -138,10 +140,10 @@ contract TokenStakeRewardsMainnetTest is MainnetForkBase {
         vm.expectRevert();
         capped.mint(bob, 1);
         vm.prank(bob);
-        vm.expectRevert("MetroToken: zero amount");
+        vm.expectRevert(MetroToken.ZeroAmount.selector);
         capped.mint(bob, 0);
         vm.prank(bob);
-        vm.expectRevert("MetroToken: bad to");
+        vm.expectRevert(MetroToken.InvalidRecipient.selector);
         capped.mint(address(0), 1);
     }
 
@@ -416,7 +418,7 @@ contract TokenStakeRewardsMainnetTest is MainnetForkBase {
         _fundUSDC(bob, 10e6);
         vm.startPrank(bob);
         IERC20(USDC).approve(address(distributor), 10e6);
-        vm.expectRevert("RewardDistributor: only operator");
+        vm.expectRevert(RewardDistributor.UnauthorizedOperator.selector);
         distributor.distribute(10e6);
         vm.expectRevert(xMETRO.Unauthorized.selector);
         core.depositRewards(10e6);
@@ -427,7 +429,7 @@ contract TokenStakeRewardsMainnetTest is MainnetForkBase {
         assertEq(core.claimable(alice), 10e6);
         distributor.setOperator(bob, false);
         vm.prank(bob);
-        vm.expectRevert("RewardDistributor: only operator");
+        vm.expectRevert(RewardDistributor.UnauthorizedOperator.selector);
         distributor.distribute(1);
     }
 
@@ -501,7 +503,7 @@ contract TokenStakeRewardsMainnetTest is MainnetForkBase {
 
     /// E-05.07: Tests zero weight and zero delta revert without funds loss.
     function test_E05_ZeroWeightAndZeroDeltaRevertWithoutFundsLoss() public {
-        vm.expectRevert("RewardDistributor: zero amount");
+        vm.expectRevert(RewardDistributor.ZeroAmount.selector);
         distributor.distribute(0);
         _fundUSDC(address(this), 2);
         IERC20(USDC).approve(address(distributor), 2);

@@ -139,3 +139,5 @@ Base QA uses TestTokens, Aave/Maple mocks, and real V2 liquidity; Ethereum forks
 ## Reward accounting precision
 
 Core tracks signed reward debt at the existing `1e24` accumulator precision. Share changes retain the full debt product. Claims, emergency payments, manual actions, and automatic batches consume only whole USDC base units and retain the fractional remainder. Zero-value claims preserve that remainder. `rewardDebt(user)` keeps its ABI and displays USDC base units, truncating negative fractions toward zero; use `claimable` / `claimableMany` for payable amounts instead of reconstructing them from the display getter. Adapter inputs and event amounts remain in token base units.
+
+Business validation failures from MetroToken, Escrow and Distributor use custom errors listed in the [function reference](../../CONTRACT_FUNCTION_REFERENCE.md#business-errors). Decode with the corresponding ABI; Core can bubble a MetroToken error, so include that ABI when reporting migration failures. External protocol/token errors and Solidity panics are not rewritten.

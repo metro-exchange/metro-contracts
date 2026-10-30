@@ -593,12 +593,57 @@
   },
   {
     "type": "error",
+    "name": "DeadlineNotAfterMigrationStart",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "EnforcedPause",
     "inputs": []
   },
   {
     "type": "error",
     "name": "ExpectedPause",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidMigrationCap",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidMigrationDeadline",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidMigrationRatio",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidMigrationStartTime",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidRecipient",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MigrationNotStarted",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MigrationRatiosLocked",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MigrationTokenRescueForbidden",
     "inputs": []
   },
   {
@@ -638,5 +683,55 @@
         "internalType": "address"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "ThorCapExceeded",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ThorConfigurationMissing",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ThorMigrationExpired",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "YThorCapExceeded",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "YThorConfigurationMissing",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "YThorMigrationExpired",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ZeroAmount",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ZeroMigrationToken",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ZeroMintAmount",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ZeroXMetro",
+    "inputs": []
   }
 ]

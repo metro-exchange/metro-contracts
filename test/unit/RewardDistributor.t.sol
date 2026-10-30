@@ -181,7 +181,7 @@ contract RewardDistributorTest is Test {
         assertEq(address(distributor.rewardToken()), address(usdc));
         assertEq(address(distributor.xMETRO()), address(xmetro));
 
-        vm.expectRevert(bytes("RewardDistributor: zero xMETRO"));
+        vm.expectRevert(RewardDistributor.ZeroXMetro.selector);
         new RewardDistributor(address(0), address(this));
 
         vm.prank(outsider);
@@ -189,12 +189,26 @@ contract RewardDistributorTest is Test {
         distributor.setOperator(outsider, true);
 
         vm.prank(outsider);
-        vm.expectRevert(bytes("RewardDistributor: only operator"));
+        vm.expectRevert(RewardDistributor.UnauthorizedOperator.selector);
         distributor.distribute(1);
 
         vm.prank(operator);
-        vm.expectRevert(bytes("RewardDistributor: zero amount"));
+        vm.expectRevert(RewardDistributor.ZeroAmount.selector);
         distributor.distribute(0);
+    }
+
+    function test_CustomErrorsCoverOperatorAndBothFundingEntrypoints() public {
+        vm.expectRevert(RewardDistributor.InvalidOperator.selector);
+        distributor.setOperator(address(0), true);
+        vm.prank(outsider);
+        vm.expectRevert(RewardDistributor.UnauthorizedOperator.selector);
+        distributor.distribute(0);
+        vm.prank(outsider);
+        vm.expectRevert(RewardDistributor.UnauthorizedOperator.selector);
+        distributor.distributeFromBalance(0);
+        vm.prank(operator);
+        vm.expectRevert(RewardDistributor.ZeroAmount.selector);
+        distributor.distributeFromBalance(0);
     }
 
     function test_CommissionConfigurationValidationAndMigration() public {
@@ -202,31 +216,31 @@ contract RewardDistributorTest is Test {
         vm.expectRevert();
         distributor.setCommissionVault(address(vault));
 
-        vm.expectRevert(bytes("RewardDistributor: bps > 10000"));
+        vm.expectRevert(RewardDistributor.InvalidCommissionSplitBps.selector);
         distributor.setMaxCommissionSplitBps(10_001);
 
-        vm.expectRevert(bytes("RewardDistributor: zero vault"));
+        vm.expectRevert(RewardDistributor.ZeroCommissionVault.selector);
         distributor.setMaxCommissionSplitBps(1);
 
-        vm.expectRevert(bytes("RewardDistributor: vault not contract"));
+        vm.expectRevert(RewardDistributor.CommissionVaultNotContract.selector);
         distributor.setCommissionVault(outsider);
 
         MockCommissionVault wrongTokenVault = new MockCommissionVault(address(otherToken), 1, address(distributor));
-        vm.expectRevert(bytes("RewardDistributor: token mismatch"));
+        vm.expectRevert(RewardDistributor.CommissionTokenMismatch.selector);
         distributor.setCommissionVault(address(wrongTokenVault));
 
         MockCommissionVault wrongDistributorVault = new MockCommissionVault(address(usdc), 1, outsider);
-        vm.expectRevert(bytes("RewardDistributor: distributor mismatch"));
+        vm.expectRevert(RewardDistributor.CommissionDistributorMismatch.selector);
         distributor.setCommissionVault(address(wrongDistributorVault));
 
         MockCommissionVault pendingMigrationVault = new MockCommissionVault(address(usdc), 1, address(distributor));
         pendingMigrationVault.setMigrationFinalized(false);
-        vm.expectRevert(bytes("RewardDistributor: vault migration pending"));
+        vm.expectRevert(RewardDistributor.CommissionVaultMigrationPending.selector);
         distributor.setCommissionVault(address(pendingMigrationVault));
 
         MockCommissionVault pausedVault = new MockCommissionVault(address(usdc), 1, address(distributor));
         pausedVault.setPaused(true);
-        vm.expectRevert(bytes("RewardDistributor: vault paused"));
+        vm.expectRevert(RewardDistributor.CommissionVaultPaused.selector);
         distributor.setCommissionVault(address(pausedVault));
 
         vm.expectEmit(true, true, false, true);
@@ -236,7 +250,7 @@ contract RewardDistributorTest is Test {
         emit RewardDistributor.MaxCommissionSplitBpsUpdated(0, 2_500);
         distributor.setMaxCommissionSplitBps(2_500);
 
-        vm.expectRevert(bytes("RewardDistributor: split enabled"));
+        vm.expectRevert(RewardDistributor.CommissionSplitEnabled.selector);
         distributor.setCommissionVault(address(0));
 
         MockCommissionVault replacement = new MockCommissionVault(address(usdc), 100e6, address(distributor));
@@ -268,7 +282,7 @@ contract RewardDistributorTest is Test {
         vault.setPaused(true);
 
         vm.prank(operator);
-        vm.expectRevert(bytes("RewardDistributor: vault paused"));
+        vm.expectRevert(RewardDistributor.CommissionVaultPaused.selector);
         distributor.distribute(100e6);
 
         distributor.setMaxCommissionSplitBps(0);
@@ -339,7 +353,7 @@ contract RewardDistributorTest is Test {
         assertEq(xmetro.claimable(user), 60e6);
 
         vm.prank(operator);
-        vm.expectRevert(bytes("RewardDistributor: insufficient balance"));
+        vm.expectRevert(RewardDistributor.InsufficientRewardBalance.selector);
         distributor.distributeFromBalance(1);
     }
 
@@ -497,7 +511,7 @@ contract RewardDistributorTest is Test {
         vm.prank(outsider);
         vm.expectRevert();
         distributor.rescueTokens(address(usdc), user, 1);
-        vm.expectRevert(bytes("RewardDistributor: bad to"));
+        vm.expectRevert(RewardDistributor.InvalidRecipient.selector);
         distributor.rescueTokens(address(usdc), address(0), 1);
 
         distributor.rescueTokens(address(usdc), user, 10e6);

@@ -7,6 +7,11 @@ import {ERC20Capped} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20C
 import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 
 contract MetroToken is ERC20Capped, ERC20Permit, Ownable {
+    error MinterStatusUnchanged();
+    error UnauthorizedMinter();
+    error InvalidRecipient();
+    error ZeroAmount();
+
     uint256 public constant MAX_SUPPLY = 100_000_000 ether;
 
     /// @notice Minter allowlist for `mint()`.
@@ -25,7 +30,7 @@ contract MetroToken is ERC20Capped, ERC20Permit, Ownable {
      * @notice Set/unset a minter (onlyOwner).
      */
     function setMinter(address minter, bool status) external onlyOwner {
-        require(isMinter[minter] != status, "MetroToken: same status");
+        require(isMinter[minter] != status, MinterStatusUnchanged());
         isMinter[minter] = status;
         emit MinterStatusUpdated(minter, status);
     }
@@ -34,9 +39,9 @@ contract MetroToken is ERC20Capped, ERC20Permit, Ownable {
      * @notice Mint function for allowlisted minters.
      */
     function mint(address to, uint256 amount) external {
-        require(isMinter[msg.sender], "MetroToken: not minter");
-        require(to != address(0), "MetroToken: bad to");
-        require(amount > 0, "MetroToken: zero amount");
+        require(isMinter[msg.sender], UnauthorizedMinter());
+        require(to != address(0), InvalidRecipient());
+        require(amount > 0, ZeroAmount());
         _mint(to, amount);
     }
 
