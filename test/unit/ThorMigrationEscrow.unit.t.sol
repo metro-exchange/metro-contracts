@@ -190,6 +190,26 @@ contract ThorMigrationEscrowUnitTest is Test {
         assertEq(xmetro.thorCredits() + xmetro.yThorCredits(), 3);
     }
 
+    function test_ConstructorEmitsActualStoredStartTime() public {
+        uint256 start = block.timestamp + 10;
+        vm.recordLogs();
+        ThorMigrationEscrow fresh =
+            new ThorMigrationEscrow(owner, address(xmetro), address(thor), address(yThor), start);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        uint256 count;
+        for (uint256 j; j < logs.length; ++j) {
+            if (
+                logs[j].emitter == address(fresh)
+                    && logs[j].topics[0] == keccak256("MigrationStartTimeUpdated(uint256)")
+            ) {
+                ++count;
+                assertEq(abi.decode(logs[j].data, (uint256)), fresh.migrationStartTime());
+            }
+        }
+        assertEq(count, 1);
+        assertEq(fresh.migrationStartTime(), start);
+    }
+
     function test_ConstructorRejectsInvalidInputs() public {
         vm.expectRevert(abi.encodeWithSignature("OwnableInvalidOwner(address)", address(0)));
         new ThorMigrationEscrow(address(0), address(xmetro), address(thor), address(yThor), block.timestamp);

@@ -1376,6 +1376,61 @@ contract CompactAaveFlowTest is CompactAdapterFlowBase {
 }
 
 contract CompactAdapterConfigurationSecurityTest is CompactAdapterFlowBase {
+    function test_ProxyInitializationEmitsBothDisabledStrategiesAndCannotRepeat() public {
+        CompactFlowCore freshCore = new CompactFlowCore(address(this));
+        address implementation = _create(vm.getCode("XMetroDeFiAdapter.sol:XMetroDeFiAdapter"));
+        vm.recordLogs();
+        XMetroDeFiAdapter fresh = XMetroDeFiAdapter(
+            address(
+                new ERC1967Proxy(
+                    implementation,
+                    abi.encodeCall(XMetroDeFiAdapter.initialize, (address(freshCore), address(usdc), address(metro)))
+                )
+            )
+        );
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        freshCore.setAdapter(address(fresh));
+        bytes32 metroId = _strategyId(IXMetroDeFiAdapter.StrategyKind.SwapMetro, address(metro));
+        bytes32 v4Id = _strategyId(IXMetroDeFiAdapter.StrategyKind.AaveV4, address(0));
+        uint256 metroEvents;
+        uint256 v4Events;
+        for (uint256 i; i < logs.length; ++i) {
+            if (
+                logs[i].emitter != address(fresh)
+                    || logs[i].topics[0] != keccak256("ConfigurationChanged(bytes32,uint64)")
+            ) continue;
+            assertEq(abi.decode(logs[i].data, (uint64)), 1);
+            if (logs[i].topics[1] == metroId) ++metroEvents;
+            else if (logs[i].topics[1] == v4Id) ++v4Events;
+            else fail("Unexpected initial strategy event");
+        }
+        assertEq(metroEvents, 1);
+        assertEq(v4Events, 1);
+        for (uint256 i; i < 2; ++i) {
+            IXMetroDeFiAdapter.StrategyInfo memory info = fresh.strategyInfo(i == 0 ? metroId : v4Id);
+            assertEq(
+                uint8(info.kind),
+                uint8(i == 0 ? IXMetroDeFiAdapter.StrategyKind.SwapMetro : IXMetroDeFiAdapter.StrategyKind.AaveV4)
+            );
+            assertEq(info.outputToken, i == 0 ? address(metro) : address(0));
+            assertFalse(info.enabled);
+            assertFalse(info.autoEnabled);
+            assertEq(info.strategyRevision, 1);
+            assertEq(info.logicEpoch, 1);
+            assertEq(info.domainRevision, 1);
+        }
+        vm.expectEmit(true, false, false, true, address(fresh));
+        emit XMetroDeFiAdapter.ConfigurationChanged(metroId, 2);
+        fresh.setSwapMetroConfig(true, true);
+        assertEq(fresh.strategyInfo(metroId).strategyRevision, 2);
+        vm.expectRevert(bytes4(keccak256("InvalidInitialization()")));
+        fresh.initialize(address(freshCore), address(usdc), address(metro));
+        assertTrue(fresh.strategyInfo(metroId).enabled);
+        assertEq(fresh.strategyInfo(metroId).strategyRevision, 2);
+        vm.expectRevert(bytes4(keccak256("InvalidInitialization()")));
+        XMetroDeFiAdapter(implementation).initialize(address(freshCore), address(usdc), address(metro));
+    }
+
     function test_AllConfigurationSettersSucceedWhileCoreIsUnpaused() public {
         CompactV2Router v2 = new CompactV2Router();
         CompactV3Router v3 = new CompactV3Router();

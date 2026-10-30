@@ -2,7 +2,7 @@
 
 ## October 30 audit remediation
 
-The local source includes capped swap inputs (Adapter implementation version 2), two-step ownership for Core/Escrow/Distributor, transient reentrancy guards, and custom business errors. Existing deployed instances and historical configuration files retain their original behavior.
+The local source includes capped swap inputs (Adapter implementation version 2), two-step ownership for Core/Escrow/Distributor, transient reentrancy guards, custom business errors, and initial configuration events. Existing deployed instances and historical configuration files retain their original behavior.
 
 Build with the pinned Solidity **0.8.38** compiler and **Osaka** EVM target in `foundry.toml`. Core, Escrow and Distributor use OpenZeppelin `ReentrancyGuardTransient`; their target chain must support EIP-1153 and the other instructions emitted for Osaka. Adapter keeps its existing proxy-local guard. Rebuild Core, Adapter and deployment artifacts together and recompute approved initcode hashes; old artifacts must not be mixed with this source. See [validation results](integration/testing/ethereum-fork/RESULTS.md) for executed checks and remaining RPC coverage.
 

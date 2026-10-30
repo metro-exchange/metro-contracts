@@ -83,7 +83,16 @@ All V2/V3/1inch compound and swap data now uses the version-2 [swap envelope](ne
 | Single-address Distributor/Escrow update events | Old/new-address event formats. |
 | `RewardsDistributed` | Amount is the **net** Core reward; `DistributionRouted` records gross and commission. |
 
-For ownership, `OwnershipTransferStarted` only nominates; `OwnershipTransferred` records the actual change after acceptance (or construction/renounce).
+New deployments also emit the existing configuration events during construction or initialization:
+
+| Emitter | Initial event | Meaning |
+| --- | --- | --- |
+| Escrow | `MigrationStartTimeUpdated(storedStart)` | The stored start time; QA input zero resolves to the deployment timestamp. |
+| Core | `YThorRewardWeightBpsUpdated(0, initialWeight)` | Includes an initial weight of zero. |
+| QA Core only | `ForfeitureRecipientUpdated(address(0), recipient)` | The initial payout recipient; the migration exclusion address remains fixed. |
+| Adapter **proxy** | `ConfigurationChanged(strategyId, 1)` for SwapMetro and AaveV4 | Each initial strategy has revision 1 and both enabled flags false. Creation is not activation. |
+
+Index Adapter configuration logs at the proxy address, including the deployment transaction. Read the corresponding getters for full state. Subsequent semantic updates still advance the same revisions; initialization cannot be repeated. For ownership, `OwnershipTransferStarted` only nominates; `OwnershipTransferred` records the actual change after acceptance (or construction/renounce).
 
 Decode each log with the ABI of the contract version that emitted it. Do not reinterpret historical logs using a new event signature.
 

@@ -37,7 +37,7 @@ contract DeploymentGovernanceMainnetTest is MainnetForkBase {
         assertEq(block.number, FORK_BLOCK);
         assertGt(address(metro).code.length, 0);
         assertEq(address(core).code.length, 23_551);
-        assertEq(implementation.code.length, 20_707);
+        assertEq(implementation.code.length, 20_755);
         assertEq(proxy.code.length, 76);
         assertGt(address(distributor).code.length, 0);
         assertGt(address(escrow).code.length, 0);

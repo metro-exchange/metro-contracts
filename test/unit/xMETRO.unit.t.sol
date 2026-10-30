@@ -277,6 +277,28 @@ contract xMETROUnitTest is Test {
         assertEq(xmetro.pendingOwner(), address(0));
     }
 
+    function test_ConstructorEmitsInitialWeightIncludingZero() public {
+        for (uint256 i; i < 2; ++i) {
+            uint256 weight = i * 20_000;
+            vm.recordLogs();
+            XMetroCore fresh = new XMetroCore(address(this), address(metro), address(usdc), forfeitureRecipient, weight);
+            Vm.Log[] memory logs = vm.getRecordedLogs();
+            uint256 weightEvents;
+
+            for (uint256 j; j < logs.length; ++j) {
+                if (logs[j].emitter != address(fresh)) continue;
+                if (logs[j].topics[0] == keccak256("YThorRewardWeightBpsUpdated(uint256,uint256)")) {
+                    ++weightEvents;
+                    (uint256 previous, uint256 current) = abi.decode(logs[j].data, (uint256, uint256));
+                    assertEq(previous, 0);
+                    assertEq(current, weight);
+                }
+            }
+            assertEq(weightEvents, 1);
+            assertEq(fresh.yThorRewardWeightBps(), weight);
+        }
+    }
+
     function test_ConstructorAndConfigurationValidation() public {
         vm.expectRevert(abi.encodeWithSignature("OwnableInvalidOwner(address)", address(0)));
         new XMetroCore(address(0), address(metro), address(usdc), forfeitureRecipient, 20_000);

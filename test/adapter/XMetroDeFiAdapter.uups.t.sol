@@ -102,8 +102,8 @@ contract CompactBadUUID {
 contract CompactUUPSDeploymentTest is Test {
     uint256 internal constant EIP170_LIMIT = 24_576;
     uint256 internal constant PROJECT_LIMIT = 23_552;
-    uint256 internal constant EXPECTED_RUNTIME = 20_707;
-    uint256 internal constant EXPECTED_INITCODE = 20_910;
+    uint256 internal constant EXPECTED_RUNTIME = 20_755;
+    uint256 internal constant EXPECTED_INITCODE = 20_958;
     uint256 internal constant EXPECTED_PROXY_RUNTIME = 77;
     uint256 internal constant ETHEREUM_PINNED_BLOCK = 25_838_112;
     uint256 internal constant BASE_PINNED_BLOCK = 50_555_256;

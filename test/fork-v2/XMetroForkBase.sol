@@ -157,7 +157,7 @@ abstract contract XMetroForkBase is Test {
         adapter = IXMetroDeFiAdapter(proxy);
         core.setDeFiAdapter(proxy);
         assertEq(address(core).code.length, 23_551);
-        assertEq(implementation.code.length, 20_707);
+        assertEq(implementation.code.length, 20_755);
         assertEq(core.deFiAdapter(), proxy);
     }
 

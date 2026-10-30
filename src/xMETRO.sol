@@ -237,6 +237,7 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuardTransient, Ownable2Step {
         forfeitureRecipient = forfeitureRecipient_;
         migrationRewardExcludedAddress = forfeitureRecipient_;
         yThorRewardWeightBps = initialYThorRewardWeightBps_;
+        emit YThorRewardWeightBpsUpdated(0, initialYThorRewardWeightBps_);
         SWAP_METRO_STRATEGY_ID =
             keccak256(abi.encode(block.chainid, STRATEGY_DOMAIN, IXMetroDeFiAdapter.StrategyKind.SwapMetro, metro_));
     }
