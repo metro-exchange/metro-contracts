@@ -150,6 +150,8 @@ Core tracks signed reward debt at the existing `1e24` accumulator precision. Sha
 
 `YTHOR_EXIT_RAMP()` returns seconds: `126144000` for production, `43200` for QA. These are compiled constants with no Owner setter.
 
+Initial configuration logs and their emitters are listed in [events and indexing](integration/docs/existing-features.md#events-and-indexing).
+
 ## Business errors
 
 The following errors have no arguments. Decode with the matching contract ABI; external failures and Solidity panics retain their original data. Check ordering and business conditions are unchanged.

@@ -239,10 +239,12 @@ contract XMetroDeFiAdapter is Initializable, UUPSUpgradeable, IXMetroDeFiAdapter
         bytes32 metroId = _deriveStrategyId(StrategyKind.SwapMetro, metro_);
         state.swapMetroId = metroId;
         state.strategies[metroId] = StrategyConfig(StrategyKind.SwapMetro, false, false, 1, metro_);
+        emit ConfigurationChanged(metroId, 1);
 
         bytes32 v4Id = _deriveStrategyId(StrategyKind.AaveV4, address(0));
         state.aaveV4Id = v4Id;
         state.strategies[v4Id] = StrategyConfig(StrategyKind.AaveV4, false, false, 1, address(0));
+        emit ConfigurationChanged(v4Id, 1);
     }
 
     modifier onlyConfigAuthority() {

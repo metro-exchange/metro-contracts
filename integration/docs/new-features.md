@@ -132,6 +132,8 @@ Only the xMETRO owner can call `emergencyDistribute(users)`, and only while the 
 
 ## Event and error handling
 
+For initial configuration logs, proxy emitters and two-step ownership events, see [events and indexing](existing-features.md#events-and-indexing). Initial strategy revision 1 does not mean a strategy is enabled.
+
 Use Core `ClaimAndExecuted`, `AutoStrategyBatchExecuted`, `AutoCompounded`, and `AutocompoundBatchExecuted` as appropriate, plus Adapter `UserStrategySettled` for per-user batch results. One ERC-20 `Transfer` alone does not establish complete business success. Adapter errors distinguish access/state, configuration, invalid request, slippage, accounting, Aave V4 authorization, and Maple authorization failures. Refresh chain state before retrying; do not bypass checks by zeroing minimum output, changing a fixed recipient, or fabricating a signature.
 
 Base QA uses TestTokens, Aave/Maple mocks, and real V2 liquidity; Ethereum forks test real Ethereum protocols. See the [Base checklist](../testing/base/BASE_ONCHAIN_FUNCTIONAL_TEST_CHECKLIST.md), [Ethereum checklist](../testing/ethereum-fork/CHECKLIST.md), and [fork results](../testing/ethereum-fork/RESULTS.md) for actual coverage and the historical F-01 observation with current regression status.

@@ -76,6 +76,7 @@ contract ThorMigrationEscrow is Ownable2Step, Pausable, ReentrancyGuardTransient
         thorToken = IERC20(thor_);
         yThorToken = IERC20(yThor_);
         migrationStartTime = migrationStartTime_;
+        emit MigrationStartTimeUpdated(migrationStartTime);
     }
 
     /// @notice Migrate THOR through the single project-configured conversion path.
