@@ -1,6 +1,15 @@
 # Ethereum Mainnet Fork Functional Test Checklist
 
-## October 24 source acceptance
+## October 30 audit remediation acceptance
+
+| Coverage | Evidence / status |
+| --- | --- |
+| E-07/E-08/E-17: capped V2/V3/1inch data; stale quotes preserve rewards; fresh quotes succeed | Adapter/Core unit and invariant tests; `AutoCompound.t.sol::test_E07_StaleInputCapRollsBackAndFreshQuoteCompounds`; see current results for executed scope |
+| E-21/E-22/X-07: implementation version 2, unchanged epoch rules, ABI/storage compatibility and size | Existing Adapter, Core and deployment tests |
+
+The tables below describe earlier revisions, not acceptance of this remediation.
+
+## October 24 source acceptance (historical)
 
 | Updated coverage | Required evidence |
 | --- | --- |

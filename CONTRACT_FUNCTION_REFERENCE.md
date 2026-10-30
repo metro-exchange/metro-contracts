@@ -1,5 +1,7 @@
 # Contract Function Reference
 
+Swap and compound `bytes` arguments use the [version-2 envelope](integration/docs/new-features.md#swap-execution-data) with a quoted input cap. The four Core function signatures and all deposit encodings are unchanged.
+
 This index follows the current `src/` contracts. See [legacy integration](integration/docs/existing-features.md), [new actions](integration/docs/new-features.md), and [roles/configuration](integration/docs/contract-api.md) for call flows. Solidity identifiers are preserved exactly.
 
 ## MetroToken

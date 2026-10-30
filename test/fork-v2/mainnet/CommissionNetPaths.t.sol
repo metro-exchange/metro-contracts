@@ -41,8 +41,11 @@ contract CommissionNetPathsMainnetTest is MainnetForkBase {
         additionalSwapIds[3] = IXMetroAdapterAdminFork(proxy).setSwapTokenConfig(XAUT, true, true);
         v3Id = IXMetroAdapterAdminFork(proxy).setAaveV3Config(AAVE_V3_POOL, A_USDC, 37, true, true);
         IXMetroAdapterAdminFork(proxy).setAaveV4Config(V4_SPOKE, V4_GIVER, V4_USDC_RESERVE, true, true);
-        v4Id = keccak256(abi.encode(block.chainid, keccak256("XMETRO_DEFI_STRATEGY_V1"),
-            IXMetroDeFiAdapter.StrategyKind.AaveV4, address(0)));
+        v4Id = keccak256(
+            abi.encode(
+                block.chainid, keccak256("XMETRO_DEFI_STRATEGY_V1"), IXMetroDeFiAdapter.StrategyKind.AaveV4, address(0)
+            )
+        );
         mapleId = IXMetroAdapterAdminFork(proxy).setMapleConfig(MAPLE_ROUTER, bytes32(0), true, true);
         _createMetroPool(10_000 ether, 10_000e6);
         core.unpause();
@@ -81,12 +84,20 @@ contract CommissionNetPathsMainnetTest is MainnetForkBase {
                 assertEq(at, block.timestamp);
                 routed = true;
             }
-            if (entry.emitter == USDC && entry.topics[0] == TRANSFER
-                && entry.topics[1] == bytes32(uint256(uint160(address(distributor))))) {
+            if (
+                entry.emitter == USDC && entry.topics[0] == TRANSFER
+                    && entry.topics[1] == bytes32(uint256(uint160(address(distributor))))
+            ) {
                 address to = address(uint160(uint256(entry.topics[2])));
                 uint256 amount = abi.decode(entry.data, (uint256));
-                if (to == address(vault)) { assertEq(amount, 25e6); vaultTransfer = true; }
-                if (to == address(core)) { assertEq(amount, 100e6); coreTransfer = true; }
+                if (to == address(vault)) {
+                    assertEq(amount, 25e6);
+                    vaultTransfer = true;
+                }
+                if (to == address(core)) {
+                    assertEq(amount, 100e6);
+                    coreTransfer = true;
+                }
             }
         }
         assertTrue(routed && vaultTransfer && coreTransfer);
@@ -103,27 +114,33 @@ contract CommissionNetPathsMainnetTest is MainnetForkBase {
         assertEq(IERC20(USDC).allowance(address(distributor), address(core)), 0);
     }
 
-    function _route() private view returns (bytes memory) {
+    function _route(uint256 cap) private view returns (bytes memory) {
         address[] memory path = new address[](2);
         path[0] = USDC;
         path[1] = address(metro);
-        return abi.encode(uint8(0), abi.encode(path));
+        return abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(0), cap, abi.encode(path));
     }
 
     function _auth() private view returns (bytes memory) {
         string memory json = vm.readFile(MAPLE_FIXTURE);
-        return abi.encode(vm.parseJsonUint(json, ".bitmap"), vm.parseJsonUint(json, ".deadline"),
-            uint8(vm.parseJsonUint(json, ".v")), vm.parseJsonBytes32(json, ".r"), vm.parseJsonBytes32(json, ".s"));
+        return abi.encode(
+            vm.parseJsonUint(json, ".bitmap"),
+            vm.parseJsonUint(json, ".deadline"),
+            uint8(vm.parseJsonUint(json, ".v")),
+            vm.parseJsonBytes32(json, ".r"),
+            vm.parseJsonBytes32(json, ".s")
+        );
     }
 
     function _data(uint8 kind) private view returns (bytes memory) {
         if (kind == 2 || kind >= 7) {
             string memory json = vm.readFile(kind == 2 ? ONEINCH_FIXTURE : FORCED_FIXTURE);
-            string memory routePath = kind == 2 ? ".routes[4].calldata"
+            string memory routePath = kind == 2
+                ? ".routes[4].calldata"
                 : string.concat(".routes[", vm.toString(uint256(kind - 7)), "].calldata");
             bytes memory callData = vm.parseJsonBytes(json, routePath);
             assertEq(bytes4(callData), bytes4(0x07ed2379));
-            return abi.encode(uint8(2), callData);
+            return abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(2), uint256(100e6), callData);
         }
         if (kind == 5) return _auth();
         return bytes("");
@@ -161,10 +178,10 @@ contract CommissionNetPathsMainnetTest is MainnetForkBase {
                     core.enableAutocompound();
                     address[] memory one = new address[](1);
                     one[0] = user;
-                    amountOut = core.autocompoundBatch(one, 1, block.timestamp + 1 hours, _route());
+                    amountOut = core.autocompoundBatch(one, 1, block.timestamp + 1 hours, _route(100e6));
                 } else {
                     vm.prank(user);
-                    amountOut = core.autocompound(1, block.timestamp + 1 hours, _route());
+                    amountOut = core.autocompound(1, block.timestamp + 1 hours, _route(100e6));
                 }
                 assertGt(core.balanceOf(user), 100 ether);
             } else {
@@ -188,13 +205,16 @@ contract CommissionNetPathsMainnetTest is MainnetForkBase {
                     assertEq(rewardIn, 100e6);
                     amountOut = output;
                 }
-                if (kind == 2 || kind == 5) assertEq(IERC20(SYRUP_USDC).balanceOf(user), amountOut);
-                else if (kind >= 7) {
+                if (kind == 2 || kind == 5) {
+                    assertEq(IERC20(SYRUP_USDC).balanceOf(user), amountOut);
+                } else if (kind >= 7) {
                     address[4] memory tokens = [USDT, WBTC, GHO, XAUT];
                     assertEq(IERC20(tokens[kind - 7]).balanceOf(user), amountOut);
+                } else if (kind == 3) {
+                    assertGt(IERC20(A_USDC).balanceOf(user), 0);
+                } else {
+                    assertEq(ICommissionNetSpoke(V4_SPOKE).getUserSuppliedShares(V4_USDC_RESERVE, user), amountOut);
                 }
-                else if (kind == 3) assertGt(IERC20(A_USDC).balanceOf(user), 0);
-                else assertEq(ICommissionNetSpoke(V4_SPOKE).getUserSuppliedShares(V4_USDC_RESERVE, user), amountOut);
             }
             assertGt(amountOut, 0);
         }

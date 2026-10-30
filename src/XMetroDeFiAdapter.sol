@@ -155,6 +155,7 @@ contract XMetroDeFiAdapter is Initializable, UUPSUpgradeable, IXMetroDeFiAdapter
     uint8 private constant DEX_V2 = 0;
     uint8 private constant DEX_V3 = 1;
     uint8 private constant DEX_ONEINCH = 2;
+    bytes32 private constant SWAP_DATA_DOMAIN = keccak256("XMETRO_SWAP_V2");
     uint256 private constant ONEINCH_FORBIDDEN_FLAGS = 7;
 
     bytes32 private constant ADAPTER_FAMILY_ID = keccak256("XMETRO_DEFI_ADAPTER_FAMILY_V1");
@@ -290,7 +291,7 @@ contract XMetroDeFiAdapter is Initializable, UUPSUpgradeable, IXMetroDeFiAdapter
     }
 
     function implementationVersion() external pure virtual returns (uint64) {
-        return 1;
+        return 2;
     }
 
     function logicEpoch() external view returns (uint64) {
@@ -712,7 +713,11 @@ contract XMetroDeFiAdapter is Initializable, UUPSUpgradeable, IXMetroDeFiAdapter
         uint256 deadline,
         bytes calldata swapData
     ) internal returns (uint256 amountOut) {
-        (uint8 dexType, bytes memory routeData) = abi.decode(swapData, (uint8, bytes));
+        (bytes32 domain, uint8 dexType, uint256 maxRewardIn, bytes memory routeData) =
+            abi.decode(swapData, (bytes32, uint8, uint256, bytes));
+        if (domain != SWAP_DATA_DOMAIN || maxRewardIn == 0 || amountIn > maxRewardIn) {
+            revert InvalidExecutionRequest();
+        }
         IERC20 output = IERC20(tokenOut);
         uint256 outputBefore = output.balanceOf(address(this));
         uint256 reported;

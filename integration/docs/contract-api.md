@@ -1,5 +1,7 @@
 # Contract API, Roles, and Configuration
 
+Swap and compound `bytes` arguments use the [version-2 envelope](new-features.md#swap-execution-data) with a quoted input cap. The four Core function signatures and all deposit encodings are unchanged.
+
 This guide covers project-contract administration and public integration parameters. User journeys are in [existing features](existing-features.md) and [new features](new-features.md). It does not document the Commission Vault's internal governance or payout rules.
 
 ## Roles and permissions

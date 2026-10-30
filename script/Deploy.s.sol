@@ -194,7 +194,7 @@ contract Deploy is DeFiAdapterScriptBase {
                 && address(distributor) == predictedDistributor && address(escrow) == predictedEscrow,
             "Deploy: CREATE address mismatch"
         );
-        _requireImplementation(implementation, 1);
+        _requireImplementation(implementation, 2);
         _requireProxySlots(proxy, implementation);
 
         metro.setMinter(address(core), true);
@@ -499,7 +499,7 @@ contract Deploy is DeFiAdapterScriptBase {
 
         AdapterConfiguration memory config =
             _requireProxyBindings(address(adapter), address(core), i.usdc, address(metro));
-        require(config.epoch == 1 && adapter.implementationVersion() == 1, "Deploy: adapter version");
+        require(config.epoch == 1 && adapter.implementationVersion() == 2, "Deploy: adapter version");
         require(
             config.routerV2 == i.routerV2 && config.routerV3 == i.routerV3 && config.oneInchRouter == i.oneInchRouter,
             "Deploy: router readback"

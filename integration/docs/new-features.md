@@ -55,7 +55,9 @@ Always read `strategyInfo` to verify kind, output token, `enabled`, and `autoEna
 All routes start with USDC. `minAmountOut` must be positive; the outer `deadline` is a future Unix timestamp. Encode:
 
 ```solidity
-executionData = abi.encode(uint8(dexType), bytes(routeData));
+executionData = abi.encode(
+    keccak256("XMETRO_SWAP_V2"), uint8(dexType), uint256(maxRewardIn), bytes(routeData)
+);
 ```
 
 | `dexType` | `routeData` | Requirement |
@@ -63,6 +65,10 @@ executionData = abi.encode(uint8(dexType), bytes(routeData));
 | 0: Uniswap V2 | `abi.encode(address[] path)` | At least two assets, USDC first and configured output last. |
 | 1: Uniswap V3 | Packed `token + uint24 fee + token ...` | Correct path length and endpoint assets; do not encode as `address[]`. |
 | 2: 1inch V6 | Full Router calldata including selector | Only validated general `swap(executor,description,data)` calls are supported. |
+
+Adapter implementation version 2 requires this envelope for all three DEX types. `maxRewardIn` is the nonzero USDC input used by the same quote as the minimum output, route and deadline (6-decimal base units). Actual input above this cap reverts the whole Core action, restoring rewards, transfers and accounting. Equal or smaller input still has to pass the existing minimum-output and routing checks; 1inch additionally requires its exact input. Legacy `(uint8,bytes)` data is rejected. Deposits retain their existing format.
+
+For batches, quote only the unique users whose current strategy preferences and revisions are eligible. If rewards increase beyond the saved cap, obtain a complete new quote and simulate again; never raise only the cap or use an unlimited default. A successful simulation does not prevent later reward arrivals, which the on-chain check handles atomically.
 
 1inch calldata must match the selected chain and configured Router, exact USDC input, allowlisted output, and **Adapter proxy** as Router output recipient—not the Core, implementation, or final user. The supported general swap selector is `0x07ed2379`. Native value, partial fill, extra-native, and Permit2 flags are not accepted. The Adapter verifies actual spent/received balances and forwards output to the user.
 

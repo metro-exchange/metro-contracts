@@ -325,8 +325,8 @@ async function optIn(system, pathName, users, strategy) {
   }
 }
 async function distribute(system) { await sent(system.distributor.distribute(rewardTotal)); }
-function routeV2(metroAddress) {
-  return ABI.encode(["uint8", "bytes"], [0, ABI.encode(["address[]"], [[ADDR.USDC, metroAddress]])]);
+function routeV2(metroAddress, quotedRewardIn) {
+  return ABI.encode(["bytes32", "uint8", "uint256", "bytes"], [ethers.utils.id("XMETRO_SWAP_V2"), 0, quotedRewardIn, ABI.encode(["address[]"], [[ADDR.USDC, metroAddress]])]);
 }
 function authorization(signature) {
   return ABI.encode(["uint256", "uint256", "uint8", "bytes32", "bytes32"],
@@ -344,13 +344,13 @@ async function businessRequest(system, pathName, users, state, external) {
   if (pathName === "compound") {
     const quote = (await system.v2.getAmountsOut(rewardTotal, [ADDR.USDC, system.metro.address]))[1];
     return { strategy, tx: await system.core.populateTransaction.autocompoundBatch(
-      addresses, quote.mul(95).div(100), deadline, routeV2(system.metro.address)) };
+      addresses, quote.mul(95).div(100), deadline, routeV2(system.metro.address, rewardTotal)) };
   }
   const minima = pathName === "v4" ? addresses.map(() => 1) : [];
   const executionData = pathName === "syrup"
-    ? ABI.encode(["uint8", "bytes"], [2, external.syrup.calldata])
+    ? ABI.encode(["bytes32", "uint8", "uint256", "bytes"], [ethers.utils.id("XMETRO_SWAP_V2"), 2, rewardTotal, external.syrup.calldata])
     : EXTRA_ONEINCH.includes(pathName)
-      ? ABI.encode(["uint8", "bytes"], [2, external.oneInch.routes[pathName].calldata])
+      ? ABI.encode(["bytes32", "uint8", "uint256", "bytes"], [ethers.utils.id("XMETRO_SWAP_V2"), 2, rewardTotal, external.oneInch.routes[pathName].calldata])
     : pathName === "maple" && state === "first" ? authorization(external.maple) : "0x";
   return { strategy, tx: await system.core.populateTransaction.executeAutoStrategyBatch(
     strategy, addresses, 1, minima, pathName === "syrup" || EXTRA_ONEINCH.includes(pathName) ? deadline : 0,

@@ -205,7 +205,7 @@ contract XMetroCoreSizeTest is Test {
 }
 
 contract XMetroCoreAdapterFlowTest is Test {
-    uint256 internal constant ADAPTER_RUNTIME = 20_487;
+    uint256 internal constant ADAPTER_RUNTIME = 20_574;
 
     CoreFlowToken internal metro;
     CoreFlowToken internal usdc;
@@ -247,6 +247,139 @@ contract XMetroCoreAdapterFlowTest is Test {
         swapStrategy = configuration.setSwapTokenConfig(address(output), true, true);
         metro.mint(address(oneInch), 1_000_000 ether);
         output.mint(address(oneInch), 1_000_000e6);
+    }
+
+    function test_StaleQuoteRejectsManualCompound() public {
+        _staleQuote(true, false, false, false);
+    }
+
+    function test_StaleQuoteRejectsManualSwap() public {
+        _staleQuote(false, false, false, false);
+    }
+
+    function test_StaleQuoteRejectsBatchCompound() public {
+        _staleQuote(true, true, false, false);
+    }
+
+    function test_StaleQuoteRejectsBatchSwap() public {
+        _staleQuote(false, true, false, false);
+    }
+
+    function testFuzz_RefreshQuoteAfterInputCapFailureSucceeds(bool compound, bool automatic, bool treasury) public {
+        _staleQuote(compound, automatic, true, treasury);
+    }
+
+    function _staleQuote(bool compound, bool automatic, bool refresh, bool treasury) private {
+        address alice = treasury ? core.migrationRewardExcludedAddress() : makeAddr("cap-alice");
+        if (treasury) {
+            core.setMigrationEscrow(address(rewardSource));
+            vm.prank(address(rewardSource));
+            core.creditThorFromMigration(alice, 100);
+            vm.prank(address(rewardSource));
+            core.creditYThorFromMigration(alice, 200);
+        }
+        address bob = makeAddr("cap-bob");
+        _stake(alice, 2);
+        _stake(bob, 2);
+        vm.prank(alice);
+        if (compound) core.enableAutocompound();
+        else core.enableAutoStrategy(swapStrategy);
+        _depositRewards(3);
+        address tokenOut = compound ? address(metro) : address(output);
+        uint256 quotedInput = core.claimable(alice);
+        bytes memory oldQuote = _v2Data(tokenOut, quotedInput);
+        _depositRewards(4);
+        assertEq(core.claimable(alice), 3);
+        bytes32 debtBefore = _scaledDebtWord(alice);
+        usdc.mint(address(adapter), 13);
+        CoreFlowToken(tokenOut).mint(address(adapter), 17);
+        uint256 backingBefore = metro.balanceOf(address(core));
+        address[] memory users = new address[](4);
+        users[0] = alice;
+        users[1] = alice;
+        users[2] = address(0);
+        users[3] = bob; // Has rewards but no automatic opt-in.
+        if (!refresh) {
+            vm.expectCall(
+                address(router), abi.encodeWithSelector(CoreV2Router.swapExactTokensForTokens.selector), uint64(0)
+            );
+        }
+        vm.expectRevert(bytes4(keccak256("InvalidExecutionRequest()")));
+        _runCappedAction(compound, automatic, alice, users, quotedInput, oldQuote);
+        assertEq(_scaledDebtWord(alice), debtBefore);
+        assertEq(core.claimable(alice), 3);
+        assertEq(core.claimable(bob), 3);
+        assertEq(core.balanceOf(alice), 2);
+        if (treasury) {
+            assertEq(core.lockedShares(alice), 300);
+            assertEq(core.thorPositionCount(alice), 1);
+            assertEq(core.yThorPositionCount(alice), 1);
+            assertEq(core.totalRewardWeight(), 4);
+        }
+        assertEq(metro.balanceOf(address(core)), backingBefore);
+        assertEq(usdc.balanceOf(address(core)), 7);
+        assertEq(usdc.balanceOf(address(adapter)), 13);
+        assertEq(CoreFlowToken(tokenOut).balanceOf(address(adapter)), 17);
+        assertEq(usdc.balanceOf(address(router)), 0);
+        assertEq(usdc.allowance(address(adapter), address(router)), 0);
+        if (refresh) {
+            // Capture a complete fresh quote, and retry in the same transaction after the failed call.
+            bytes memory newQuote = _v2Data(tokenOut, 3);
+            _runCappedAction(compound, automatic, alice, users, 3, newQuote);
+            assertEq(core.claimable(alice), 0);
+            assertEq(usdc.balanceOf(address(router)), 3);
+            assertEq(usdc.allowance(address(adapter), address(router)), 0);
+            assertEq(usdc.balanceOf(address(adapter)), 13);
+            assertEq(CoreFlowToken(tokenOut).balanceOf(address(adapter)), 17);
+            if (compound) {
+                assertEq(core.balanceOf(alice), 5);
+                vm.prank(alice);
+                core.requestUnstake(3);
+            } else {
+                assertEq(output.balanceOf(alice), 3);
+            }
+        } else {
+            vm.prank(alice);
+            assertEq(core.claimRewards(), 3);
+        }
+        // Each user retains the half-unit accrued before the failed action.
+        _depositRewards(1);
+        assertEq(core.claimable(alice), 1);
+        assertEq(core.claimable(bob), 4);
+        vm.prank(alice);
+        assertEq(core.claimRewards(), 1);
+        vm.prank(bob);
+        assertEq(core.claimRewards(), 4);
+        assertEq(usdc.balanceOf(address(core)), 0);
+    }
+
+    function _runCappedAction(
+        bool compound,
+        bool automatic,
+        address user,
+        address[] memory users,
+        uint256 minimum,
+        bytes memory data
+    ) private {
+        if (!automatic) vm.prank(user);
+        if (compound) {
+            if (automatic) core.autocompoundBatch(users, minimum, block.timestamp + 1, data);
+            else core.autocompound(minimum, block.timestamp + 1, data);
+        } else {
+            if (automatic) {
+                core.executeAutoStrategyBatch(swapStrategy, users, minimum, new uint256[](0), block.timestamp + 1, data);
+            } else {
+                core.claimAndExecute(swapStrategy, minimum, block.timestamp + 1, data);
+            }
+        }
+    }
+
+    function _scaledDebtWord(address user) private returns (bytes32) {
+        vm.record();
+        core.rewardDebt(user);
+        (bytes32[] memory reads,) = vm.accesses(address(core));
+        assertEq(reads.length, 1);
+        return vm.load(address(core), reads[0]);
     }
 
     function test_CoreManualClaimUsesFinalProxyAndFixedRecipient() public {
@@ -385,7 +518,7 @@ contract XMetroCoreAdapterFlowTest is Test {
         candidates[4] = userB;
         candidates[5] = address(0);
         (uint256 rewardIn, uint256 amountOut) = core.executeAutoStrategyBatch(
-            swapStrategy, candidates, 90e6, new uint256[](0), block.timestamp + 1, _v2Data(address(output))
+            swapStrategy, candidates, 90e6, new uint256[](0), block.timestamp + 1, _v2Data(address(output), 90e6)
         );
 
         assertEq(rewardIn, 90e6);
@@ -414,7 +547,12 @@ contract XMetroCoreAdapterFlowTest is Test {
         users[0] = user;
         vm.expectRevert(xMETRO.NoRewards.selector);
         core.executeAutoStrategyBatch(
-            swapStrategy, users, pendingBefore, new uint256[](0), block.timestamp + 1, _v2Data(address(output))
+            swapStrategy,
+            users,
+            pendingBefore,
+            new uint256[](0),
+            block.timestamp + 1,
+            _v2Data(address(output), pendingBefore)
         );
         assertEq(core.claimable(user), pendingBefore);
         assertEq(output.balanceOf(user), 0);
@@ -422,7 +560,12 @@ contract XMetroCoreAdapterFlowTest is Test {
         vm.prank(user);
         core.enableAutoStrategy(swapStrategy);
         core.executeAutoStrategyBatch(
-            swapStrategy, users, pendingBefore, new uint256[](0), block.timestamp + 1, _v2Data(address(output))
+            swapStrategy,
+            users,
+            pendingBefore,
+            new uint256[](0),
+            block.timestamp + 1,
+            _v2Data(address(output), pendingBefore)
         );
         assertEq(output.balanceOf(user), pendingBefore);
     }
@@ -447,7 +590,7 @@ contract XMetroCoreAdapterFlowTest is Test {
             }
             vm.expectRevert(xMETRO.NoRewards.selector);
             core.executeAutoStrategyBatch(
-                swapStrategy, users, 1, new uint256[](0), block.timestamp + 1, _v2Data(address(output))
+                swapStrategy, users, 1, new uint256[](0), block.timestamp + 1, _v2Data(address(output), 100e6)
             );
             assertEq(core.claimable(user), 100e6);
             vm.prank(user);
@@ -455,7 +598,7 @@ contract XMetroCoreAdapterFlowTest is Test {
         }
 
         (uint256 used, uint256 received) = core.executeAutoStrategyBatch(
-            swapStrategy, users, 100e6, new uint256[](0), block.timestamp + 1, _v2Data(address(output))
+            swapStrategy, users, 100e6, new uint256[](0), block.timestamp + 1, _v2Data(address(output), 100e6)
         );
         assertEq(used, 100e6);
         assertEq(received, 100e6);
@@ -478,7 +621,7 @@ contract XMetroCoreAdapterFlowTest is Test {
         ICoreUUPSUpgrade(proxy).upgradeToAndCall(v2, "");
         assertEq(core.deFiAdapter(), proxy);
         assertEq(core.deFiAdapterEpoch(), 1);
-        assertEq(adapter.implementationVersion(), 2);
+        assertEq(adapter.implementationVersion(), 3);
         assertEq(adapter.logicEpoch(), 2);
         assertTrue(adapter.strategyInfo(swapStrategy).enabled);
 
@@ -486,13 +629,13 @@ contract XMetroCoreAdapterFlowTest is Test {
         users[0] = user;
         vm.expectRevert(xMETRO.NoRewards.selector);
         core.executeAutoStrategyBatch(
-            swapStrategy, users, 1, new uint256[](0), block.timestamp + 1, _v2Data(address(output))
+            swapStrategy, users, 1, new uint256[](0), block.timestamp + 1, _v2Data(address(output), 100e6)
         );
         assertEq(core.claimable(user), 100e6);
         vm.prank(user);
         core.enableAutoStrategy(swapStrategy);
         core.executeAutoStrategyBatch(
-            swapStrategy, users, 100e6, new uint256[](0), block.timestamp + 1, _v2Data(address(output))
+            swapStrategy, users, 100e6, new uint256[](0), block.timestamp + 1, _v2Data(address(output), 100e6)
         );
         assertEq(output.balanceOf(user), 100e6);
         assertEq(core.claimable(user), 0);
@@ -548,7 +691,12 @@ contract XMetroCoreAdapterFlowTest is Test {
         users[0] = user;
         vm.expectRevert(bytes4(keccak256("AccountingFailure()")));
         core.executeAutoStrategyBatch(
-            swapStrategy, users, pendingBefore, new uint256[](0), block.timestamp + 1, _v2Data(address(output))
+            swapStrategy,
+            users,
+            pendingBefore,
+            new uint256[](0),
+            block.timestamp + 1,
+            _v2Data(address(output), pendingBefore)
         );
         assertEq(core.claimable(user), pendingBefore);
         assertEq(usdc.balanceOf(address(core)), coreUsdcBefore);
@@ -587,14 +735,24 @@ contract XMetroCoreAdapterFlowTest is Test {
         users[0] = user;
         vm.expectRevert(xMETRO.NoRewards.selector);
         core.executeAutoStrategyBatch(
-            swapStrategy, users, pendingBefore, new uint256[](0), block.timestamp + 1, _v2Data(address(output))
+            swapStrategy,
+            users,
+            pendingBefore,
+            new uint256[](0),
+            block.timestamp + 1,
+            _v2Data(address(output), pendingBefore)
         );
         assertEq(core.claimable(user), pendingBefore);
 
         vm.prank(user);
         core.enableAutoStrategy(swapStrategy);
         core.executeAutoStrategyBatch(
-            swapStrategy, users, pendingBefore, new uint256[](0), block.timestamp + 1, _v2Data(address(output))
+            swapStrategy,
+            users,
+            pendingBefore,
+            new uint256[](0),
+            block.timestamp + 1,
+            _v2Data(address(output), pendingBefore)
         );
         assertEq(output.balanceOf(user), pendingBefore);
         assertEq(core.deFiAdapterEpoch(), 2);
@@ -663,7 +821,7 @@ contract XMetroCoreAdapterFlowTest is Test {
         candidates[0] = alice;
         candidates[1] = alice;
         candidates[2] = address(0);
-        bytes memory route = _v2Data(compound ? address(metro) : address(output));
+        bytes memory route = _v2Data(compound ? address(metro) : address(output), 1);
         if (automatic) {
             if (compound) {
                 assertEq(core.autocompoundBatch(candidates, 1, block.timestamp + 1, route), 1);
@@ -725,11 +883,11 @@ contract XMetroCoreAdapterFlowTest is Test {
         rewardSource.deposit(amount);
     }
 
-    function _v2Data(address tokenOut) private view returns (bytes memory) {
+    function _v2Data(address tokenOut, uint256 cap) private view returns (bytes memory) {
         address[] memory path = new address[](2);
         path[0] = address(usdc);
         path[1] = tokenOut;
-        return abi.encode(uint8(0), abi.encode(path));
+        return abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(0), cap, abi.encode(path));
     }
 
     function _oneInchData(address tokenOut, uint256 amount) private view returns (bytes memory) {
@@ -745,7 +903,7 @@ contract XMetroCoreAdapterFlowTest is Test {
         bytes memory callData = abi.encodeWithSelector(
             MockOneInchRouter.swap.selector, address(oneInchExecutor), description, bytes("verified-route")
         );
-        return abi.encode(uint8(2), callData);
+        return abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(2), amount, callData);
     }
 
     function _create(bytes memory initCode) private returns (address deployed) {

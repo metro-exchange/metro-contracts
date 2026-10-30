@@ -68,18 +68,18 @@ contract XMetroCoreAdapterInvariantHandler is Test {
     }
 
     function executeAutoSwap() external {
-        bool eligible;
+        uint256 quotedInput;
         for (uint256 i; i < actors.length; ++i) {
             if (core.claimable(actors[i]) != 0 && core.getAutoStrategyPreference(actors[i]).strategyId == swapStrategy)
             {
-                eligible = true;
+                quotedInput += core.claimable(actors[i]);
             }
         }
-        if (!eligible) return;
+        if (quotedInput == 0) return;
         ++swapAttempts;
         address[] memory accounts = _actors();
         try core.executeAutoStrategyBatch(
-            swapStrategy, accounts, 1, new uint256[](0), block.timestamp + 1, _v2Data(address(output))
+            swapStrategy, accounts, 1, new uint256[](0), block.timestamp + 1, _v2Data(address(output), quotedInput)
         ) returns (
             uint256 rewardIn, uint256
         ) {
@@ -92,21 +92,45 @@ contract XMetroCoreAdapterInvariantHandler is Test {
     }
 
     function executeAutoCompound() external {
-        bool eligible;
+        uint256 quotedInput;
         for (uint256 i; i < actors.length; ++i) {
-            if (core.claimable(actors[i]) != 0 && core.autocompoundEnabled(actors[i])) eligible = true;
+            if (core.claimable(actors[i]) != 0 && core.autocompoundEnabled(actors[i])) {
+                quotedInput += core.claimable(actors[i]);
+            }
         }
-        if (!eligible) return;
+        if (quotedInput == 0) return;
         ++compoundAttempts;
         address[] memory accounts = _actors();
         uint256 beforeBalance = usdc.balanceOf(address(core));
-        try core.autocompoundBatch(accounts, 1, block.timestamp + 1, _v2Data(address(core.METRO()))) returns (uint256) {
+        try core.autocompoundBatch(
+            accounts, 1, block.timestamp + 1, _v2Data(address(core.METRO()), quotedInput)
+        ) returns (
+            uint256
+        ) {
             totalConsumed += beforeBalance - usdc.balanceOf(address(core));
             ++compoundSuccesses;
         } catch (bytes memory reason) {
             emit log_named_bytes("unexpected auto compound failure", reason);
             ++unexpectedFailures;
         }
+    }
+
+    function rewardsAfterQuote(uint256 actorSeed) external {
+        address user = actors[actorSeed % actors.length];
+        uint256 cap = core.claimable(user);
+        if (cap == 0) return;
+        bytes memory quote = _v2Data(address(output), cap);
+        usdc.mint(address(this), 600e6);
+        core.depositRewards(600e6);
+        totalDeposited += 600e6;
+        uint256 pending = core.claimable(user);
+        assertGt(pending, cap);
+        uint256 balance = usdc.balanceOf(address(core));
+        vm.prank(user);
+        vm.expectRevert(bytes4(keccak256("InvalidExecutionRequest()")));
+        core.claimAndExecute(swapStrategy, 1, block.timestamp + 1, quote);
+        assertEq(core.claimable(user), pending);
+        assertEq(usdc.balanceOf(address(core)), balance);
     }
 
     function claim(uint256 actorSeed) external {
@@ -130,11 +154,11 @@ contract XMetroCoreAdapterInvariantHandler is Test {
         }
     }
 
-    function _v2Data(address tokenOut) private view returns (bytes memory) {
+    function _v2Data(address tokenOut, uint256 cap) private view returns (bytes memory) {
         address[] memory path = new address[](2);
         path[0] = address(usdc);
         path[1] = tokenOut;
-        return abi.encode(uint8(0), abi.encode(path));
+        return abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(0), cap, abi.encode(path));
     }
 }
 

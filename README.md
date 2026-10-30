@@ -48,6 +48,8 @@ The architecture has no external Actions Library, ProxyAdmin, or arbitrary targe
 
 ## Reward actions
 
+Adapter implementation version 2 requires the [versioned swap envelope](integration/docs/new-features.md#swap-execution-data) with a nonzero quoted USDC input cap for all four manual/batch swap and compound entrypoints. An increase above that cap reverts the complete action without consuming rewards. Core function signatures and deposit encodings are unchanged. Existing deployment records describe their original revisions.
+
 A user may enable either legacy Auto-Compound or one general auto strategy, not both. A user may disable a preference while paused; enabling and executing actions require an unpaused core.
 
 - `claimAndExecute(strategyId,minAmountOut,deadline,executionData)` consumes the caller's available USDC rewards. The recipient is fixed to the caller.
