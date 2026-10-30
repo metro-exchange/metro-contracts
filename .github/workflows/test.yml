@@ -69,7 +69,9 @@ jobs:
             test/unit/ThorMigrationEscrow.unit.t.sol \
             test/unit/YThorWeight.integration.t.sol \
             test/unit/xMETRO.unit.t.sol \
+            script/VerifyDeployment.s.sol \
             src/RewardDistributor.sol \
+            test/invariant/RewardDistributor.invariant.t.sol \
             test/mocks/MaliciousERC20.sol \
             test/unit/RewardDistributor.t.sol
 

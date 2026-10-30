@@ -304,11 +304,21 @@ contract AdapterLifecycleMainnetTest is MainnetForkBase {
         assertEq(IERC20(USDC).balanceOf(proxy), 0);
     }
 
-    /// E-21.05: Tests single step owner authority and upgrade.
-    function test_E21_SingleStepOwnerAuthorityAndUpgrade() public {
+    /// E-21.05: Tests two-step owner authority and upgrade.
+    function test_E21_TwoStepOwnerAuthorityAndUpgrade() public {
         address nextOwner = makeAddr("lifecycle-next-owner");
         address nextImpl = _newImplementation();
         core.transferOwnership(nextOwner);
+        assertEq(core.pendingOwner(), nextOwner);
+        assertEq(core.owner(), address(this));
+        vm.prank(nextOwner);
+        vm.expectRevert();
+        IAdapterLifecycleMainnet(proxy).upgradeToAndCall(nextImpl, "");
+        vm.prank(nextOwner);
+        vm.expectRevert();
+        IXMetroAdapterAdminFork(proxy).setRouters(V2_ROUTER, V3_ROUTER, ONEINCH_ROUTER);
+        vm.prank(nextOwner);
+        core.acceptOwnership();
         assertEq(core.owner(), nextOwner);
         vm.expectRevert();
         IAdapterLifecycleMainnet(proxy).upgradeToAndCall(nextImpl, "");

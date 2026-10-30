@@ -36,7 +36,7 @@ contract DeploymentGovernanceMainnetTest is MainnetForkBase {
         assertEq(block.chainid, 1);
         assertEq(block.number, FORK_BLOCK);
         assertGt(address(metro).code.length, 0);
-        assertEq(address(core).code.length, 23_496);
+        assertEq(address(core).code.length, 23_551);
         assertEq(implementation.code.length, 20_707);
         assertEq(proxy.code.length, 76);
         assertGt(address(distributor).code.length, 0);
@@ -89,13 +89,16 @@ contract DeploymentGovernanceMainnetTest is MainnetForkBase {
         emit log_named_address("Commission Vault", address(vault));
     }
 
-    /// E-01.04: Tests explicit pause configuration and single step ownership.
-    function test_E01_ExplicitPauseConfigurationAndSingleStepOwnership() public {
+    /// E-01.04: Tests explicit pause configuration and two-step ownership.
+    function test_E01_ExplicitPauseConfigurationAndTwoStepOwnership() public {
         assertTrue(core.paused());
         IXMetroAdapterAdminFork(proxy).setRouters(V2_ROUTER, V3_ROUTER, ONEINCH_ROUTER);
         IXMetroAdapterAdminFork(proxy).setSwapMetroConfig(true, true);
         address nextOwner = makeAddr("next-governance-owner");
         core.transferOwnership(nextOwner);
+        assertEq(core.pendingOwner(), nextOwner);
+        vm.prank(nextOwner);
+        core.acceptOwnership();
         assertEq(core.owner(), nextOwner);
         vm.expectRevert();
         core.unpause();
@@ -282,6 +285,9 @@ contract DeploymentGovernanceMainnetTest is MainnetForkBase {
         IAdapterRescue(proxy).rescueERC20(USDC, recipient, 4e6);
         assertEq(IERC20(USDC).balanceOf(recipient), 4e6);
         core.transferOwnership(nextOwner);
+        assertEq(core.pendingOwner(), nextOwner);
+        vm.prank(nextOwner);
+        core.acceptOwnership();
         vm.expectRevert();
         IAdapterRescue(proxy).rescueERC20(USDC, recipient, 1e6);
         vm.prank(nextOwner);
@@ -292,15 +298,24 @@ contract DeploymentGovernanceMainnetTest is MainnetForkBase {
 
     /// E-09.06: Tests ownership semantics and isolated renounce.
     function test_E09_OwnershipSemanticsAndIsolatedRenounce() public {
-        address nextOwner = makeAddr("one-step-owner");
+        address nextOwner = makeAddr("two-step-owner");
         vm.prank(nextOwner);
         vm.expectRevert();
         core.renounceOwnership();
         core.transferOwnership(nextOwner);
+        assertEq(core.pendingOwner(), nextOwner);
+        vm.prank(nextOwner);
+        core.acceptOwnership();
         assertEq(core.owner(), nextOwner);
         metro.transferOwnership(nextOwner);
         escrow.transferOwnership(nextOwner);
+        assertEq(escrow.pendingOwner(), nextOwner);
+        vm.prank(nextOwner);
+        escrow.acceptOwnership();
         distributor.transferOwnership(nextOwner);
+        assertEq(distributor.pendingOwner(), nextOwner);
+        vm.prank(nextOwner);
+        distributor.acceptOwnership();
         assertEq(metro.owner(), nextOwner);
         assertEq(escrow.owner(), nextOwner);
         assertEq(distributor.owner(), nextOwner);
@@ -322,6 +337,11 @@ contract DeploymentGovernanceMainnetTest is MainnetForkBase {
         assertEq(spareToken.owner(), address(0));
         assertEq(spareEscrow.owner(), address(0));
         assertEq(spareDistributor.owner(), address(0));
+        vm.prank(nextOwner);
+        vm.expectRevert(bytes4(keccak256("EnforcedPause()")));
+        core.renounceOwnership();
+        vm.prank(nextOwner);
+        core.unpause();
         vm.prank(nextOwner);
         core.renounceOwnership();
         assertEq(core.owner(), address(0));

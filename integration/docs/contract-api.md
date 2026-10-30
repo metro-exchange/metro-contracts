@@ -95,18 +95,26 @@ mockPermissionManager.setPermissionAdmin(B, true); // If B will sign Base QA Map
 // If needed, grant Contributor to the address that will create schedules.
 xMETRO.setContributor(contributorAddress, true);
 
-// Transfer ownership last; after these calls, only A can change configuration.
+// Current owners send these calls after configuration; business ownership remains pending.
 metro.transferOwnership(A);
 xMETRO.transferOwnership(A);
 escrow.transferOwnership(A);
 rewardDistributor.transferOwnership(A);
 ```
 
-The new xMETRO and the other project contracts use one-step ownership transfer; no `acceptOwnership()` is needed. TestToken and Mock owners are transferred separately. A project Safe can hold ownership and mint control; the backend wallet does not need those powers. If any permission is configured after ownership transfer, A must send that call. Transfer of ownership does not revoke old Keeper, Operator, Minter, Contributor, or Mock permission-admin roles—review and revoke each obsolete allowance explicitly. In particular, revoke the temporary Maple signature admins only after B can sign the QA authorization. Do not use `renounceOwnership()` as a handover method.
+The following calls are sent separately by A itself (or executed by the Safe at address A):
+
+```solidity
+xMETRO.acceptOwnership();
+escrow.acceptOwnership();
+rewardDistributor.acceptOwnership();
+```
+
+Core, Escrow and Distributor use two-step transfer. Until acceptance the old owner remains authorized; `transferOwnership(address(0))` cancels the pending nomination. Core/Escrow can hand over while paused but cannot renounce while paused. Distributor has no pause state. MetroToken remains one-step. TestToken and Mock owners are transferred separately. A project Safe can hold ownership and mint control; the backend wallet does not need those powers. If any permission is configured after ownership transfer, A must send that call. Transfer of ownership does not revoke old Keeper, Operator, Minter, Contributor, or Mock permission-admin roles—review and revoke each obsolete allowance explicitly. In particular, revoke the temporary Maple signature admins only after B can sign the QA authorization. Do not use `renounceOwnership()` as a handover method.
 
 ## Readback checklist
 
-After each confirmed transaction, read `owner()` from each contract; `METRO.isMinter`, `Distributor.operators`, `xMETRO.autoCompoundOperators`, `xMETRO.contributorWhitelist`, `xMETRO.yThorRewardWeightBps`, `xMETRO.migrationRewardExcludedAddress`, core bindings and pause status, Escrow start/deadline/ratio/cap getters, Distributor Vault/split getters, Adapter `configuration`/`strategyInfo`/`aaveV4Giver`, and each user's auto preference when relevant. For QA, also read each TestToken/Mock `owner()` and public mint rights. A local `.env` edit, UI status, or dry run does not change chain state.
+After each confirmed transaction, read `owner()` from each contract and `pendingOwner()` from Core/Escrow/Distributor. Final handover requires all three owners to equal A and all three pending owners to be zero. Also read `METRO.isMinter`, `Distributor.operators`, `xMETRO.autoCompoundOperators`, `xMETRO.contributorWhitelist`, `xMETRO.yThorRewardWeightBps`, `xMETRO.migrationRewardExcludedAddress`, core bindings and pause status, Escrow start/deadline/ratio/cap getters, Distributor Vault/split getters, Adapter `configuration`/`strategyInfo`/`aaveV4Giver`, and each user's auto preference when relevant. For QA, also read each TestToken/Mock `owner()` and public mint rights. A local `.env` edit, UI status, or dry run does not change chain state.
 
 ## Position queries and events
 

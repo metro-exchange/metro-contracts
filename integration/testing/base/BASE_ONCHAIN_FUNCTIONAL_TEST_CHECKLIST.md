@@ -2,6 +2,7 @@
 
 ## October 30 audit remediation: future on-chain checks
 
+- [ ] On new Core/Escrow/Distributor instances, verify owner/pendingOwner before and after acceptance; reject paused Core/Escrow renounce while allowing handover.
 - [ ] On a future version-2 Adapter, exercise V2/V3/1inch input caps and rejection of legacy data.
 - [ ] Fund rewards after quoting; confirm all four Core swap/compound paths revert above the saved cap, preserve rewards and succeed with a complete fresh quote.
 
@@ -64,7 +65,7 @@ The yTHOR ramp starts after its exit delay; the maximum yTHOR exit scenario take
 | ID | New deployment | Check | New Base evidence |
 | --- | --- | --- | --- |
 | P-01 | [ ] | Deploy all test tokens and METRO; verify decimals, cap, owners, mint rights, and a single TestUSDC. | — |
-| P-02 | [ ] | Deploy Core, Escrow, Distributor, Adapter implementation and ERC1967 Proxy; verify code, one-step Owner model, initial pause state, and bindings. | — |
+| P-02 | [ ] | Deploy Core, Escrow, Distributor, Adapter implementation and ERC1967 Proxy; verify code, two-step business Owner acceptance, initial pause state, and bindings. | — |
 | P-03 | [ ] | Deploy/configure Mock V3 Pool/aUSDC, V4 Spoke/Giver, Maple Router/PermissionManager/Syrup; verify owners, interfaces, permissions, and tested events. | — |
 | P-04 | [ ] | Deploy a fresh Commission Vault for the new TestUSDC and Distributor, bind it in the Distributor, and verify the initial split is zero until the project configures it. | — |
 | P-05 | [ ] | Create and fund real V2 pairs for METRO, five initial output assets, and ExtraToken against TestUSDC; verify Router/Factory and reserves. | — |
@@ -84,7 +85,7 @@ The yTHOR ramp starts after its exit delay; the maximum yTHOR exit scenario take
 | O-06 | [ ] | Single-user legacy Auto-Compound through the funded real V2 pair, including opt-in/out, output minimum, deadline, and allowance cleanup. | — |
 | O-07 | [ ] | Keeper-only `autocompoundBatch`: one swap, proportional user allocation, skipped candidates, rounding, and revoked Keeper. | — |
 | O-08 | [ ] | Contributor allowlist, schedule creation, cliff/linear vesting, preview, scan/cursor, liquid and stake claims, and withdrawal queue. | — |
-| O-09 | [ ] | Core/Escrow pause, unpause, rescue and role boundaries under the current one-step Owner implementation. | — |
+| O-09 | [ ] | Core/Escrow pause, unpause, rescue and role boundaries under the two-step Owner implementation, including paused renounce rejection. | — |
 
 ## N. New and replaced-function testing
 

@@ -6,6 +6,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 
 interface IxMETRO {
@@ -23,7 +24,7 @@ interface ICommissionVault {
 
 /// @title RewardDistributor
 /// @notice Routes a capped portion of each USDC distribution to CommissionVault and the remainder to xMETRO.
-contract RewardDistributor is Ownable, ReentrancyGuardTransient {
+contract RewardDistributor is Ownable2Step, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
 
     uint256 public constant BPS_DENOMINATOR = 10_000;

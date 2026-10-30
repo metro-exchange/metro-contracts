@@ -14,6 +14,7 @@ import {MockOneInchExecutor, MockOneInchRouter} from "../mocks/MockOneInchRouter
 
 interface ICoreAdapterConfiguration {
     function setRouters(address routerV2, address routerV3, address oneInchRouter) external;
+    function rescueERC20(address token, address to, uint256 amount) external;
     function setSwapMetroConfig(bool enabled, bool autoEnabled) external;
     function setSwapTokenConfig(address tokenOut, bool enabled, bool autoEnabled) external returns (bytes32 id);
     function setAaveV4Config(address spoke, address giver, uint256 reserveId, bool enabled, bool autoEnabled) external;
@@ -148,8 +149,8 @@ contract CoreRewardSource {
 contract XMetroCoreSizeTest is Test {
     uint256 internal constant EIP170_LIMIT = 24_576;
     uint256 internal constant PROJECT_LIMIT = 23_552;
-    uint256 internal constant EXPECTED_RUNTIME = 23_496;
-    uint256 internal constant EXPECTED_INITCODE = 25_112;
+    uint256 internal constant EXPECTED_RUNTIME = 23_551;
+    uint256 internal constant EXPECTED_INITCODE = 25_176;
     uint256 internal constant ETHEREUM_PINNED_BLOCK = 25_838_112;
     uint256 internal constant BASE_PINNED_BLOCK = 50_555_256;
 
@@ -247,6 +248,34 @@ contract XMetroCoreAdapterFlowTest is Test {
         swapStrategy = configuration.setSwapTokenConfig(address(output), true, true);
         metro.mint(address(oneInch), 1_000_000 ether);
         output.mint(address(oneInch), 1_000_000e6);
+    }
+
+    function test_SharedStakePreservesRewardsAndRollsBackFailedOptIn() public {
+        address user = makeAddr("shared-stake-user");
+        metro.mint(user, 50 ether);
+        vm.prank(user);
+        metro.approve(address(core), type(uint256).max);
+        vm.prank(user);
+        assertEq(core.stake(10 ether), 10 ether);
+        _depositRewards(10e6);
+        vm.expectEmit(true, false, false, true, address(core));
+        emit xMETRO.Staked(user, 10 ether, 10 ether);
+        vm.prank(user);
+        assertEq(core.stakeAndEnableAutocompound(10 ether), 10 ether);
+        assertTrue(core.autocompoundEnabled(user));
+        assertEq(core.claimable(user), 10e6);
+        assertEq(core.balanceOf(user), 20 ether);
+        vm.prank(user);
+        vm.expectRevert(xMETRO.InvalidAmount.selector);
+        core.stakeAndEnableAutocompound(0);
+        ICoreAdapterConfiguration(address(adapter)).setSwapMetroConfig(true, false);
+        vm.prank(user);
+        vm.expectRevert(xMETRO.InvalidConfiguration.selector);
+        core.stakeAndEnableAutocompound(10 ether);
+        assertEq(core.claimable(user), 10e6);
+        assertEq(core.balanceOf(user), 20 ether);
+        assertEq(metro.balanceOf(user), 30 ether);
+        assertEq(metro.balanceOf(address(core)), 20 ether);
     }
 
     function test_StaleQuoteRejectsManualCompound() public {
@@ -641,33 +670,60 @@ contract XMetroCoreAdapterFlowTest is Test {
         assertEq(core.claimable(user), 0);
     }
 
-    function test_SingleStepOwnerHandoffMovesAdapterConfigurationAuthority() public {
+    function test_TwoStepOwnerHandoffMovesAdapterConfigurationAuthorityOnlyAfterAcceptance() public {
         address nextOwner = makeAddr("next-owner");
-        address outsider = makeAddr("not-owner");
-        vm.prank(outsider);
-        vm.expectRevert();
         core.transferOwnership(nextOwner);
-        vm.expectRevert();
-        core.transferOwnership(address(0));
         assertEq(core.owner(), address(this));
-        core.transferOwnership(nextOwner);
-        assertEq(core.owner(), nextOwner);
-
-        vm.expectRevert();
+        assertEq(core.pendingOwner(), nextOwner);
+        vm.prank(nextOwner);
+        vm.expectRevert(bytes4(keccak256("AccessStateFailure()")));
         ICoreAdapterConfiguration(address(adapter)).setSwapTokenConfig(address(output), false, false);
-        vm.expectRevert();
-        core.setAutoCompoundOperator(outsider, true);
+        ICoreAdapterConfiguration(address(adapter)).setSwapTokenConfig(address(output), true, false);
+        bytes memory nextInitCode = vm.parseJsonBytes(
+            vm.readFile("out-adapter/XMetroDeFiAdapterV2.sol/XMetroDeFiAdapterV2.json"), ".bytecode.object"
+        );
+        address nextImplementation = _create(nextInitCode);
+        vm.prank(nextOwner);
+        vm.expectRevert(bytes4(keccak256("AccessStateFailure()")));
+        ICoreUUPSUpgrade(address(adapter)).upgradeToAndCall(nextImplementation, "");
+        core.pause();
+        output.mint(address(adapter), 1);
+        vm.prank(nextOwner);
+        vm.expectRevert(bytes4(keccak256("AccessStateFailure()")));
+        ICoreAdapterConfiguration(address(adapter)).rescueERC20(address(output), nextOwner, 1);
+        ICoreAdapterConfiguration(address(adapter)).rescueERC20(address(output), address(this), 1);
+        assertEq(output.balanceOf(address(this)), 1);
+        core.setAutoCompoundOperator(nextOwner, true);
+        vm.prank(nextOwner);
+        core.acceptOwnership();
+        assertEq(core.owner(), nextOwner);
+        assertEq(core.pendingOwner(), address(0));
+        assertTrue(core.autoCompoundOperators(nextOwner));
+        assertTrue(core.autoCompoundOperators(address(this)));
+        vm.expectRevert(bytes4(keccak256("AccessStateFailure()")));
+        ICoreAdapterConfiguration(address(adapter)).setSwapTokenConfig(address(output), false, false);
         vm.prank(nextOwner);
         ICoreAdapterConfiguration(address(adapter)).setSwapTokenConfig(address(output), false, false);
         assertFalse(adapter.strategyInfo(swapStrategy).enabled);
+        vm.expectRevert(bytes4(keccak256("AccessStateFailure()")));
+        ICoreUUPSUpgrade(address(adapter)).upgradeToAndCall(nextImplementation, "");
         vm.prank(nextOwner);
-        core.setAutoCompoundOperator(outsider, true);
-        assertTrue(core.autoCompoundOperators(outsider));
+        ICoreUUPSUpgrade(address(adapter)).upgradeToAndCall(nextImplementation, "");
+        assertEq(adapter.implementationVersion(), 3);
+        assertEq(adapter.logicEpoch(), 2);
+        output.mint(address(adapter), 1);
+        vm.expectRevert(bytes4(keccak256("AccessStateFailure()")));
+        ICoreAdapterConfiguration(address(adapter)).rescueERC20(address(output), address(this), 1);
+        vm.prank(nextOwner);
+        ICoreAdapterConfiguration(address(adapter)).rescueERC20(address(output), nextOwner, 1);
+        assertEq(output.balanceOf(nextOwner), 1);
+        vm.prank(nextOwner);
+        core.unpause();
         vm.prank(nextOwner);
         core.renounceOwnership();
         assertEq(core.owner(), address(0));
         vm.prank(nextOwner);
-        vm.expectRevert();
+        vm.expectRevert(bytes4(keccak256("AccessStateFailure()")));
         ICoreAdapterConfiguration(address(adapter)).setSwapTokenConfig(address(output), true, true);
     }
 
