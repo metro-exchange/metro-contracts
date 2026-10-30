@@ -157,3 +157,14 @@ Validated locally with Solidity 0.8.30 before the subsequent compiler/ownership 
 | Node syntax and local stub-provider assertions | Passed: all DEX envelope encodings agree with cast, version/binding/cap rejection, eligible candidates and unchanged quote data |
 
 Adapter runtime/initcode: 20,574/20,777 bytes. Core runtime remains 23,510 bytes. Existing size limits were retained. Core and Adapter ABI comparisons against the delivered JSON were equal; the Adapter storage namespace/canary regression passed and no storage fields were changed. No ETH_RPC_URL or BASE_RPC_URL was available, so RPC-dependent tests are not claimed as passed. Final combined remediation artifacts must be revalidated after later changes.
+
+## Per-issue submission validation (October 30)
+
+Each row is a separately tested complete source state. Production stages follow the audit submission order; Base QA uses one combined change. All rows use the unchanged project size budgets. This table records local validation, not protocol-fork or on-chain acceptance.
+
+| Stage | Tests passed / failed / RPC skipped | Core runtime / initcode | Adapter runtime / initcode |
+| --- | --- | --- | --- |
+| #13 | 251 / 0 / 4 | 23,510 / 25,146 | 20,574 / 20,777 |
+| #16 | 254 / 0 / 4 | 23,496 / 25,112 | 20,707 / 20,910 |
+
+Every stage passed the Adapter/Core/regression/deployment-script test profiles, deploy and fork-test compilation, ABI and error-selector checks, deployment artifact comparisons, formatting and JavaScript client assertions. No RPC URL was available: the four RPC-dependent deployment tests were skipped, and real-protocol fork execution was not performed.

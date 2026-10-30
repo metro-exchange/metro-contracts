@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 /// @dev Internal-only Core state helpers. Every function is inlined into xMETRO;
 ///      this source creates no linked/deployed business Library.

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import "forge-std/Test.sol";
+import {MaliciousERC20} from "../mocks/MaliciousERC20.sol";
 
 import {ThorMigrationEscrow} from "../../src/ThorMigrationEscrow.sol";
 import {ERC20Mintable} from "../mocks/ERC20Mintable.sol";
@@ -66,6 +67,52 @@ contract ThorMigrationEscrowUnitTest is Test {
         token.mint(account, amount);
         vm.prank(account);
         token.approve(address(escrow), amount);
+    }
+
+    function testFuzz_TransientGuardProtectsBothMigrationCallbacksAndRecovers(bool yThorPath, bool crossFunction)
+        public
+    {
+        MaliciousERC20 token = new MaliciousERC20("Malicious migration", "MMIG", 18);
+        ThorMigrationEscrow guarded = new ThorMigrationEscrow(
+            address(this),
+            address(xmetro),
+            yThorPath ? address(thor) : address(token),
+            yThorPath ? address(token) : address(yThor),
+            block.timestamp
+        );
+        guarded.setRatios(1 ether, 1 ether);
+        guarded.setCaps(100 ether, 100 ether);
+        guarded.setDeadlines(block.timestamp + 365 days, block.timestamp + 365 days);
+        token.mint(user, 30 ether);
+        vm.prank(user);
+        token.approve(address(guarded), type(uint256).max);
+        bool nestedYThor = crossFunction ? !yThorPath : yThorPath;
+        bytes memory nested = nestedYThor
+            ? abi.encodeCall(ThorMigrationEscrow.migrateYThor, (1))
+            : abi.encodeCall(ThorMigrationEscrow.migrateThor, (1));
+        for (uint256 i; i < 2; ++i) {
+            token.setAttack(address(guarded), nested, true);
+            vm.prank(user);
+            if (yThorPath) guarded.migrateYThor(10 ether);
+            else guarded.migrateThor(10 ether);
+            assertTrue(token.attackAttempted());
+            assertFalse(token.attackSucceeded());
+            assertEq(token.attackRevertData(), abi.encodeWithSignature("ReentrancyGuardReentrantCall()"));
+        }
+        token.setAttack(address(guarded), nested, false);
+        xmetro.setRevertCredits(true);
+        vm.prank(user);
+        vm.expectRevert(bytes("MockXMetro: rejected"));
+        if (yThorPath) guarded.migrateYThor(1 ether);
+        else guarded.migrateThor(1 ether);
+        assertEq(token.balanceOf(address(guarded)), 20 ether);
+        assertEq(xmetro.thorCredits() + xmetro.yThorCredits(), 2);
+        xmetro.setRevertCredits(false);
+        vm.prank(user);
+        if (yThorPath) guarded.migrateYThor(1 ether);
+        else guarded.migrateThor(1 ether);
+        assertEq(token.balanceOf(address(guarded)), 21 ether);
+        assertEq(xmetro.thorCredits() + xmetro.yThorCredits(), 3);
     }
 
     function test_ConstructorRejectsInvalidInputs() public {

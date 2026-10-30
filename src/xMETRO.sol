@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -8,7 +8,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 
 import {IXMetroDeFiAdapter} from "./interfaces/IXMetroDeFiAdapter.sol";
 import {XMetroCoreLogic} from "./XMetroCoreLogic.sol";
@@ -21,7 +21,7 @@ interface IBoundRewardDistributor {
     function rewardToken() external view returns (address);
 }
 
-contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
+contract xMETRO is ERC20, Pausable, ReentrancyGuardTransient, Ownable {
     error Unauthorized();
     error NoRewards();
     error InvalidAddress();

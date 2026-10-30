@@ -68,7 +68,10 @@ jobs:
             test/mock/XChainAndCore.t.sol \
             test/unit/ThorMigrationEscrow.unit.t.sol \
             test/unit/YThorWeight.integration.t.sol \
-            test/unit/xMETRO.unit.t.sol
+            test/unit/xMETRO.unit.t.sol \
+            src/RewardDistributor.sol \
+            test/mocks/MaliciousERC20.sol \
+            test/unit/RewardDistributor.t.sol
 
       - name: Build production xMETRO artifact
         run: FOUNDRY_PROFILE=core forge build --sizes

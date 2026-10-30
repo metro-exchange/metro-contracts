@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import {Test} from "forge-std/Test.sol";
 import {MockAaveV4Giver} from "../mocks/MockAaveV4Giver.sol";
@@ -29,8 +29,8 @@ contract DeployScriptTest is Test {
     using stdJson for string;
 
     uint256 internal constant DEPLOYER_KEY = 0xD3F10;
-    uint256 internal constant ADAPTER_RUNTIME = 20_574;
-    uint256 internal constant CORE_RUNTIME = 23_510;
+    uint256 internal constant ADAPTER_RUNTIME = 20_707;
+    uint256 internal constant CORE_RUNTIME = 23_496;
     bytes32 internal constant P_DEPOSIT = bytes32("P:deposit");
     bytes32 internal constant IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
     bytes32 internal constant ADMIN_SLOT = 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103;

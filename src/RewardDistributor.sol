@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 
 interface IxMETRO {
     function depositRewards(uint256 amount) external;
@@ -23,7 +23,7 @@ interface ICommissionVault {
 
 /// @title RewardDistributor
 /// @notice Routes a capped portion of each USDC distribution to CommissionVault and the remainder to xMETRO.
-contract RewardDistributor is Ownable, ReentrancyGuard {
+contract RewardDistributor is Ownable, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
 
     uint256 public constant BPS_DENOMINATOR = 10_000;

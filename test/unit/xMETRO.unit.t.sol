@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import "forge-std/Test.sol";
+import {MaliciousERC20} from "../mocks/MaliciousERC20.sol";
 
 import {xMETRO as XMetroCore} from "../../src/xMETRO.sol";
 import {MetroToken} from "../../src/metro.sol";
@@ -154,6 +155,34 @@ contract xMETROUnitTest is Test {
     function _setMockAdapter(uint256 mul, uint256 div) internal returns (MockXMetroDeFiAdapter adapter) {
         adapter = new MockXMetroDeFiAdapter(address(xmetro), address(usdc), address(metro), mul, div);
         xmetro.setDeFiAdapter(address(adapter));
+    }
+
+    function testFuzz_TransientGuardRejectsCallbackAndAllowsSameTransactionRetry(bool crossFunction) public {
+        MaliciousERC20 token = new MaliciousERC20("Malicious METRO", "MMETRO", 18);
+        XMetroCore guarded = new XMetroCore(address(this), address(token), address(usdc), forfeitureRecipient, 20_000);
+        token.mint(userA, 30 ether);
+        vm.prank(userA);
+        token.approve(address(guarded), type(uint256).max);
+        bytes memory nested =
+            crossFunction ? abi.encodeCall(XMetroCore.claimRewards, ()) : abi.encodeCall(XMetroCore.stake, (1));
+        for (uint256 i; i < 2; ++i) {
+            token.setAttack(address(guarded), nested, true);
+            vm.prank(userA);
+            guarded.stake(10 ether);
+            assertTrue(token.attackAttempted());
+            assertFalse(token.attackSucceeded());
+            assertEq(token.attackRevertData(), abi.encodeWithSignature("ReentrancyGuardReentrantCall()"));
+        }
+        assertEq(guarded.balanceOf(userA), 20 ether);
+        token.setAttack(address(guarded), nested, false);
+        vm.prank(userA);
+        vm.expectRevert();
+        guarded.stake(100 ether);
+        assertEq(guarded.balanceOf(userA), 20 ether);
+        vm.prank(userA);
+        guarded.stake(1 ether);
+        assertEq(guarded.balanceOf(userA), 21 ether);
+        assertEq(token.balanceOf(address(guarded)), 21 ether);
     }
 
     function test_ConstructorAndConfigurationValidation() public {

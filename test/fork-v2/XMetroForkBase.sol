@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import {Test} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -156,8 +156,8 @@ abstract contract XMetroForkBase is Test {
         proxy = address(new ERC1967Proxy(implementation, initData));
         adapter = IXMetroDeFiAdapter(proxy);
         core.setDeFiAdapter(proxy);
-        assertEq(address(core).code.length, 23_510);
-        assertEq(implementation.code.length, 20_574);
+        assertEq(address(core).code.length, 23_496);
+        assertEq(implementation.code.length, 20_707);
         assertEq(core.deFiAdapter(), proxy);
     }
 
