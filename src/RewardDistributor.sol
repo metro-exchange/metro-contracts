@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 
 interface IxMETRO {
     function depositRewards(uint256 amount) external;
@@ -23,7 +24,22 @@ interface ICommissionVault {
 
 /// @title RewardDistributor
 /// @notice Routes a capped portion of each USDC distribution to CommissionVault and the remainder to xMETRO.
-contract RewardDistributor is Ownable, ReentrancyGuard {
+contract RewardDistributor is Ownable2Step, ReentrancyGuardTransient {
+    error ZeroXMetro();
+    error UnauthorizedOperator();
+    error InvalidOperator();
+    error CommissionSplitEnabled();
+    error InvalidCommissionSplitBps();
+    error ZeroAmount();
+    error InsufficientRewardBalance();
+    error ZeroCommissionVault();
+    error CommissionVaultNotContract();
+    error CommissionTokenMismatch();
+    error CommissionDistributorMismatch();
+    error CommissionVaultMigrationPending();
+    error CommissionVaultPaused();
+    error InvalidRecipient();
+
     using SafeERC20 for IERC20;
 
     uint256 public constant BPS_DENOMINATOR = 10_000;
@@ -52,18 +68,18 @@ contract RewardDistributor is Ownable, ReentrancyGuard {
     );
 
     constructor(address xMetro_, address owner_) Ownable(owner_) {
-        require(xMetro_ != address(0), "RewardDistributor: zero xMETRO");
+        require(xMetro_ != address(0), ZeroXMetro());
         xMETRO = IxMETRO(xMetro_);
         rewardToken = IxMETRO(xMetro_).rewardToken();
     }
 
     modifier onlyOperator() {
-        require(operators[msg.sender], "RewardDistributor: only operator");
+        require(operators[msg.sender], UnauthorizedOperator());
         _;
     }
 
     function setOperator(address operator, bool allowed) external onlyOwner {
-        require(operator != address(0), "RewardDistributor: bad operator");
+        require(operator != address(0), InvalidOperator());
         operators[operator] = allowed;
         emit OperatorUpdated(operator, allowed);
     }
@@ -71,7 +87,7 @@ contract RewardDistributor is Ownable, ReentrancyGuard {
     /// @notice Set or migrate the CommissionVault. Clear only after disabling the split.
     function setCommissionVault(address vault) external onlyOwner {
         if (vault == address(0)) {
-            require(maxCommissionSplitBps == 0, "RewardDistributor: split enabled");
+            require(maxCommissionSplitBps == 0, CommissionSplitEnabled());
         } else {
             _validateCommissionVault(vault);
         }
@@ -83,7 +99,7 @@ contract RewardDistributor is Ownable, ReentrancyGuard {
 
     /// @notice Set the per-distribution CommissionVault ceiling. Zero disables top-ups.
     function setMaxCommissionSplitBps(uint16 bps) external onlyOwner {
-        require(bps <= BPS_DENOMINATOR, "RewardDistributor: bps > 10000");
+        require(bps <= BPS_DENOMINATOR, InvalidCommissionSplitBps());
         if (bps != 0) {
             _validateCommissionVault(commissionVault);
         }
@@ -95,15 +111,15 @@ contract RewardDistributor is Ownable, ReentrancyGuard {
 
     /// @notice Pull a gross reward amount from an operator and route it.
     function distribute(uint256 amount) external onlyOperator nonReentrant {
-        require(amount > 0, "RewardDistributor: zero amount");
+        require(amount > 0, ZeroAmount());
         rewardToken.safeTransferFrom(msg.sender, address(this), amount);
         _routeDistribution(amount);
     }
 
     /// @notice Route a gross reward amount already held by this contract.
     function distributeFromBalance(uint256 amount) external onlyOperator nonReentrant {
-        require(amount > 0, "RewardDistributor: zero amount");
-        require(rewardToken.balanceOf(address(this)) >= amount, "RewardDistributor: insufficient balance");
+        require(amount > 0, ZeroAmount());
+        require(rewardToken.balanceOf(address(this)) >= amount, InsufficientRewardBalance());
         _routeDistribution(amount);
     }
 
@@ -137,16 +153,16 @@ contract RewardDistributor is Ownable, ReentrancyGuard {
     }
 
     function _validateCommissionVault(address vault) internal view {
-        require(vault != address(0), "RewardDistributor: zero vault");
-        require(vault.code.length != 0, "RewardDistributor: vault not contract");
-        require(ICommissionVault(vault).usdc() == address(rewardToken), "RewardDistributor: token mismatch");
-        require(ICommissionVault(vault).distributor() == address(this), "RewardDistributor: distributor mismatch");
-        require(ICommissionVault(vault).migrationFinalized(), "RewardDistributor: vault migration pending");
-        require(!ICommissionVault(vault).paused(), "RewardDistributor: vault paused");
+        require(vault != address(0), ZeroCommissionVault());
+        require(vault.code.length != 0, CommissionVaultNotContract());
+        require(ICommissionVault(vault).usdc() == address(rewardToken), CommissionTokenMismatch());
+        require(ICommissionVault(vault).distributor() == address(this), CommissionDistributorMismatch());
+        require(ICommissionVault(vault).migrationFinalized(), CommissionVaultMigrationPending());
+        require(!ICommissionVault(vault).paused(), CommissionVaultPaused());
     }
 
     function rescueTokens(address token, address to, uint256 amount) external onlyOwner {
-        require(to != address(0), "RewardDistributor: bad to");
+        require(to != address(0), InvalidRecipient());
         IERC20(token).safeTransfer(to, amount);
         emit TokensRescued(token, to, amount);
     }

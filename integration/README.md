@@ -1,5 +1,7 @@
 # xMETRO Integration Guide
 
+Current swap and compound examples require Adapter implementation version 2 and the [new swap envelope](docs/new-features.md#swap-execution-data). Core, Escrow and Distributor now expose two-step ownership interfaces; regenerate clients from the corresponding ABI. MetroToken, Escrow and Distributor business failures use custom errors from their matching ABI. The four Core reward entrypoint signatures are unchanged. Use the ABI and examples matching the actual deployed revision; existing configuration JSON and historical addresses are not updated by this source change.
+
 ## October 24 source update
 
 This source version changes yTHOR exits to 20%-100% of the converted METRO principal. Production opens exits after 120 days and reaches 100% over the following `4 * 365 days`; Base QA keeps its 4-hour delay and 12-hour ramp. Repeated migrations, independent position IDs, one complete exit per position, and `1e24` reward-debt precision are retained.
@@ -11,6 +13,8 @@ The existing Base QA deployment and its address/configuration records remain unc
 This directory is the entry point for frontend, backend, and operations integration. The documentation does not imply that every external-protocol scenario has passed; use the linked execution records for actual status.
 
 This Base QA branch changes seven waiting periods. The linked Ethereum fork results were recorded on the production-time build and must not be presented as test results for this QA bytecode.
+
+Build with the pinned Solidity 0.8.38 / Osaka profiles; the target chain must support transient storage and all emitted instructions. [Build and validation notes](../README.md#october-30-audit-remediation) and [initial configuration events](docs/existing-features.md#events-and-indexing) describe the current source.
 
 ## Reading order
 

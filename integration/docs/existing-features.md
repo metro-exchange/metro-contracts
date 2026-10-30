@@ -54,7 +54,7 @@ For reward UI, read `rewardWeightOf(user)` and `totalRewardWeight()`. `totalShar
 | `setSwapAdapter(address)` | `setDeFiAdapter(proxy)` | Bind the new Adapter **proxy**, not its implementation. |
 | `setDefaultMaxThorLocks(maxLocks)` | Removed | Each exit selects a position ID; no scan limit is needed. |
 
-The current xMETRO uses original one-step ownership, allows renouncing, and starts unpaused; these are not new business features. Already-deployed historical QA contracts still follow their own deployed ABI and must not be silently treated as the new version.
+The current Core, Escrow and Distributor use two-step ownership: nomination preserves the old owner until the pending owner accepts. A zero nomination cancels handover. Core/Escrow forbid renouncing while paused, but allow handover; Distributor has no pause mechanism. Core still starts unpaused. Already-deployed historical QA contracts still follow their own deployed ABI and must not be silently treated as the new version.
 
 ## Preserved behavior and notable differences
 
@@ -70,7 +70,7 @@ The current xMETRO uses original one-step ownership, allows renouncing, and star
 | Keeper compound batch | `autocompoundBatch(users,minMetroOut,deadline,swapData)` | One swap; shares allocated in proportion to pending rewards. |
 | Reward injection | `distribute`, `distributeFromBalance` | Same operator entrypoints, now with optional commission diversion; Core receives net rewards. |
 
-V2/V3 compound data remains `abi.encode(uint8 dexType, bytes routeData)`. `previewWithdrawableNow(user)` still has four return fields, but its THOR/yTHOR components now mean the sum of payouts from all eligible, unexited positions. It includes unlocked Contributor value and excludes all withdrawal queues, even matured ones. Read each queue through its `unstakeRequestCount*`, `unstakeRequest*`, and `unstakeCursor*` getters.
+All V2/V3/1inch compound and swap data now uses the version-2 [swap envelope](new-features.md#swap-execution-data), including a nonzero quoted USDC input cap. Core function signatures remain unchanged; old encoded data is rejected by the new Adapter. `previewWithdrawableNow(user)` still has four return fields, but its THOR/yTHOR components now mean the sum of payouts from all eligible, unexited positions. It includes unlocked Contributor value and excludes all withdrawal queues, even matured ones. Read each queue through its `unstakeRequestCount*`, `unstakeRequest*`, and `unstakeCursor*` getters.
 
 ## Events and indexing
 
@@ -82,6 +82,17 @@ V2/V3 compound data remains `abi.encode(uint8 dexType, bytes routeData)`. `previ
 | `SwapAdapterUpdated` | `DeFiAdapterUpdated(oldAdapter,newAdapter,adapterEpoch)`. |
 | Single-address Distributor/Escrow update events | Old/new-address event formats. |
 | `RewardsDistributed` | Amount is the **net** Core reward; `DistributionRouted` records gross and commission. |
+
+New deployments also emit the existing configuration events during construction or initialization:
+
+| Emitter | Initial event | Meaning |
+| --- | --- | --- |
+| Escrow | `MigrationStartTimeUpdated(storedStart)` | The stored start time; QA input zero resolves to the deployment timestamp. |
+| Core | `YThorRewardWeightBpsUpdated(0, initialWeight)` | Includes an initial weight of zero. |
+| QA Core only | `ForfeitureRecipientUpdated(address(0), recipient)` | The initial payout recipient; the migration exclusion address remains fixed. |
+| Adapter **proxy** | `ConfigurationChanged(strategyId, 1)` for SwapMetro and AaveV4 | Each initial strategy has revision 1 and both enabled flags false. Creation is not activation. |
+
+Index Adapter configuration logs at the proxy address, including the deployment transaction. Read the corresponding getters for full state. Subsequent semantic updates still advance the same revisions; initialization cannot be repeated. For ownership, `OwnershipTransferStarted` only nominates; `OwnershipTransferred` records the actual change after acceptance (or construction/renounce).
 
 Decode each log with the ABI of the contract version that emitted it. Do not reinterpret historical logs using a new event signature.
 

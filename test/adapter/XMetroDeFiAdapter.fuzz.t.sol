@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import {
     CompactAdapterFlowBase,
@@ -31,6 +31,39 @@ contract CompactAdapterFuzzTest is CompactAdapterFlowBase {
         adapter.setRouters(address(routerV2), address(routerV3), address(oneInch));
         strategy = adapter.setSwapTokenConfig(address(output), true, true);
         core.setPaused(false);
+    }
+
+    function testFuzz_SwapRewardInputCapBoundary(uint96 seed, uint8 dexSeed, uint8 boundarySeed) public {
+        uint256 amount = bound(uint256(seed), 2, 1e24);
+        uint8 dex = dexSeed % 3;
+        uint8 boundary = boundarySeed % 3;
+        uint256 cap = boundary == 0 ? amount - 1 : boundary == 1 ? amount : amount + 1;
+        address[] memory path = new address[](2);
+        path[0] = address(usdc);
+        path[1] = address(output);
+        bytes memory route = dex == 0
+            ? abi.encode(path)
+            : dex == 1 ? abi.encodePacked(address(usdc), uint24(500), address(output)) : _validOneInchRoute(amount);
+        IXMetroDeFiAdapter.ManualExecution memory request = IXMetroDeFiAdapter.ManualExecution({
+            strategyId: strategy,
+            account: makeAddr("cap-boundary"),
+            amountIn: amount,
+            minAmountOut: amount,
+            deadline: block.timestamp + 1,
+            executionData: _swapData(dex, cap, route)
+        });
+        usdc.mint(address(core), amount);
+        usdc.mint(address(adapter), 13);
+        output.mint(address(adapter), 17);
+        if (boundary == 0) vm.expectRevert(XMetroDeFiAdapter.InvalidExecutionRequest.selector);
+        core.runManual(usdc, request);
+        assertEq(usdc.balanceOf(address(core)), boundary == 0 ? amount : 0);
+        assertEq(output.balanceOf(request.account), boundary == 0 ? 0 : amount);
+        assertEq(usdc.balanceOf(address(adapter)), 13);
+        assertEq(output.balanceOf(address(adapter)), 17);
+        assertEq(usdc.allowance(address(adapter), address(routerV2)), 0);
+        assertEq(usdc.allowance(address(adapter), address(routerV3)), 0);
+        assertEq(usdc.allowance(address(adapter), address(oneInch)), 0);
     }
 
     function testFuzz_BatchDistributionPreservesDonationsAndConservesEveryUnit(
@@ -66,7 +99,7 @@ contract CompactAdapterFuzzTest is CompactAdapterFlowBase {
             minTotalAmountOut: total,
             minUserAmountsOut: new uint256[](0),
             deadline: block.timestamp + 1,
-            executionData: abi.encode(uint8(0), abi.encode(path))
+            executionData: _swapData(0, total, abi.encode(path))
         });
         IXMetroDeFiAdapter.ExecutionResult memory result = core.runBatch(usdc, request);
 
@@ -142,8 +175,9 @@ contract CompactAdapterFuzzTest is CompactAdapterFlowBase {
             minTotalAmountOut: 1,
             minUserAmountsOut: new uint256[](0),
             deadline: block.timestamp + 1,
-            executionData: abi.encode(
-                uint8(2),
+            executionData: _swapData(
+                2,
+                totalIn,
                 abi.encodeWithSelector(
                     IOneInchAggregationRouterV6.swap.selector, address(executor), description, hex"01"
                 )
@@ -190,8 +224,9 @@ contract CompactAdapterFuzzTest is CompactAdapterFlowBase {
             minTotalAmountOut: 1,
             minUserAmountsOut: new uint256[](0),
             deadline: block.timestamp + 1,
-            executionData: abi.encode(
-                uint8(2),
+            executionData: _swapData(
+                2,
+                total,
                 abi.encodeWithSelector(
                     IOneInchAggregationRouterV6.swap.selector, address(executor), description, hex"01"
                 )
@@ -249,7 +284,7 @@ contract CompactAdapterFuzzTest is CompactAdapterFlowBase {
             amountIn: amount,
             minAmountOut: amount,
             deadline: block.timestamp + 1,
-            executionData: abi.encode(uint8(2), route)
+            executionData: _swapData(2, amount, route)
         });
         vm.expectRevert();
         core.runManual(usdc, request);

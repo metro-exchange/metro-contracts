@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import "forge-std/Test.sol";
+import {MaliciousERC20} from "../mocks/MaliciousERC20.sol";
 
 import {RewardDistributor} from "../../src/RewardDistributor.sol";
 import {xMETRO} from "../../src/xMETRO.sol";
@@ -60,11 +61,127 @@ contract RewardDistributorTest is Test {
         usdc.approve(address(distributor), type(uint256).max);
     }
 
+    event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    function test_TwoStepOwnershipAcceptReplaceCancelAndPermissions() public {
+        address next = makeAddr("pending-owner");
+        address replaced = makeAddr("replacement-owner");
+        assertEq(distributor.owner(), address(this));
+        assertEq(distributor.pendingOwner(), address(0));
+        vm.prank(next);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", next));
+        distributor.acceptOwnership();
+        vm.prank(next);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", next));
+        distributor.transferOwnership(replaced);
+        vm.expectEmit(true, true, false, true, address(distributor));
+        emit OwnershipTransferStarted(address(this), next);
+        distributor.transferOwnership(next);
+        assertEq(distributor.owner(), address(this));
+        assertEq(distributor.pendingOwner(), next);
+        vm.prank(next);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", next));
+        distributor.setOperator(outsider, true);
+        distributor.setOperator(outsider, true);
+        distributor.transferOwnership(replaced);
+        vm.prank(next);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", next));
+        distributor.acceptOwnership();
+        distributor.transferOwnership(address(0));
+        assertEq(distributor.owner(), address(this));
+        assertEq(distributor.pendingOwner(), address(0));
+        vm.prank(replaced);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", replaced));
+        distributor.acceptOwnership();
+        distributor.transferOwnership(next);
+        vm.expectEmit(true, true, false, true, address(distributor));
+        emit OwnershipTransferred(address(this), next);
+        vm.prank(next);
+        distributor.acceptOwnership();
+        assertEq(distributor.owner(), next);
+        assertEq(distributor.pendingOwner(), address(0));
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", address(this)));
+        distributor.setOperator(outsider, true);
+        vm.prank(next);
+        distributor.setOperator(outsider, true);
+        vm.prank(next);
+        distributor.transferOwnership(replaced);
+        vm.prank(next);
+        distributor.renounceOwnership();
+        assertEq(distributor.owner(), address(0));
+        assertEq(distributor.pendingOwner(), address(0));
+        vm.prank(replaced);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", replaced));
+        distributor.acceptOwnership();
+    }
+
+    function test_AcceptingOwnerRetainsOperatorAndUserRewards() public {
+        address next = makeAddr("distributor-next-owner");
+        distributor.transferOwnership(next);
+        vm.prank(next);
+        distributor.acceptOwnership();
+        assertTrue(distributor.operators(operator));
+        vm.prank(operator);
+        distributor.distribute(10e6);
+        assertEq(xmetro.claimable(user), 10e6);
+    }
+
+    function testFuzz_TransientGuardChecksAuthorizedCallbacksAndSameTransactionRetry(
+        bool fromBalance,
+        bool crossFunction
+    ) public {
+        MaliciousERC20 token = new MaliciousERC20("Malicious rewards", "MUSDC", 6);
+        xMETRO guardedCore = new xMETRO(address(this), address(metro), address(token), forfeitureRecipient, 20_000);
+        RewardDistributor guarded = new RewardDistributor(address(guardedCore), address(this));
+        guardedCore.setRewardDistributor(address(guarded));
+        guarded.setOperator(address(this), true);
+        guarded.setOperator(address(token), true); // Reach the lock, not an unrelated operator failure.
+        MockCommissionVault commission = new MockCommissionVault(address(token), 100e6, address(guarded));
+        guarded.setCommissionVault(address(commission));
+        guarded.setMaxCommissionSplitBps(1_000);
+        metro.mint(user, 100 ether);
+        vm.startPrank(user);
+        metro.approve(address(guardedCore), 100 ether);
+        guardedCore.stake(100 ether);
+        vm.stopPrank();
+        token.mint(fromBalance ? address(guarded) : address(this), 30e6);
+        token.approve(address(guarded), type(uint256).max);
+        bool nestedBalance = crossFunction ? !fromBalance : fromBalance;
+        bytes memory nested = nestedBalance
+            ? abi.encodeCall(RewardDistributor.distributeFromBalance, (1))
+            : abi.encodeCall(RewardDistributor.distribute, (1));
+        for (uint256 i; i < 2; ++i) {
+            token.setAttack(address(guarded), nested, true);
+            if (fromBalance) guarded.distributeFromBalance(10e6);
+            else guarded.distribute(10e6);
+            assertTrue(token.attackAttempted());
+            assertFalse(token.attackSucceeded());
+            assertEq(token.attackRevertData(), abi.encodeWithSignature("ReentrancyGuardReentrantCall()"));
+        }
+        assertEq(guardedCore.claimable(user), 18e6);
+        assertEq(token.balanceOf(address(commission)), 2e6);
+        token.setAttack(address(guarded), nested, false);
+        guardedCore.pause();
+        vm.expectRevert(bytes4(keccak256("EnforcedPause()")));
+        if (fromBalance) guarded.distributeFromBalance(10e6);
+        else guarded.distribute(10e6);
+        assertEq(token.balanceOf(address(commission)), 2e6);
+        assertEq(guardedCore.claimable(user), 18e6);
+        guardedCore.unpause();
+        if (fromBalance) guarded.distributeFromBalance(10e6);
+        else guarded.distribute(10e6);
+        assertEq(token.balanceOf(address(commission)), 3e6);
+        assertEq(guardedCore.claimable(user), 27e6);
+    }
+
     function test_ConstructorAndOperatorPermissions() public {
+        vm.expectRevert(abi.encodeWithSignature("OwnableInvalidOwner(address)", address(0)));
+        new RewardDistributor(address(xmetro), address(0));
         assertEq(address(distributor.rewardToken()), address(usdc));
         assertEq(address(distributor.xMETRO()), address(xmetro));
 
-        vm.expectRevert(bytes("RewardDistributor: zero xMETRO"));
+        vm.expectRevert(RewardDistributor.ZeroXMetro.selector);
         new RewardDistributor(address(0), address(this));
 
         vm.prank(outsider);
@@ -72,12 +189,26 @@ contract RewardDistributorTest is Test {
         distributor.setOperator(outsider, true);
 
         vm.prank(outsider);
-        vm.expectRevert(bytes("RewardDistributor: only operator"));
+        vm.expectRevert(RewardDistributor.UnauthorizedOperator.selector);
         distributor.distribute(1);
 
         vm.prank(operator);
-        vm.expectRevert(bytes("RewardDistributor: zero amount"));
+        vm.expectRevert(RewardDistributor.ZeroAmount.selector);
         distributor.distribute(0);
+    }
+
+    function test_CustomErrorsCoverOperatorAndBothFundingEntrypoints() public {
+        vm.expectRevert(RewardDistributor.InvalidOperator.selector);
+        distributor.setOperator(address(0), true);
+        vm.prank(outsider);
+        vm.expectRevert(RewardDistributor.UnauthorizedOperator.selector);
+        distributor.distribute(0);
+        vm.prank(outsider);
+        vm.expectRevert(RewardDistributor.UnauthorizedOperator.selector);
+        distributor.distributeFromBalance(0);
+        vm.prank(operator);
+        vm.expectRevert(RewardDistributor.ZeroAmount.selector);
+        distributor.distributeFromBalance(0);
     }
 
     function test_CommissionConfigurationValidationAndMigration() public {
@@ -85,31 +216,31 @@ contract RewardDistributorTest is Test {
         vm.expectRevert();
         distributor.setCommissionVault(address(vault));
 
-        vm.expectRevert(bytes("RewardDistributor: bps > 10000"));
+        vm.expectRevert(RewardDistributor.InvalidCommissionSplitBps.selector);
         distributor.setMaxCommissionSplitBps(10_001);
 
-        vm.expectRevert(bytes("RewardDistributor: zero vault"));
+        vm.expectRevert(RewardDistributor.ZeroCommissionVault.selector);
         distributor.setMaxCommissionSplitBps(1);
 
-        vm.expectRevert(bytes("RewardDistributor: vault not contract"));
+        vm.expectRevert(RewardDistributor.CommissionVaultNotContract.selector);
         distributor.setCommissionVault(outsider);
 
         MockCommissionVault wrongTokenVault = new MockCommissionVault(address(otherToken), 1, address(distributor));
-        vm.expectRevert(bytes("RewardDistributor: token mismatch"));
+        vm.expectRevert(RewardDistributor.CommissionTokenMismatch.selector);
         distributor.setCommissionVault(address(wrongTokenVault));
 
         MockCommissionVault wrongDistributorVault = new MockCommissionVault(address(usdc), 1, outsider);
-        vm.expectRevert(bytes("RewardDistributor: distributor mismatch"));
+        vm.expectRevert(RewardDistributor.CommissionDistributorMismatch.selector);
         distributor.setCommissionVault(address(wrongDistributorVault));
 
         MockCommissionVault pendingMigrationVault = new MockCommissionVault(address(usdc), 1, address(distributor));
         pendingMigrationVault.setMigrationFinalized(false);
-        vm.expectRevert(bytes("RewardDistributor: vault migration pending"));
+        vm.expectRevert(RewardDistributor.CommissionVaultMigrationPending.selector);
         distributor.setCommissionVault(address(pendingMigrationVault));
 
         MockCommissionVault pausedVault = new MockCommissionVault(address(usdc), 1, address(distributor));
         pausedVault.setPaused(true);
-        vm.expectRevert(bytes("RewardDistributor: vault paused"));
+        vm.expectRevert(RewardDistributor.CommissionVaultPaused.selector);
         distributor.setCommissionVault(address(pausedVault));
 
         vm.expectEmit(true, true, false, true);
@@ -119,7 +250,7 @@ contract RewardDistributorTest is Test {
         emit RewardDistributor.MaxCommissionSplitBpsUpdated(0, 2_500);
         distributor.setMaxCommissionSplitBps(2_500);
 
-        vm.expectRevert(bytes("RewardDistributor: split enabled"));
+        vm.expectRevert(RewardDistributor.CommissionSplitEnabled.selector);
         distributor.setCommissionVault(address(0));
 
         MockCommissionVault replacement = new MockCommissionVault(address(usdc), 100e6, address(distributor));
@@ -151,7 +282,7 @@ contract RewardDistributorTest is Test {
         vault.setPaused(true);
 
         vm.prank(operator);
-        vm.expectRevert(bytes("RewardDistributor: vault paused"));
+        vm.expectRevert(RewardDistributor.CommissionVaultPaused.selector);
         distributor.distribute(100e6);
 
         distributor.setMaxCommissionSplitBps(0);
@@ -222,7 +353,7 @@ contract RewardDistributorTest is Test {
         assertEq(xmetro.claimable(user), 60e6);
 
         vm.prank(operator);
-        vm.expectRevert(bytes("RewardDistributor: insufficient balance"));
+        vm.expectRevert(RewardDistributor.InsufficientRewardBalance.selector);
         distributor.distributeFromBalance(1);
     }
 
@@ -380,7 +511,7 @@ contract RewardDistributorTest is Test {
         vm.prank(outsider);
         vm.expectRevert();
         distributor.rescueTokens(address(usdc), user, 1);
-        vm.expectRevert(bytes("RewardDistributor: bad to"));
+        vm.expectRevert(RewardDistributor.InvalidRecipient.selector);
         distributor.rescueTokens(address(usdc), address(0), 1);
 
         distributor.rescueTokens(address(usdc), user, 10e6);

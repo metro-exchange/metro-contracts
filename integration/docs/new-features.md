@@ -55,7 +55,9 @@ Always read `strategyInfo` to verify kind, output token, `enabled`, and `autoEna
 All routes start with USDC. `minAmountOut` must be positive; the outer `deadline` is a future Unix timestamp. Encode:
 
 ```solidity
-executionData = abi.encode(uint8(dexType), bytes(routeData));
+executionData = abi.encode(
+    keccak256("XMETRO_SWAP_V2"), uint8(dexType), uint256(maxRewardIn), bytes(routeData)
+);
 ```
 
 | `dexType` | `routeData` | Requirement |
@@ -63,6 +65,10 @@ executionData = abi.encode(uint8(dexType), bytes(routeData));
 | 0: Uniswap V2 | `abi.encode(address[] path)` | At least two assets, USDC first and configured output last. |
 | 1: Uniswap V3 | Packed `token + uint24 fee + token ...` | Correct path length and endpoint assets; do not encode as `address[]`. |
 | 2: 1inch V6 | Full Router calldata including selector | Only validated general `swap(executor,description,data)` calls are supported. |
+
+Adapter implementation version 2 requires this envelope for all three DEX types. `maxRewardIn` is the nonzero USDC input used by the same quote as the minimum output, route and deadline (6-decimal base units). Actual input above this cap reverts the whole Core action, restoring rewards, transfers and accounting. Equal or smaller input still has to pass the existing minimum-output and routing checks; 1inch additionally requires its exact input. Legacy `(uint8,bytes)` data is rejected. Deposits retain their existing format.
+
+For batches, quote only the unique users whose current strategy preferences and revisions are eligible. If rewards increase beyond the saved cap, obtain a complete new quote and simulate again; never raise only the cap or use an unlimited default. A successful simulation does not prevent later reward arrivals, which the on-chain check handles atomically.
 
 1inch calldata must match the selected chain and configured Router, exact USDC input, allowlisted output, and **Adapter proxy** as Router output recipient—not the Core, implementation, or final user. The supported general swap selector is `0x07ed2379`. Native value, partial fill, extra-native, and Permit2 flags are not accepted. The Adapter verifies actual spent/received balances and forwards output to the user.
 
@@ -126,6 +132,8 @@ Only the xMETRO owner can call `emergencyDistribute(users)`, and only while the 
 
 ## Event and error handling
 
+For initial configuration logs, proxy emitters and two-step ownership events, see [events and indexing](existing-features.md#events-and-indexing). Initial strategy revision 1 does not mean a strategy is enabled.
+
 Use Core `ClaimAndExecuted`, `AutoStrategyBatchExecuted`, `AutoCompounded`, and `AutocompoundBatchExecuted` as appropriate, plus Adapter `UserStrategySettled` for per-user batch results. One ERC-20 `Transfer` alone does not establish complete business success. Adapter errors distinguish access/state, configuration, invalid request, slippage, accounting, Aave V4 authorization, and Maple authorization failures. Refresh chain state before retrying; do not bypass checks by zeroing minimum output, changing a fixed recipient, or fabricating a signature.
 
 Base QA uses TestTokens, Aave/Maple mocks, and real V2 liquidity; Ethereum forks test real Ethereum protocols. See the [Base checklist](../testing/base/BASE_ONCHAIN_FUNCTIONAL_TEST_CHECKLIST.md), [Ethereum checklist](../testing/ethereum-fork/CHECKLIST.md), and [fork results](../testing/ethereum-fork/RESULTS.md) for actual coverage and the historical F-01 observation with current regression status.
@@ -133,3 +141,5 @@ Base QA uses TestTokens, Aave/Maple mocks, and real V2 liquidity; Ethereum forks
 ## Reward accounting precision
 
 Core tracks signed reward debt at the existing `1e24` accumulator precision. Share changes retain the full debt product. Claims, emergency payments, manual actions, and automatic batches consume only whole USDC base units and retain the fractional remainder. Zero-value claims preserve that remainder. `rewardDebt(user)` keeps its ABI and displays USDC base units, truncating negative fractions toward zero; use `claimable` / `claimableMany` for payable amounts instead of reconstructing them from the display getter. Adapter inputs and event amounts remain in token base units.
+
+Business validation failures from MetroToken, Escrow and Distributor use custom errors listed in the [function reference](../../CONTRACT_FUNCTION_REFERENCE.md#business-errors). Decode with the corresponding ABI; Core can bubble a MetroToken error, so include that ABI when reporting migration failures. External protocol/token errors and Solidity panics are not rewritten.

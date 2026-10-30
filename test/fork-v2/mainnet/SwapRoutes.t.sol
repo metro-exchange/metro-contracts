@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IXMetroDeFiAdapter} from "../../../src/interfaces/IXMetroDeFiAdapter.sol";
@@ -26,8 +26,8 @@ contract SwapRoutesMainnetTest is MainnetForkBase {
         users[2] = makeAddr("swap-route-carol");
     }
 
-    function _path(address[] memory path) private pure returns (bytes memory) {
-        return abi.encode(uint8(0), abi.encode(path));
+    function _path(address[] memory path, uint256 cap) private pure returns (bytes memory) {
+        return abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(0), cap, abi.encode(path));
     }
 
     function _direct(address out) private pure returns (address[] memory path) {
@@ -45,7 +45,9 @@ contract SwapRoutesMainnetTest is MainnetForkBase {
 
     function _three() private view returns (address[] memory list) {
         list = new address[](3);
-        for (uint256 i; i < 3; ++i) list[i] = users[i];
+        for (uint256 i; i < 3; ++i) {
+            list[i] = users[i];
+        }
     }
 
     /// E-17.11/.15: Tests V2 single manual without auto preference.
@@ -58,7 +60,7 @@ contract SwapRoutesMainnetTest is MainnetForkBase {
         uint256 beforeOut = IERC20(WETH).balanceOf(users[0]);
         vm.prank(users[0]);
         (uint256 rewardIn, uint256 out) =
-            core.claimAndExecute(wethStrategy, quote * 99 / 100, block.timestamp + 1 hours, _path(path));
+            core.claimAndExecute(wethStrategy, quote * 99 / 100, block.timestamp + 1 hours, _path(path, 100e6));
         assertEq(rewardIn, 100e6);
         assertEq(out, quote);
         assertEq(IERC20(WETH).balanceOf(users[0]) - beforeOut, out);
@@ -81,7 +83,7 @@ contract SwapRoutesMainnetTest is MainnetForkBase {
         uint256 quote = IUniswapV2RouterMainnet(V2_ROUTER).getAmountsOut(100e6, path)[2];
         _fundUSDC(proxy, 5e6);
         (uint256 rewardIn, uint256 out) = core.executeAutoStrategyBatch(
-            usdtStrategy, _three(), quote * 99 / 100, new uint256[](0), block.timestamp + 1 hours, _path(path)
+            usdtStrategy, _three(), quote * 99 / 100, new uint256[](0), block.timestamp + 1 hours, _path(path, 100e6)
         );
         assertEq(rewardIn, 100e6);
         assertEq(out, quote);
@@ -102,16 +104,24 @@ contract SwapRoutesMainnetTest is MainnetForkBase {
         uint256 snapshot = vm.snapshotState();
         bytes memory single = abi.encodePacked(USDC, uint24(500), WETH);
         vm.prank(users[0]);
-        (uint256 firstIn, uint256 firstOut) =
-            core.claimAndExecute(wethStrategy, 1, block.timestamp + 1 hours, abi.encode(uint8(1), single));
+        (uint256 firstIn, uint256 firstOut) = core.claimAndExecute(
+            wethStrategy,
+            1,
+            block.timestamp + 1 hours,
+            abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(1), uint256(100e6), single)
+        );
         assertEq(firstIn, 100e6);
         assertGt(firstOut, 0);
         assertEq(IERC20(USDC).allowance(proxy, V3_ROUTER), 0);
         assertTrue(vm.revertToState(snapshot));
         bytes memory multi = abi.encodePacked(USDC, uint24(100), DAI, uint24(3000), WETH);
         vm.prank(users[0]);
-        (uint256 secondIn, uint256 secondOut) =
-            core.claimAndExecute(wethStrategy, 1, block.timestamp + 1 hours, abi.encode(uint8(1), multi));
+        (uint256 secondIn, uint256 secondOut) = core.claimAndExecute(
+            wethStrategy,
+            1,
+            block.timestamp + 1 hours,
+            abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(1), uint256(100e6), multi)
+        );
         assertEq(secondIn, 100e6);
         assertGt(secondOut, 0);
         assertEq(IERC20(WETH).balanceOf(users[0]), secondOut);
@@ -128,13 +138,13 @@ contract SwapRoutesMainnetTest is MainnetForkBase {
         assertFalse(adapter.strategyInfo(wethStrategy).enabled);
         vm.prank(users[0]);
         vm.expectRevert();
-        core.claimAndExecute(wethStrategy, 1, block.timestamp + 1 hours, _path(_direct(WETH)));
+        core.claimAndExecute(wethStrategy, 1, block.timestamp + 1 hours, _path(_direct(WETH), 100e6));
         vm.prank(users[0]);
         vm.expectRevert();
         core.enableAutoStrategy(wethStrategy);
         vm.prank(users[0]);
         (uint256 rewardIn, uint256 daiOut) =
-            core.claimAndExecute(daiStrategy, 1, block.timestamp + 1 hours, _path(_direct(DAI)));
+            core.claimAndExecute(daiStrategy, 1, block.timestamp + 1 hours, _path(_direct(DAI), 100e6));
         assertEq(rewardIn, 100e6);
         assertGt(daiOut, 0);
         assertEq(IERC20(DAI).balanceOf(users[0]), daiOut);
@@ -146,19 +156,24 @@ contract SwapRoutesMainnetTest is MainnetForkBase {
     function test_E17_InvalidRouteDeadlineMinimumAndMetroEntry() public {
         _mintAndStake(users[0], 1 ether);
         _distribute(100e6);
-        bytes32 metroStrategy = keccak256(abi.encode(
-            block.chainid, keccak256("XMETRO_DEFI_STRATEGY_V1"), IXMetroDeFiAdapter.StrategyKind.SwapMetro, address(metro)
-        ));
+        bytes32 metroStrategy = keccak256(
+            abi.encode(
+                block.chainid,
+                keccak256("XMETRO_DEFI_STRATEGY_V1"),
+                IXMetroDeFiAdapter.StrategyKind.SwapMetro,
+                address(metro)
+            )
+        );
         vm.prank(users[0]);
         vm.expectRevert();
-        core.claimAndExecute(metroStrategy, 1, block.timestamp + 1 hours, _path(_direct(address(metro))));
+        core.claimAndExecute(metroStrategy, 1, block.timestamp + 1 hours, _path(_direct(address(metro)), 100e6));
         address[] memory wrongStart = new address[](2);
         wrongStart[0] = WETH;
         wrongStart[1] = USDT;
-        _mustFail(usdtStrategy, 1, block.timestamp + 1 hours, _path(wrongStart));
-        _mustFail(usdtStrategy, 1, block.timestamp + 1 hours, _path(_direct(WETH)));
-        _mustFail(usdtStrategy, 1, block.timestamp, _path(_direct(USDT)));
-        _mustFail(usdtStrategy, type(uint256).max, block.timestamp + 1 hours, _path(_direct(USDT)));
+        _mustFail(usdtStrategy, 1, block.timestamp + 1 hours, _path(wrongStart, 100e6));
+        _mustFail(usdtStrategy, 1, block.timestamp + 1 hours, _path(_direct(WETH), 100e6));
+        _mustFail(usdtStrategy, 1, block.timestamp, _path(_direct(USDT), 100e6));
+        _mustFail(usdtStrategy, type(uint256).max, block.timestamp + 1 hours, _path(_direct(USDT), 100e6));
         assertEq(core.claimable(users[0]), 100e6);
         assertEq(IERC20(USDC).balanceOf(address(core)), 100e6);
         assertEq(IERC20(USDC).allowance(proxy, V2_ROUTER), 0);

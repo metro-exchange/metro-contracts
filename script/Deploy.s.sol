@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 /**
  * @title Deploy
  * @notice Deploys the immutable xMETRO Core and the fixed-address UUPS DeFi Adapter Proxy.
  * @dev Build the Adapter artifact with FOUNDRY_PROFILE=adapter before running this script with
- *      FOUNDRY_PROFILE=deploy. xMETRO deploys unpaused; final ownership transfers in one step.
+ *      FOUNDRY_PROFILE=deploy. xMETRO deploys unpaused; business-contract ownership requires acceptance by the target owner.
  */
 
 import {stdJson} from "forge-std/StdJson.sol";
@@ -51,6 +51,12 @@ contract Deploy is DeFiAdapterScriptBase {
         bytes32 escrowCodehash;
         address autoCompoundOperator;
         address owner;
+        address coreOwner;
+        address corePendingOwner;
+        address escrowOwner;
+        address escrowPendingOwner;
+        address distributorOwner;
+        address distributorPendingOwner;
         address forfeitureRecipient;
         address migrationRewardExcludedAddress;
         address commissionVault;
@@ -194,7 +200,7 @@ contract Deploy is DeFiAdapterScriptBase {
                 && address(distributor) == predictedDistributor && address(escrow) == predictedEscrow,
             "Deploy: CREATE address mismatch"
         );
-        _requireImplementation(implementation, 1);
+        _requireImplementation(implementation, 2);
         _requireProxySlots(proxy, implementation);
 
         metro.setMinter(address(core), true);
@@ -221,9 +227,11 @@ contract Deploy is DeFiAdapterScriptBase {
         core.setMigrationEscrow(address(escrow));
 
         metro.transferOwnership(input.owner);
-        distributor.transferOwnership(input.owner);
-        escrow.transferOwnership(input.owner);
-        if (input.owner != input.deployer) core.transferOwnership(input.owner);
+        if (input.owner != input.deployer) {
+            distributor.transferOwnership(input.owner);
+            escrow.transferOwnership(input.owner);
+            core.transferOwnership(input.owner);
+        }
         vm.stopBroadcast();
 
         _fillOutput(output, input, startingNonce, metro, core, implementation, proxy, distributor, escrow);
@@ -414,6 +422,12 @@ contract Deploy is DeFiAdapterScriptBase {
         a.escrowCodehash = address(escrow).codehash;
         a.autoCompoundOperator = i.autoCompoundOperator;
         a.owner = i.owner;
+        a.coreOwner = core.owner();
+        a.corePendingOwner = core.pendingOwner();
+        a.escrowOwner = escrow.owner();
+        a.escrowPendingOwner = escrow.pendingOwner();
+        a.distributorOwner = distributor.owner();
+        a.distributorPendingOwner = distributor.pendingOwner();
         a.forfeitureRecipient = i.forfeitureRecipient;
         a.migrationRewardExcludedAddress = core.migrationRewardExcludedAddress();
         a.commissionVault = i.commissionVault;
@@ -487,7 +501,11 @@ contract Deploy is DeFiAdapterScriptBase {
         );
         require(metro.isMinter(address(core)), "Deploy: xMETRO not minter");
         require(!metro.isMinter(i.deployer) && !metro.isMinter(i.owner), "Deploy: unexpected EOA minter");
-        require(core.owner() == i.owner && !core.paused(), "Deploy: xMETRO ownership/pause");
+        address expectedPending = i.owner == i.deployer ? address(0) : i.owner;
+        require(
+            core.owner() == i.deployer && core.pendingOwner() == expectedPending && !core.paused(),
+            "Deploy: xMETRO ownership/pause"
+        );
         require(
             address(core.METRO()) == address(metro) && address(core.rewardToken()) == i.usdc
                 && core.forfeitureRecipient() == i.forfeitureRecipient
@@ -499,7 +517,7 @@ contract Deploy is DeFiAdapterScriptBase {
 
         AdapterConfiguration memory config =
             _requireProxyBindings(address(adapter), address(core), i.usdc, address(metro));
-        require(config.epoch == 1 && adapter.implementationVersion() == 1, "Deploy: adapter version");
+        require(config.epoch == 1 && adapter.implementationVersion() == 2, "Deploy: adapter version");
         require(
             config.routerV2 == i.routerV2 && config.routerV3 == i.routerV3 && config.oneInchRouter == i.oneInchRouter,
             "Deploy: router readback"
@@ -551,7 +569,10 @@ contract Deploy is DeFiAdapterScriptBase {
         _requireStrategy(adapter, a.aaveV4StrategyId, IXMetroDeFiAdapter.StrategyKind.AaveV4, i.aaveV4Enabled);
         if (i.mapleEnabled) _requireStrategy(adapter, a.mapleStrategyId, IXMetroDeFiAdapter.StrategyKind.Maple, true);
 
-        require(distributor.owner() == i.owner, "Deploy: distributor owner");
+        require(
+            distributor.owner() == i.deployer && distributor.pendingOwner() == expectedPending,
+            "Deploy: distributor owner"
+        );
         require(
             address(distributor.xMETRO()) == address(core) && address(distributor.rewardToken()) == i.usdc
                 && distributor.commissionVault() == i.commissionVault
@@ -565,10 +586,10 @@ contract Deploy is DeFiAdapterScriptBase {
             require(core.autoCompoundOperators(i.autoCompoundOperator), "Deploy: keeper");
         }
         require(
-            escrow.owner() == i.owner && address(escrow.xMETRO()) == address(core)
-                && address(escrow.thorToken()) == i.thor && address(escrow.yThorToken()) == i.yThor
-                && escrow.migrationStartTime() == i.migrationStartTime && escrow.capThor() == i.capThor
-                && escrow.capYThor() == i.capYThor && escrow.ratioThor() == i.ratioThor
+            escrow.owner() == i.deployer && escrow.pendingOwner() == expectedPending
+                && address(escrow.xMETRO()) == address(core) && address(escrow.thorToken()) == i.thor
+                && address(escrow.yThorToken()) == i.yThor && escrow.migrationStartTime() == i.migrationStartTime
+                && escrow.capThor() == i.capThor && escrow.capYThor() == i.capYThor && escrow.ratioThor() == i.ratioThor
                 && escrow.ratioYThor() == i.ratioYThor && escrow.deadlineThor() == i.deadlineThor
                 && escrow.deadlineYThor() == i.deadlineYThor,
             "Deploy: escrow readback"
@@ -721,6 +742,12 @@ contract Deploy is DeFiAdapterScriptBase {
         json = vm.serializeBytes32(obj, "escrowCodehash", a.escrowCodehash);
         json = vm.serializeAddress(obj, "autoCompoundOperator", a.autoCompoundOperator);
         json = vm.serializeAddress(obj, "owner", a.owner);
+        json = vm.serializeAddress(obj, "distributorPendingOwner", a.distributorPendingOwner);
+        json = vm.serializeAddress(obj, "distributorOwner", a.distributorOwner);
+        json = vm.serializeAddress(obj, "escrowPendingOwner", a.escrowPendingOwner);
+        json = vm.serializeAddress(obj, "escrowOwner", a.escrowOwner);
+        json = vm.serializeAddress(obj, "corePendingOwner", a.corePendingOwner);
+        json = vm.serializeAddress(obj, "coreOwner", a.coreOwner);
         json = vm.serializeAddress(obj, "forfeitureRecipient", a.forfeitureRecipient);
         json = vm.serializeAddress(obj, "migrationRewardExcludedAddress", a.migrationRewardExcludedAddress);
         json = vm.serializeAddress(obj, "commissionVault", a.commissionVault);
@@ -788,7 +815,19 @@ contract Deploy is DeFiAdapterScriptBase {
         console2.log("Adapter Proxy:", a.deFiAdapterProxy);
         console2.log("Core adapter epoch:", a.adapterEpoch);
         console2.log("Adapter logic epoch:", a.adapterLogicEpoch);
-        console2.log("Final owner:", a.owner);
+        console2.log("Target owner:", a.owner);
+        console2.log("Core owner:", a.coreOwner);
+        console2.log("Core pending owner:", a.corePendingOwner);
+        console2.log("Escrow owner:", a.escrowOwner);
+        console2.log("Escrow pending owner:", a.escrowPendingOwner);
+        console2.log("Distributor owner:", a.distributorOwner);
+        console2.log("Distributor pending owner:", a.distributorPendingOwner);
+        console2.log(
+            a.corePendingOwner == address(0) && a.escrowPendingOwner == address(0)
+                && a.distributorPendingOwner == address(0)
+                ? "Ownership: Accepted"
+                : "Ownership: Pending acceptance"
+        );
         console2.log("RewardDistributor:", a.rewardDistributor);
         console2.log("ThorMigrationEscrow:", a.escrow);
         console2.log("Addresses written to:", _addressesPath());

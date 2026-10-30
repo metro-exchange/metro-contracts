@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import "forge-std/Test.sol";
 
@@ -64,7 +64,9 @@ contract ThorMigrationEscrowFuzzTest is Test {
         assertEq(migrateY ? xmetro.yThorCredits() : xmetro.thorCredits(), count);
         assertEq(token.balanceOf(address(escrow)), amount * count);
         vm.prank(user);
-        vm.expectRevert(migrateY ? bytes("ThorEscrow: ythor cap") : bytes("ThorEscrow: thor cap"));
+        vm.expectRevert(
+            migrateY ? ThorMigrationEscrow.YThorCapExceeded.selector : ThorMigrationEscrow.ThorCapExceeded.selector
+        );
         if (migrateY) escrow.migrateYThor(amount);
         else escrow.migrateThor(amount);
         assertEq(token.balanceOf(user), amount);
@@ -126,7 +128,7 @@ contract ThorMigrationEscrowFuzzTest is Test {
         thor.approve(address(escrow), amount);
 
         vm.prank(user);
-        vm.expectRevert(bytes("ThorEscrow: thor cap"));
+        vm.expectRevert(ThorMigrationEscrow.ThorCapExceeded.selector);
         escrow.migrateThor(amount);
         assertEq(escrow.migratedThor(), 0);
         assertEq(xmetro.thorCredits(), 0);

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import {Test} from "forge-std/Test.sol";
 import {MockAaveV4Giver} from "../mocks/MockAaveV4Giver.sol";
@@ -11,6 +11,7 @@ import {UpgradeDeFiAdapter} from "../../script/UpgradeDeFiAdapter.s.sol";
 import {ReplaceDeFiAdapter} from "../../script/ReplaceDeFiAdapter.s.sol";
 import {VerifyDeployment} from "../../script/VerifyDeployment.s.sol";
 import {IXMetroDeFiAdapterAdmin} from "../../script/DeFiAdapterScriptBase.sol";
+import {ThorMigrationEscrow} from "../../src/ThorMigrationEscrow.sol";
 import {RewardDistributor} from "../../src/RewardDistributor.sol";
 import {MetroToken} from "../../src/metro.sol";
 import {xMETRO as XMetroCore} from "../../src/xMETRO.sol";
@@ -29,8 +30,8 @@ contract DeployScriptTest is Test {
     using stdJson for string;
 
     uint256 internal constant DEPLOYER_KEY = 0xD3F10;
-    uint256 internal constant ADAPTER_RUNTIME = 20_487;
-    uint256 internal constant CORE_RUNTIME = 23_394;
+    uint256 internal constant ADAPTER_RUNTIME = 20_755;
+    uint256 internal constant CORE_RUNTIME = 23_435;
     bytes32 internal constant P_DEPOSIT = bytes32("P:deposit");
     bytes32 internal constant IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
     bytes32 internal constant ADMIN_SLOT = 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103;
@@ -97,7 +98,75 @@ contract DeployScriptTest is Test {
         _restore(initialState);
         _wrongChainIdFailsBeforeAnyDeployment();
         _restore(initialState);
+        _targetOwnerIsDeployer();
+        _restore(initialState);
         _fullDryRunUsesReleaseArtifactsAndReadsEveryBinding();
+    }
+
+    function _targetOwnerIsDeployer() private {
+        address deployer = vm.addr(DEPLOYER_KEY);
+        _set("OWNER", deployer);
+        deployScript.run();
+        string memory record = vm.readFile(_deploymentPath());
+        assertEq(record.readAddress(".owner"), deployer);
+        assertEq(record.readAddress(".coreOwner"), deployer);
+        assertEq(record.readAddress(".corePendingOwner"), address(0));
+        assertEq(record.readAddress(".escrowOwner"), deployer);
+        assertEq(record.readAddress(".escrowPendingOwner"), address(0));
+        assertEq(record.readAddress(".distributorOwner"), deployer);
+        assertEq(record.readAddress(".distributorPendingOwner"), address(0));
+        vm.setEnv("DEPLOYMENT_JSON", _deploymentPath());
+        new VerifyDeployment().run();
+    }
+
+    function _acceptPendingOwnershipAndVerify() private {
+        string memory record = vm.readFile(_deploymentPath());
+        XMetroCore core = XMetroCore(record.readAddress(".xMETRO"));
+        ThorMigrationEscrow escrow = ThorMigrationEscrow(record.readAddress(".escrow"));
+        RewardDistributor distributor = RewardDistributor(record.readAddress(".rewardDistributor"));
+        address deployer = vm.addr(DEPLOYER_KEY);
+        assertEq(record.readAddress(".owner"), finalOwner);
+        assertEq(record.readAddress(".coreOwner"), deployer);
+        assertEq(record.readAddress(".escrowOwner"), deployer);
+        assertEq(record.readAddress(".distributorOwner"), deployer);
+        assertEq(record.readAddress(".corePendingOwner"), finalOwner);
+        assertEq(record.readAddress(".escrowPendingOwner"), finalOwner);
+        assertEq(record.readAddress(".distributorPendingOwner"), finalOwner);
+        assertEq(core.owner(), deployer);
+        assertEq(escrow.owner(), deployer);
+        assertEq(distributor.owner(), deployer);
+        VerifyDeployment verifier = new VerifyDeployment();
+        vm.expectRevert("VerifyDeploy: Core ownership");
+        verifier.run();
+        vm.prank(finalOwner);
+        core.acceptOwnership();
+        vm.expectRevert("VerifyDeploy: Distributor owner");
+        verifier.run();
+        vm.prank(finalOwner);
+        distributor.acceptOwnership();
+        vm.expectRevert();
+        verifier.run();
+        vm.prank(finalOwner);
+        escrow.acceptOwnership();
+        verifier.run();
+        assertEq(core.pendingOwner(), address(0));
+        assertEq(escrow.pendingOwner(), address(0));
+        assertEq(distributor.pendingOwner(), address(0));
+        // Pending snapshots remain historical; final verification reads live contract state.
+        assertEq(vm.readFile(_deploymentPath()).readAddress(".corePendingOwner"), finalOwner);
+        vm.prank(finalOwner);
+        core.transferOwnership(deployer);
+        vm.expectRevert("VerifyDeploy: Core ownership");
+        verifier.run();
+        vm.prank(deployer);
+        core.acceptOwnership();
+        vm.expectRevert("VerifyDeploy: Core ownership");
+        verifier.run();
+        vm.prank(deployer);
+        core.transferOwnership(finalOwner);
+        vm.prank(finalOwner);
+        core.acceptOwnership();
+        verifier.run();
     }
 
     function _fullDryRunUsesReleaseArtifactsAndReadsEveryBinding() private {
@@ -109,7 +178,7 @@ contract DeployScriptTest is Test {
         _set("MAX_COMMISSION_SPLIT_BPS", 1_000);
         deployScript.run();
         vm.setEnv("DEPLOYMENT_JSON", _deploymentPath());
-        new VerifyDeployment().run();
+        _acceptPendingOwnershipAndVerify();
 
         string memory json = vm.readFile(_deploymentPath());
         address deployer = vm.addr(DEPLOYER_KEY);
@@ -176,7 +245,7 @@ contract DeployScriptTest is Test {
         assertEq(adapter.USDC(), address(usdc));
         assertEq(adapter.METRO(), address(metro));
         assertEq(adapter.logicEpoch(), 1);
-        assertEq(adapter.implementationVersion(), 1);
+        assertEq(adapter.implementationVersion(), 2);
         assertEq(json.readAddress(".routerV2"), address(usdt));
         assertEq(json.readAddress(".routerV3"), address(wbtc));
         assertEq(json.readAddress(".oneInchRouter"), address(gho));
@@ -242,11 +311,11 @@ contract DeployScriptTest is Test {
         assertEq(upgradeJson.readAddress(".newImplementation"), predictedV2);
         assertEq(predictedV2.code.length, ADAPTER_RUNTIME);
         assertEq(adapter.logicEpoch(), 2);
-        assertEq(adapter.implementationVersion(), 2);
+        assertEq(adapter.implementationVersion(), 3);
         assertEq(upgradeJson.readUint(".oldLogicEpoch"), 1);
         assertEq(upgradeJson.readUint(".newLogicEpoch"), 2);
-        assertEq(upgradeJson.readUint(".oldImplementationVersion"), 1);
-        assertEq(upgradeJson.readUint(".newImplementationVersion"), 2);
+        assertEq(upgradeJson.readUint(".oldImplementationVersion"), 2);
+        assertEq(upgradeJson.readUint(".newImplementationVersion"), 3);
         assertEq(core.deFiAdapter(), proxy);
         assertFalse(core.paused());
         {
@@ -256,7 +325,7 @@ contract DeployScriptTest is Test {
             assertEq(activeAddresses.readAddress(".proxyImplementationReadback"), predictedV2);
             assertEq(activeAddresses.readUint(".adapterEpoch"), 1);
             assertEq(activeAddresses.readUint(".adapterLogicEpoch"), 2);
-            assertEq(activeAddresses.readUint(".adapterImplementationVersion"), 2);
+            assertEq(activeAddresses.readUint(".adapterImplementationVersion"), 3);
         }
 
         bytes32 disabledAaveV3Id = vm.readFile(_deploymentPath()).readBytes32(".aaveV3StrategyId");
@@ -320,7 +389,7 @@ contract DeployScriptTest is Test {
         assertTrue(core.paused());
         IXMetroDeFiAdapterAdmin replacementAdapter = IXMetroDeFiAdapterAdmin(predictedReplacementProxy);
         assertEq(replacementAdapter.logicEpoch(), 1);
-        assertEq(replacementAdapter.implementationVersion(), 2);
+        assertEq(replacementAdapter.implementationVersion(), 3);
         assertEq(replacementAdapter.xMETRO(), address(core));
         _assertAaveV3Cleared(replacementAdapter);
         assertFalse(replacementAdapter.strategyInfo(disabledAaveV3Id).enabled);
@@ -333,7 +402,7 @@ contract DeployScriptTest is Test {
             assertEq(activeAddresses.readAddress(".proxyImplementationReadback"), predictedReplacementImplementation);
             assertEq(activeAddresses.readUint(".adapterEpoch"), 2);
             assertEq(activeAddresses.readUint(".adapterLogicEpoch"), 1);
-            assertEq(activeAddresses.readUint(".adapterImplementationVersion"), 2);
+            assertEq(activeAddresses.readUint(".adapterImplementationVersion"), 3);
             assertFalse(activeAddresses.readBool(".aaveV3Enabled"));
             assertEq(activeAddresses.readAddress(".aaveV3Pool"), address(0));
             assertEq(activeAddresses.readAddress(".aaveV3AUsdc"), address(0));
@@ -375,7 +444,7 @@ contract DeployScriptTest is Test {
         assertEq(record.readAddress(".tokenOutXaut"), address(0));
         assertEq(record.readBytes32(".swapXautStrategyId"), bytes32(0));
         vm.setEnv("DEPLOYMENT_JSON", _deploymentPath());
-        new VerifyDeployment().run();
+        _acceptPendingOwnershipAndVerify();
         _setRequiredEnvironment();
     }
 
@@ -393,7 +462,7 @@ contract DeployScriptTest is Test {
         assertEq(record.readAddress(".routerV2"), address(0));
         assertEq(record.readBytes32(".swapUsdtStrategyId"), bytes32(0));
         vm.setEnv("DEPLOYMENT_JSON", _deploymentPath());
-        new VerifyDeployment().run();
+        _acceptPendingOwnershipAndVerify();
         _setRequiredEnvironment();
     }
 

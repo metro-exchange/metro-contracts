@@ -1,5 +1,7 @@
 # Contract API, Roles, and Configuration
 
+Swap and compound `bytes` arguments use the [version-2 envelope](new-features.md#swap-execution-data) with a quoted input cap. The four Core function signatures and all deposit encodings are unchanged.
+
 This guide covers project-contract administration and public integration parameters. User journeys are in [existing features](existing-features.md) and [new features](new-features.md). It does not document the Commission Vault's internal governance or payout rules.
 
 ## Roles and permissions
@@ -94,18 +96,26 @@ mockPermissionManager.setPermissionAdmin(B, true); // If B will sign Base QA Map
 // If needed, grant Contributor to the address that will create schedules.
 xMETRO.setContributor(contributorAddress, true);
 
-// Transfer ownership last; after these calls, only A can change configuration.
+// Current owners send these calls after configuration; business ownership remains pending.
 metro.transferOwnership(A);
 xMETRO.transferOwnership(A);
 escrow.transferOwnership(A);
 rewardDistributor.transferOwnership(A);
 ```
 
-The new xMETRO and the other project contracts use one-step ownership transfer; no `acceptOwnership()` is needed. TestToken and Mock owners are transferred separately. A project Safe can hold ownership and mint control; the backend wallet does not need those powers. If any permission is configured after ownership transfer, A must send that call. Transfer of ownership does not revoke old Keeper, Operator, Minter, Contributor, or Mock permission-admin roles—review and revoke each obsolete allowance explicitly. In particular, revoke the temporary Maple signature admins only after B can sign the QA authorization. Do not use `renounceOwnership()` as a handover method.
+The following calls are sent separately by A itself (or executed by the Safe at address A):
+
+```solidity
+xMETRO.acceptOwnership();
+escrow.acceptOwnership();
+rewardDistributor.acceptOwnership();
+```
+
+Core, Escrow and Distributor use two-step transfer. Until acceptance the old owner remains authorized; `transferOwnership(address(0))` cancels the pending nomination. Core/Escrow can hand over while paused but cannot renounce while paused. Distributor has no pause state. MetroToken remains one-step. TestToken and Mock owners are transferred separately. A project Safe can hold ownership and mint control; the backend wallet does not need those powers. If any permission is configured after ownership transfer, A must send that call. Transfer of ownership does not revoke old Keeper, Operator, Minter, Contributor, or Mock permission-admin roles—review and revoke each obsolete allowance explicitly. In particular, revoke the temporary Maple signature admins only after B can sign the QA authorization. Do not use `renounceOwnership()` as a handover method.
 
 ## Readback checklist
 
-After each confirmed transaction, read `owner()` from each contract; `METRO.isMinter`, `Distributor.operators`, `xMETRO.autoCompoundOperators`, `xMETRO.contributorWhitelist`, `xMETRO.yThorRewardWeightBps`, `xMETRO.migrationRewardExcludedAddress`, QA `xMETRO.forfeitureRecipient`, core bindings and pause status, Escrow start/deadline/ratio/cap getters, Distributor Vault/split getters, Adapter `configuration`/`strategyInfo`/`aaveV4Giver`, and each user's auto preference when relevant. For QA, also read each TestToken/Mock `owner()` and public mint rights. A local `.env` edit, UI status, or dry run does not change chain state.
+After each confirmed transaction, read `owner()` from each contract and `pendingOwner()` from Core/Escrow/Distributor. Final handover requires all three owners to equal A and all three pending owners to be zero. Also read `METRO.isMinter`, `Distributor.operators`, `xMETRO.autoCompoundOperators`, `xMETRO.contributorWhitelist`, `xMETRO.yThorRewardWeightBps`, `xMETRO.migrationRewardExcludedAddress`, QA `xMETRO.forfeitureRecipient`, core bindings and pause status, Escrow start/deadline/ratio/cap getters, Distributor Vault/split getters, Adapter `configuration`/`strategyInfo`/`aaveV4Giver`, and each user's auto preference when relevant. For QA, also read each TestToken/Mock `owner()` and public mint rights. A local `.env` edit, UI status, or dry run does not change chain state.
 
 ## Position queries and events
 
@@ -150,3 +160,5 @@ Exclude principal before rounding. The yTHOR accumulator divides only by eligibl
 The constructor fixes `migrationRewardExcludedAddress` from the existing `forfeitureRecipient_` argument; no constructor argument or user-action signature changes. For production, configure `FORFEITURE_RECIPIENT=0x7D8911eB1C72F0Ba29302bE30301B75Cec81F622`. Both production addresses are immutable. The treasury keeps normal migration and exit rights. If it exits early, forfeited METRO returns to that same recipient and only the payout is queued or staked; the project's intention not to exit early is not an on-chain restriction.
 
 For a future Base QA deployment, explicitly set the existing `BASE_QA_FORFEITURE_RECIPIENT` before creating the deployment plan. The script rejects missing addresses or a different address in a saved plan. QA `setForfeitureRecipient()` changes only the forfeiture recipient; it never changes the fixed migration reward exclusion address or historical rewards. The existing on-chain QA deployment has not acquired these changes.
+
+Business validation failures from MetroToken, Escrow and Distributor use custom errors listed in the [function reference](../../CONTRACT_FUNCTION_REFERENCE.md#business-errors). Decode with the corresponding ABI; Core can bubble a MetroToken error, so include that ABI when reporting migration failures. External protocol/token errors and Solidity panics are not rewritten.

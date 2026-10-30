@@ -141,3 +141,61 @@ The gas harness used a local Anvil fork and submitted actual transactions to `12
 Example 100-user successful gas used on the recorded routes: Auto-Compound `5,114,294` for the first batch and `3,370,094` for a later batch; Auto-Swap USDT `7,471,923`/`4,051,923`; WBTC `7,322,861`/`3,902,857`; GHO `7,239,705`/`3,801,552`. See the raw receipt records for the other paths, versions and prior balances. The Auto-Compound later state can still exhibit F-01; successful receipt status is not an accounting acceptance.
 
 The original gas study and later XAUT retry did not always use identical Core artifacts; the [artifact variant record](evidence/2026-09-29-eth26077998-01/gas-artifact-variants.json) separates them. Do not mix their gas figures as one exact build. Public RPC timeouts also affected some retries, and those attempts remain in the evidence rather than being converted into passes.
+
+## October 30 local remediation: Sherlock #13
+
+Validated locally with Solidity 0.8.30 before the subsequent compiler/ownership remediations. No commit, publication or on-chain transaction was made. Tracked sources were copied to an isolated directory using the existing local dependencies; untracked diagnostic tests were excluded and preserved.
+
+| Command (FOUNDRY_PROFILE) | Result |
+| --- | --- |
+| adapter: forge test -vv | 45 passed, 0 failed, 2 RPC-dependent tests skipped |
+| core: forge test -vv | 59 passed, 0 failed, 2 RPC-dependent tests skipped |
+| regression: forge test -vv | 148 passed, 0 failed |
+| deploy: forge build --sizes | Passed |
+| deployment-test: forge test -vv | 1 scenario suite passed, 0 failed |
+| fork-v2: forge build | Passed; actual mainnet fork scenarios not run |
+| Node syntax and local stub-provider assertions | Passed: all DEX envelope encodings agree with cast, version/binding/cap rejection, eligible candidates and unchanged quote data |
+
+Adapter runtime/initcode: 20,574/20,777 bytes. Core runtime remains 23,394 bytes. Existing size limits were retained. Core and Adapter ABI comparisons against the delivered JSON were equal; the Adapter storage namespace/canary regression passed and no storage fields were changed. No ETH_RPC_URL or BASE_RPC_URL was available, so RPC-dependent tests are not claimed as passed. Final combined remediation artifacts must be revalidated after later changes.
+
+
+## October 30 combined local remediation: Sherlock #13/#15/#16/#17/#19
+
+All five remediations are implemented locally. The existing #22/#23 behavior remains in place and is covered by the regression suites. This record describes the combined working tree before submission. At that validation stage, no GitHub operation, deployment, broadcast or chain transaction was performed.
+
+Validation used Forge with official `solc@0.8.38` solc-js (`0.8.38+commit.1835d247`) through an external standard-JSON wrapper passed to `--use`, with the repository's pinned Osaka profiles. A local copy contained all tracked inputs and the existing dependencies; unrelated untracked diagnostics were excluded and preserved. The validated `out-core`, `out-adapter` and `out-deploy` artifacts were also refreshed locally; these generated directories remain ignored.
+
+Source/configuration SHA-256: `de2876d75af0635edb7e4a831ee39c3b456372c0030920bfaebd94f47f67ae47`. This hashes the sorted tracked `src/**/*.sol` files and `foundry.toml`, concatenating each relative path, NUL, raw file bytes and NUL. It is a working-tree fingerprint, not a commit hash.
+
+| Command (FOUNDRY_PROFILE; same compiler wrapper) | Final result |
+| --- | --- |
+| core: forge build --sizes | Passed; original size limits retained |
+| adapter: forge build --sizes | Passed |
+| adapter: forge test -vv | 46 passed, 0 failed, 2 RPC tests skipped |
+| core: forge test -vv | 60 passed, 0 failed, 2 RPC tests skipped |
+| regression: forge test -vv | 163 passed, 0 failed |
+| deploy: forge build --sizes | Passed; Core/Token/Escrow/Distributor bytecode and ABI match the core-profile artifacts |
+| deployment-test: forge test -vv | 1 scenario suite passed, 0 failed |
+| fork-v2: forge build | Passed; protocol fork execution was not performed |
+| Forge formatting, git diff --check and Node syntax | Passed |
+| Local JS assertions | Passed: DEX encodings agree with cast; version/binding/cap rejection, candidate filtering and saved quotes |
+
+Total: **270 passed, 0 failed, 4 skipped** across the four test profiles. Fuzz and invariant runs are included in those counts. The deployment scenario suite covers unaccepted/partially accepted/completed handovers, a deployer who is also the target owner, live verification with historical pending snapshots, and Adapter upgrade/replacement checks.
+
+Core runtime/initcode: **23,435/25,118 bytes**. Adapter runtime/initcode: **20,755/20,958 bytes**. Initcode lengths exclude constructor arguments. The Core budget remains 23,552 bytes and the EIP-170 limit remains 24,576. Shared internal staking and bounded withdrawal-counter increments keep Core within that budget; return values, events, historical rewards, failed opt-in rollback and queue limits were tested.
+
+AST comparison confirmed that all 42 former string-error checks retain their conditions and order, with zero business string errors left in `src/`. Four delivered business ABIs match the final artifacts; Adapter ABI is unchanged, and no error-selector collision was found. Layout changes are limited to the expected Ownable2Step pending-owner field and resulting shifts; the yTHOR accumulator is at slot 9. Adapter storage namespace/canary tests passed. Constructor/initializer event tests include stored values, zero weight/start cases as applicable, proxy emitters, disabled initial strategies and rejected reinitialization.
+
+No ETH_RPC_URL or BASE_RPC_URL was available. The four skipped tests require those RPCs, and real mainnet protocol execution/target-chain instruction compatibility remains unverified for this build. Historical protocol, address, gas and transaction evidence above is preserved and is not relabeled as validation of the new source. Current Base on-chain checkboxes remain unchecked.
+
+The QA ownership-stage function also passed isolated stub readback checks for owner/pendingOwner fields and rejection cases. The deployment runner itself was not imported or executed.
+
+## Per-issue submission validation (October 30)
+
+Each row is a separately tested complete source state. Production stages follow the audit submission order; Base QA uses one combined change. All rows use the unchanged project size budgets. This table records local validation, not protocol-fork or on-chain acceptance.
+
+| Stage | Tests passed / failed / RPC skipped | Core runtime / initcode | Adapter runtime / initcode |
+| --- | --- | --- | --- |
+| Base QA (all five fixes) | 270 / 0 / 4 | 23,435 / 25,118 | 20,755 / 20,958 |
+
+Every stage passed the Adapter/Core/regression/deployment-script test profiles, deploy and fork-test compilation, ABI and error-selector checks, deployment artifact comparisons, formatting and JavaScript client assertions. No RPC URL was available: the four RPC-dependent deployment tests were skipped, and real-protocol fork execution was not performed.

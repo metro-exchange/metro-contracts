@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import {Test} from "forge-std/Test.sol";
 import {MockAaveV4Giver} from "../mocks/MockAaveV4Giver.sol";
@@ -423,6 +423,10 @@ contract CompactSyrupRouter is ISyrupRouter {
 }
 
 abstract contract CompactAdapterFlowBase is Test {
+    function _swapData(uint8 dex, uint256 cap, bytes memory route) internal pure returns (bytes memory) {
+        return abi.encode(keccak256("XMETRO_SWAP_V2"), dex, cap, route);
+    }
+
     bytes32 internal constant STRATEGY_DOMAIN = keccak256("XMETRO_DEFI_STRATEGY_V1");
     bytes32 internal constant SETTLEMENT_TOPIC = keccak256("UserStrategySettled(bytes32,address,uint256,uint256)");
 
@@ -556,7 +560,7 @@ contract CompactERC20ReturnShapeTest is CompactAdapterFlowBase {
                 amountIn: amount,
                 minAmountOut: amount,
                 deadline: block.timestamp + 1,
-                executionData: abi.encode(uint8(0), abi.encode(path))
+                executionData: _swapData(0, amount, abi.encode(path))
             });
             uint256 beforeCore = usdc.balanceOf(address(core));
             if (mode == 1 || mode == 2) {
@@ -603,7 +607,7 @@ contract CompactERC20ReturnShapeTest is CompactAdapterFlowBase {
             amountIn: 10e6,
             minAmountOut: 10e6,
             deadline: block.timestamp + 1,
-            executionData: abi.encode(uint8(0), abi.encode(path))
+            executionData: _swapData(0, 10e6, abi.encode(path))
         });
         input.mint(address(approvalCore), 10e6);
         vm.prank(proxy);
@@ -643,6 +647,60 @@ contract CompactSwapFlowTest is CompactAdapterFlowBase {
         core.setPaused(false);
     }
 
+    function test_SwapRejectsInvalidEnvelopeBeforeAnyRouterCall() public {
+        uint256 amount = 100e6;
+        usdc.mint(address(core), amount);
+        address[] memory path = new address[](2);
+        path[0] = address(usdc);
+        path[1] = address(output);
+        vm.expectCall(
+            address(routerV2), abi.encodeWithSelector(CompactV2Router.swapExactTokensForTokens.selector), uint64(0)
+        );
+        vm.expectCall(address(routerV3), abi.encodeWithSelector(CompactV3Router.exactInput.selector), uint64(0));
+        vm.expectCall(address(oneInch), abi.encodeWithSelector(CompactOneInchRouter.swap.selector), uint64(0));
+        for (uint8 dex; dex < 3; ++dex) {
+            bytes memory route = dex == 0
+                ? abi.encode(path)
+                : dex == 1
+                    ? abi.encodePacked(address(usdc), uint24(500), address(output))
+                    : _oneInchCall(address(adapter), amount, amount, 0);
+            IXMetroDeFiAdapter.ManualExecution memory request = IXMetroDeFiAdapter.ManualExecution({
+                strategyId: strategy,
+                account: makeAddr("capped-user"),
+                amountIn: amount,
+                minAmountOut: amount,
+                deadline: block.timestamp + 1,
+                executionData: bytes("")
+            });
+            for (uint8 invalid; invalid < 6; ++invalid) {
+                if (invalid == 0) {
+                    request.executionData = _swapData(dex, 0, route);
+                } else if (invalid == 1) {
+                    request.executionData = _swapData(dex, amount - 1, route);
+                } else if (invalid == 2) {
+                    request.executionData = abi.encode(bytes32(0), dex, amount, route);
+                } else if (invalid == 3) {
+                    request.executionData = abi.encode(dex, route);
+                } else if (invalid == 4) {
+                    request.executionData = hex"01";
+                } else {
+                    request.executionData = _swapData(dex, amount, route);
+                    bytes memory data = request.executionData;
+                    assembly ("memory-safe") { mstore(add(data, 128), not(0)) }
+                }
+                if (invalid < 3) vm.expectRevert(XMetroDeFiAdapter.InvalidExecutionRequest.selector);
+                else vm.expectRevert();
+                core.runManual(usdc, request);
+                assertEq(usdc.balanceOf(address(core)), amount);
+                assertEq(usdc.balanceOf(address(adapter)), 0);
+                assertEq(output.balanceOf(request.account), 0);
+                assertEq(usdc.allowance(address(adapter), address(routerV2)), 0);
+                assertEq(usdc.allowance(address(adapter), address(routerV3)), 0);
+                assertEq(usdc.allowance(address(adapter), address(oneInch)), 0);
+            }
+        }
+    }
+
     function test_V2AndFixedOneInchFundEnvelopes() public {
         address userV2 = makeAddr("user-v2");
         uint256 amount = 100e6;
@@ -656,7 +714,7 @@ contract CompactSwapFlowTest is CompactAdapterFlowBase {
             amountIn: amount,
             minAmountOut: amount,
             deadline: block.timestamp + 1,
-            executionData: abi.encode(uint8(0), abi.encode(path))
+            executionData: _swapData(0, amount, abi.encode(path))
         });
         IXMetroDeFiAdapter.ExecutionResult memory result = core.runManual(usdc, request);
         assertEq(result.amountOut, amount);
@@ -667,7 +725,7 @@ contract CompactSwapFlowTest is CompactAdapterFlowBase {
         address userOneInch = makeAddr("user-one-inch");
         usdc.mint(address(core), amount);
         request.account = userOneInch;
-        request.executionData = abi.encode(uint8(2), _oneInchCall(address(adapter), amount, amount, 0));
+        request.executionData = _swapData(2, amount, _oneInchCall(address(adapter), amount, amount, 0));
         result = core.runManual(usdc, request);
         assertEq(result.amountOut, amount);
         assertEq(output.balanceOf(userOneInch), amount);
@@ -684,7 +742,7 @@ contract CompactSwapFlowTest is CompactAdapterFlowBase {
             amountIn: amount,
             minAmountOut: amount,
             deadline: block.timestamp + 1,
-            executionData: abi.encode(uint8(1), singleHop)
+            executionData: _swapData(1, amount, singleHop)
         });
         usdc.mint(address(core), amount);
         IXMetroDeFiAdapter.ExecutionResult memory result = core.runManual(usdc, request);
@@ -695,7 +753,7 @@ contract CompactSwapFlowTest is CompactAdapterFlowBase {
         CompactFlowToken middle = new CompactFlowToken("Middle", "MID", 18);
         bytes memory multiHop =
             abi.encodePacked(address(usdc), uint24(500), address(middle), uint24(3_000), address(output));
-        request.executionData = abi.encode(uint8(1), multiHop);
+        request.executionData = _swapData(1, amount, multiHop);
         usdc.mint(address(core), amount);
         result = core.runManual(usdc, request);
         assertEq(result.amountOut, amount);
@@ -713,7 +771,7 @@ contract CompactSwapFlowTest is CompactAdapterFlowBase {
             amountIn: amount,
             minAmountOut: amount,
             deadline: block.timestamp + 1,
-            executionData: abi.encode(uint8(9), bytes("unknown"))
+            executionData: _swapData(9, amount, bytes("unknown"))
         });
         usdc.mint(address(core), amount);
         vm.expectRevert(XMetroDeFiAdapter.InvalidExecutionRequest.selector);
@@ -723,12 +781,12 @@ contract CompactSwapFlowTest is CompactAdapterFlowBase {
         address[] memory wrongV2 = new address[](2);
         wrongV2[0] = address(output);
         wrongV2[1] = address(usdc);
-        request.executionData = abi.encode(uint8(0), abi.encode(wrongV2));
+        request.executionData = _swapData(0, amount, abi.encode(wrongV2));
         vm.expectRevert(XMetroDeFiAdapter.InvalidExecutionRequest.selector);
         core.runManual(usdc, request);
         assertEq(usdc.balanceOf(address(core)), amount);
 
-        request.executionData = abi.encode(uint8(1), abi.encodePacked(address(usdc), uint24(500), address(usdc)));
+        request.executionData = _swapData(1, amount, abi.encodePacked(address(usdc), uint24(500), address(usdc)));
         vm.expectRevert(XMetroDeFiAdapter.InvalidExecutionRequest.selector);
         core.runManual(usdc, request);
         assertEq(usdc.balanceOf(address(core)), amount);
@@ -751,7 +809,7 @@ contract CompactSwapFlowTest is CompactAdapterFlowBase {
             amountIn: amount,
             minAmountOut: amount,
             deadline: block.timestamp + 1,
-            executionData: abi.encode(uint8(0), abi.encode(path))
+            executionData: _swapData(0, amount, abi.encode(path))
         });
         usdc.mint(address(core), amount);
         core.runManual(usdc, request);
@@ -777,7 +835,7 @@ contract CompactSwapFlowTest is CompactAdapterFlowBase {
             minTotalAmountOut: total,
             minUserAmountsOut: new uint256[](0),
             deadline: block.timestamp + 1,
-            executionData: abi.encode(uint8(0), abi.encode(path))
+            executionData: _swapData(0, total, abi.encode(path))
         });
         usdc.mint(address(core), total);
         vm.recordLogs();
@@ -812,7 +870,7 @@ contract CompactSwapFlowTest is CompactAdapterFlowBase {
             amountIn: amount,
             minAmountOut: amount + 1,
             deadline: block.timestamp + 1,
-            executionData: abi.encode(uint8(0), abi.encode(path))
+            executionData: _swapData(0, amount, abi.encode(path))
         });
         usdc.mint(address(core), amount);
         vm.expectRevert(XMetroDeFiAdapter.SlippageFailure.selector);
@@ -838,7 +896,7 @@ contract CompactSwapFlowTest is CompactAdapterFlowBase {
             amountIn: 1e6,
             minAmountOut: 1,
             deadline: block.timestamp + 1 hours,
-            executionData: abi.encode(uint8(0), abi.encode(path))
+            executionData: _swapData(0, 1e6, abi.encode(path))
         });
         vm.expectRevert(XMetroDeFiAdapter.AccountingFailure.selector);
         core.runUnfunded(request);
@@ -1002,7 +1060,7 @@ contract CompactSwapFlowTest is CompactAdapterFlowBase {
             amountIn: amount,
             minAmountOut: amount,
             deadline: block.timestamp + 1,
-            executionData: abi.encode(uint8(2), _oneInchCall(address(adapter), amount, amount, 0))
+            executionData: _swapData(2, amount, _oneInchCall(address(adapter), amount, amount, 0))
         });
 
         usdc.mint(address(core), amount);
@@ -1047,7 +1105,7 @@ contract CompactSwapFlowTest is CompactAdapterFlowBase {
             minTotalAmountOut: total,
             minUserAmountsOut: new uint256[](0),
             deadline: block.timestamp + 1,
-            executionData: abi.encode(uint8(2), _oneInchCall(address(adapter), total, total, 0))
+            executionData: _swapData(2, total, _oneInchCall(address(adapter), total, total, 0))
         });
         usdc.mint(address(core), total);
         core.runBatch(usdc, batch);
@@ -1071,7 +1129,7 @@ contract CompactSwapFlowTest is CompactAdapterFlowBase {
             amountIn: amount,
             minAmountOut: amount,
             deadline: block.timestamp + 1,
-            executionData: abi.encode(uint8(2), _oneInchCall(address(adapter), amount, amount, 0))
+            executionData: _swapData(2, amount, _oneInchCall(address(adapter), amount, amount, 0))
         });
 
         vm.expectRevert(XMetroDeFiAdapter.InvalidExecutionRequest.selector);
@@ -1091,7 +1149,7 @@ contract CompactSwapFlowTest is CompactAdapterFlowBase {
         address user,
         address router
     ) internal {
-        request.executionData = abi.encode(uint8(2), route);
+        request.executionData = _swapData(2, request.amountIn, route);
         vm.expectRevert(XMetroDeFiAdapter.InvalidExecutionRequest.selector);
         core.runManual(usdc, request);
         _assertOneInchAtomic(amount, user, router);
@@ -1104,7 +1162,7 @@ contract CompactSwapFlowTest is CompactAdapterFlowBase {
         address user,
         address router
     ) internal {
-        request.executionData = abi.encode(uint8(2), route);
+        request.executionData = _swapData(2, request.amountIn, route);
         vm.expectRevert();
         core.runManual(usdc, request);
         _assertOneInchAtomic(amount, user, router);
@@ -1318,6 +1376,61 @@ contract CompactAaveFlowTest is CompactAdapterFlowBase {
 }
 
 contract CompactAdapterConfigurationSecurityTest is CompactAdapterFlowBase {
+    function test_ProxyInitializationEmitsBothDisabledStrategiesAndCannotRepeat() public {
+        CompactFlowCore freshCore = new CompactFlowCore(address(this));
+        address implementation = _create(vm.getCode("XMetroDeFiAdapter.sol:XMetroDeFiAdapter"));
+        vm.recordLogs();
+        XMetroDeFiAdapter fresh = XMetroDeFiAdapter(
+            address(
+                new ERC1967Proxy(
+                    implementation,
+                    abi.encodeCall(XMetroDeFiAdapter.initialize, (address(freshCore), address(usdc), address(metro)))
+                )
+            )
+        );
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        freshCore.setAdapter(address(fresh));
+        bytes32 metroId = _strategyId(IXMetroDeFiAdapter.StrategyKind.SwapMetro, address(metro));
+        bytes32 v4Id = _strategyId(IXMetroDeFiAdapter.StrategyKind.AaveV4, address(0));
+        uint256 metroEvents;
+        uint256 v4Events;
+        for (uint256 i; i < logs.length; ++i) {
+            if (
+                logs[i].emitter != address(fresh)
+                    || logs[i].topics[0] != keccak256("ConfigurationChanged(bytes32,uint64)")
+            ) continue;
+            assertEq(abi.decode(logs[i].data, (uint64)), 1);
+            if (logs[i].topics[1] == metroId) ++metroEvents;
+            else if (logs[i].topics[1] == v4Id) ++v4Events;
+            else fail("Unexpected initial strategy event");
+        }
+        assertEq(metroEvents, 1);
+        assertEq(v4Events, 1);
+        for (uint256 i; i < 2; ++i) {
+            IXMetroDeFiAdapter.StrategyInfo memory info = fresh.strategyInfo(i == 0 ? metroId : v4Id);
+            assertEq(
+                uint8(info.kind),
+                uint8(i == 0 ? IXMetroDeFiAdapter.StrategyKind.SwapMetro : IXMetroDeFiAdapter.StrategyKind.AaveV4)
+            );
+            assertEq(info.outputToken, i == 0 ? address(metro) : address(0));
+            assertFalse(info.enabled);
+            assertFalse(info.autoEnabled);
+            assertEq(info.strategyRevision, 1);
+            assertEq(info.logicEpoch, 1);
+            assertEq(info.domainRevision, 1);
+        }
+        vm.expectEmit(true, false, false, true, address(fresh));
+        emit XMetroDeFiAdapter.ConfigurationChanged(metroId, 2);
+        fresh.setSwapMetroConfig(true, true);
+        assertEq(fresh.strategyInfo(metroId).strategyRevision, 2);
+        vm.expectRevert(bytes4(keccak256("InvalidInitialization()")));
+        fresh.initialize(address(freshCore), address(usdc), address(metro));
+        assertTrue(fresh.strategyInfo(metroId).enabled);
+        assertEq(fresh.strategyInfo(metroId).strategyRevision, 2);
+        vm.expectRevert(bytes4(keccak256("InvalidInitialization()")));
+        XMetroDeFiAdapter(implementation).initialize(address(freshCore), address(usdc), address(metro));
+    }
+
     function test_AllConfigurationSettersSucceedWhileCoreIsUnpaused() public {
         CompactV2Router v2 = new CompactV2Router();
         CompactV3Router v3 = new CompactV3Router();

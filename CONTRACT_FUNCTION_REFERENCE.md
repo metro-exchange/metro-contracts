@@ -1,5 +1,7 @@
 # Contract Function Reference
 
+Swap and compound `bytes` arguments use the [version-2 envelope](integration/docs/new-features.md#swap-execution-data) with a quoted input cap. The four Core function signatures and all deposit encodings are unchanged.
+
 This index follows the current `src/` contracts. See [legacy integration](integration/docs/existing-features.md), [new actions](integration/docs/new-features.md), and [roles/configuration](integration/docs/contract-api.md) for call flows. Solidity identifiers are preserved exactly.
 
 ## MetroToken
@@ -71,7 +73,7 @@ Legacy compound and general auto strategies are mutually exclusive. A batch swap
 - `setForfeitureRecipient(address)` is Base QA-only and lets the current owner redirect future THOR/yTHOR exit forfeitures to a nonzero address. Production has an immutable recipient and no setter.
 - `setAutoCompoundOperator(address,bool)`; `setMigrationEscrow(address)`; `setRewardDistributor(address)`; `setContributor(address,bool)`; `setDefaultMaxVestingSchedules(uint256)`
 - `pause()`; `unpause()`; `rescueERC20(address,address,uint256)` (principal-backing METRO is protected)
-- `transferOwnership(address)` acts in one step; there is no `pendingOwner` or `acceptOwnership()` on the current version. `renounceOwnership()` is irreversible and also prevents later Adapter upgrades. The constructor leaves the core unpaused.
+- Core, Escrow and Distributor expose `pendingOwner()`, `transferOwnership(address)` and `acceptOwnership()`. Nomination preserves the current owner; a zero target cancels it. Acceptance clears pending ownership. `renounceOwnership()` clears both owner fields and is irreversible; Core/Escrow reject it while paused. Paused handovers remain available. MetroToken remains one-step. The Core constructor leaves it unpaused.
 
 Normal configuration and UUPS implementation upgrades do not require a pause. A full proxy replacement should remain paused throughout its multi-transaction handover. A UUPS implementation upgrade increments `logicEpoch` without changing the proxy address; a proxy replacement increments `deFiAdapterEpoch`. Both make older auto preferences stale.
 
@@ -148,3 +150,49 @@ Read `thorPositionCount(user)` / `yThorPositionCount(user)` before querying `tho
 Core tracks signed reward debt at the existing `1e24` accumulator precision. Share changes retain the full debt product. Claims, emergency payments, manual actions, and automatic batches consume only whole USDC base units and retain the fractional remainder. Zero-value claims preserve that remainder. `rewardDebt(user)` keeps its ABI and displays USDC base units, truncating negative fractions toward zero; use `claimable` / `claimableMany` for payable amounts instead of reconstructing them from the display getter. Adapter inputs and event amounts remain in token base units.
 
 `YTHOR_EXIT_RAMP()` returns seconds: `126144000` for production, `43200` for QA. These are compiled constants with no Owner setter.
+
+Initial configuration logs and their emitters are listed in [events and indexing](integration/docs/existing-features.md#events-and-indexing).
+
+## Business errors
+
+The following errors have no arguments. Decode with the matching contract ABI; external failures and Solidity panics retain their original data. Check ordering and business conditions are unchanged.
+
+| Contract | Error | Trigger |
+| --- | --- | --- |
+| MetroToken | `MinterStatusUnchanged()` | same status |
+| MetroToken | `UnauthorizedMinter()` | not minter |
+| MetroToken | `InvalidRecipient()` | bad to |
+| MetroToken | `ZeroAmount()` | zero amount |
+| ThorMigrationEscrow | `ZeroXMetro()` | zero xMETRO |
+| ThorMigrationEscrow | `ZeroMigrationToken()` | zero token |
+| ThorMigrationEscrow | `InvalidMigrationStartTime()` | bad start time |
+| ThorMigrationEscrow | `MigrationNotStarted()` | not started |
+| ThorMigrationEscrow | `ZeroAmount()` | zero amount |
+| ThorMigrationEscrow | `ThorConfigurationMissing()` | thor config not set |
+| ThorMigrationEscrow | `ThorMigrationExpired()` | thor expired |
+| ThorMigrationEscrow | `ZeroMintAmount()` | zero mint |
+| ThorMigrationEscrow | `ThorCapExceeded()` | thor cap |
+| ThorMigrationEscrow | `YThorConfigurationMissing()` | ythor config not set |
+| ThorMigrationEscrow | `YThorMigrationExpired()` | ythor expired |
+| ThorMigrationEscrow | `YThorCapExceeded()` | ythor cap |
+| ThorMigrationEscrow | `InvalidMigrationDeadline()` | bad deadline |
+| ThorMigrationEscrow | `DeadlineNotAfterMigrationStart()` | deadline before start |
+| ThorMigrationEscrow | `InvalidMigrationRatio()` | bad ratio |
+| ThorMigrationEscrow | `MigrationRatiosLocked()` | ratios locked |
+| ThorMigrationEscrow | `InvalidMigrationCap()` | bad cap |
+| ThorMigrationEscrow | `MigrationTokenRescueForbidden()` | cannot rescue migration tokens |
+| ThorMigrationEscrow | `InvalidRecipient()` | bad to |
+| RewardDistributor | `ZeroXMetro()` | zero xMETRO |
+| RewardDistributor | `UnauthorizedOperator()` | only operator |
+| RewardDistributor | `InvalidOperator()` | bad operator |
+| RewardDistributor | `CommissionSplitEnabled()` | split enabled |
+| RewardDistributor | `InvalidCommissionSplitBps()` | bps > 10000 |
+| RewardDistributor | `ZeroAmount()` | zero amount |
+| RewardDistributor | `InsufficientRewardBalance()` | insufficient balance |
+| RewardDistributor | `ZeroCommissionVault()` | zero vault |
+| RewardDistributor | `CommissionVaultNotContract()` | vault not contract |
+| RewardDistributor | `CommissionTokenMismatch()` | token mismatch |
+| RewardDistributor | `CommissionDistributorMismatch()` | distributor mismatch |
+| RewardDistributor | `CommissionVaultMigrationPending()` | vault migration pending |
+| RewardDistributor | `CommissionVaultPaused()` | vault paused |
+| RewardDistributor | `InvalidRecipient()` | bad to |

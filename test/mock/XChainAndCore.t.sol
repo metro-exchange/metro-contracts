@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import "forge-std/Test.sol";
 
@@ -128,7 +128,7 @@ contract CoreIntegrationTest is Test {
         thor.mint(userA, 5 ether);
         vm.startPrank(userA);
         thor.approve(address(escrow), 5 ether);
-        vm.expectRevert(bytes("MetroToken: not minter"));
+        vm.expectRevert(MetroToken.UnauthorizedMinter.selector);
         escrow.migrateThor(5 ether);
         vm.stopPrank();
         assertEq(xmetro.thorPositionCount(userA), 3);
@@ -299,9 +299,9 @@ contract CoreIntegrationTest is Test {
         vm.startPrank(forfeiture);
         thor.approve(address(escrow), 5 ether);
         yThor.approve(address(escrow), 7 ether);
-        vm.expectRevert(bytes("MetroToken: not minter"));
+        vm.expectRevert(MetroToken.UnauthorizedMinter.selector);
         escrow.migrateThor(5 ether);
-        vm.expectRevert(bytes("MetroToken: not minter"));
+        vm.expectRevert(MetroToken.UnauthorizedMinter.selector);
         escrow.migrateYThor(7 ether);
         vm.stopPrank();
         assertEq(xmetro.thorPositionCount(forfeiture), 1);

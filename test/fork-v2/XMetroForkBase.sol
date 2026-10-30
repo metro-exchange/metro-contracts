@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import {Test} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -153,8 +153,8 @@ abstract contract XMetroForkBase is Test {
         proxy = address(new ERC1967Proxy(implementation, initData));
         adapter = IXMetroDeFiAdapter(proxy);
         core.setDeFiAdapter(proxy);
-        assertEq(address(core).code.length, 23_394);
-        assertEq(implementation.code.length, 20_487);
+        assertEq(address(core).code.length, 23_435);
+        assertEq(implementation.code.length, 20_755);
         assertEq(core.deFiAdapter(), proxy);
     }
 
@@ -200,15 +200,15 @@ abstract contract XMetroForkBase is Test {
         return keccak256(abi.encode(block.chainid, STRATEGY_DOMAIN, kind, outputToken));
     }
 
-    function _v2SwapData(address tokenOut) internal pure returns (bytes memory) {
+    function _v2SwapData(address tokenOut, uint256 cap) internal pure returns (bytes memory) {
         address[] memory path = new address[](2);
         path[0] = USDC;
         path[1] = tokenOut;
-        return abi.encode(uint8(0), abi.encode(path));
+        return abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(0), cap, abi.encode(path));
     }
 
-    function _v3SwapData(bytes memory path) internal pure returns (bytes memory) {
-        return abi.encode(uint8(1), path);
+    function _v3SwapData(bytes memory path, uint256 cap) internal pure returns (bytes memory) {
+        return abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(1), cap, path);
     }
 
     function _artifactCreationCode(string memory path) internal view returns (bytes memory) {

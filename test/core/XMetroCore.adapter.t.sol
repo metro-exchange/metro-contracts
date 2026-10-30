@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import {Test} from "forge-std/Test.sol";
 import {MockAaveV4Giver} from "../mocks/MockAaveV4Giver.sol";
@@ -14,6 +14,7 @@ import {MockOneInchExecutor, MockOneInchRouter} from "../mocks/MockOneInchRouter
 
 interface ICoreAdapterConfiguration {
     function setRouters(address routerV2, address routerV3, address oneInchRouter) external;
+    function rescueERC20(address token, address to, uint256 amount) external;
     function setSwapMetroConfig(bool enabled, bool autoEnabled) external;
     function setSwapTokenConfig(address tokenOut, bool enabled, bool autoEnabled) external returns (bytes32 id);
     function setAaveV4Config(address spoke, address giver, uint256 reserveId, bool enabled, bool autoEnabled) external;
@@ -148,8 +149,8 @@ contract CoreRewardSource {
 contract XMetroCoreSizeTest is Test {
     uint256 internal constant EIP170_LIMIT = 24_576;
     uint256 internal constant PROJECT_LIMIT = 23_552;
-    uint256 internal constant EXPECTED_RUNTIME = 23_394;
-    uint256 internal constant EXPECTED_INITCODE = 24_998;
+    uint256 internal constant EXPECTED_RUNTIME = 23_435;
+    uint256 internal constant EXPECTED_INITCODE = 25_118;
     uint256 internal constant ETHEREUM_PINNED_BLOCK = 25_838_112;
     uint256 internal constant BASE_PINNED_BLOCK = 50_555_256;
 
@@ -205,7 +206,7 @@ contract XMetroCoreSizeTest is Test {
 }
 
 contract XMetroCoreAdapterFlowTest is Test {
-    uint256 internal constant ADAPTER_RUNTIME = 20_487;
+    uint256 internal constant ADAPTER_RUNTIME = 20_755;
 
     CoreFlowToken internal metro;
     CoreFlowToken internal usdc;
@@ -247,6 +248,167 @@ contract XMetroCoreAdapterFlowTest is Test {
         swapStrategy = configuration.setSwapTokenConfig(address(output), true, true);
         metro.mint(address(oneInch), 1_000_000 ether);
         output.mint(address(oneInch), 1_000_000e6);
+    }
+
+    function test_SharedStakePreservesRewardsAndRollsBackFailedOptIn() public {
+        address user = makeAddr("shared-stake-user");
+        metro.mint(user, 50 ether);
+        vm.prank(user);
+        metro.approve(address(core), type(uint256).max);
+        vm.prank(user);
+        assertEq(core.stake(10 ether), 10 ether);
+        _depositRewards(10e6);
+        vm.expectEmit(true, false, false, true, address(core));
+        emit xMETRO.Staked(user, 10 ether, 10 ether);
+        vm.prank(user);
+        assertEq(core.stakeAndEnableAutocompound(10 ether), 10 ether);
+        assertTrue(core.autocompoundEnabled(user));
+        assertEq(core.claimable(user), 10e6);
+        assertEq(core.balanceOf(user), 20 ether);
+        vm.prank(user);
+        vm.expectRevert(xMETRO.InvalidAmount.selector);
+        core.stakeAndEnableAutocompound(0);
+        ICoreAdapterConfiguration(address(adapter)).setSwapMetroConfig(true, false);
+        vm.prank(user);
+        vm.expectRevert(xMETRO.InvalidConfiguration.selector);
+        core.stakeAndEnableAutocompound(10 ether);
+        assertEq(core.claimable(user), 10e6);
+        assertEq(core.balanceOf(user), 20 ether);
+        assertEq(metro.balanceOf(user), 30 ether);
+        assertEq(metro.balanceOf(address(core)), 20 ether);
+    }
+
+    function test_StaleQuoteRejectsManualCompound() public {
+        _staleQuote(true, false, false, false);
+    }
+
+    function test_StaleQuoteRejectsManualSwap() public {
+        _staleQuote(false, false, false, false);
+    }
+
+    function test_StaleQuoteRejectsBatchCompound() public {
+        _staleQuote(true, true, false, false);
+    }
+
+    function test_StaleQuoteRejectsBatchSwap() public {
+        _staleQuote(false, true, false, false);
+    }
+
+    function testFuzz_RefreshQuoteAfterInputCapFailureSucceeds(bool compound, bool automatic, bool treasury) public {
+        _staleQuote(compound, automatic, true, treasury);
+    }
+
+    function _staleQuote(bool compound, bool automatic, bool refresh, bool treasury) private {
+        address alice = treasury ? core.migrationRewardExcludedAddress() : makeAddr("cap-alice");
+        if (treasury) {
+            core.setMigrationEscrow(address(rewardSource));
+            vm.prank(address(rewardSource));
+            core.creditThorFromMigration(alice, 100);
+            vm.prank(address(rewardSource));
+            core.creditYThorFromMigration(alice, 200);
+        }
+        address bob = makeAddr("cap-bob");
+        _stake(alice, 2);
+        _stake(bob, 2);
+        vm.prank(alice);
+        if (compound) core.enableAutocompound();
+        else core.enableAutoStrategy(swapStrategy);
+        _depositRewards(3);
+        address tokenOut = compound ? address(metro) : address(output);
+        uint256 quotedInput = core.claimable(alice);
+        bytes memory oldQuote = _v2Data(tokenOut, quotedInput);
+        _depositRewards(4);
+        assertEq(core.claimable(alice), 3);
+        bytes32 debtBefore = _scaledDebtWord(alice);
+        usdc.mint(address(adapter), 13);
+        CoreFlowToken(tokenOut).mint(address(adapter), 17);
+        uint256 backingBefore = metro.balanceOf(address(core));
+        address[] memory users = new address[](4);
+        users[0] = alice;
+        users[1] = alice;
+        users[2] = address(0);
+        users[3] = bob; // Has rewards but no automatic opt-in.
+        if (!refresh) {
+            vm.expectCall(
+                address(router), abi.encodeWithSelector(CoreV2Router.swapExactTokensForTokens.selector), uint64(0)
+            );
+        }
+        vm.expectRevert(bytes4(keccak256("InvalidExecutionRequest()")));
+        _runCappedAction(compound, automatic, alice, users, quotedInput, oldQuote);
+        assertEq(_scaledDebtWord(alice), debtBefore);
+        assertEq(core.claimable(alice), 3);
+        assertEq(core.claimable(bob), 3);
+        assertEq(core.balanceOf(alice), 2);
+        if (treasury) {
+            assertEq(core.lockedShares(alice), 300);
+            assertEq(core.thorPositionCount(alice), 1);
+            assertEq(core.yThorPositionCount(alice), 1);
+            assertEq(core.totalRewardWeight(), 4);
+        }
+        assertEq(metro.balanceOf(address(core)), backingBefore);
+        assertEq(usdc.balanceOf(address(core)), 7);
+        assertEq(usdc.balanceOf(address(adapter)), 13);
+        assertEq(CoreFlowToken(tokenOut).balanceOf(address(adapter)), 17);
+        assertEq(usdc.balanceOf(address(router)), 0);
+        assertEq(usdc.allowance(address(adapter), address(router)), 0);
+        if (refresh) {
+            // Capture a complete fresh quote, and retry in the same transaction after the failed call.
+            bytes memory newQuote = _v2Data(tokenOut, 3);
+            _runCappedAction(compound, automatic, alice, users, 3, newQuote);
+            assertEq(core.claimable(alice), 0);
+            assertEq(usdc.balanceOf(address(router)), 3);
+            assertEq(usdc.allowance(address(adapter), address(router)), 0);
+            assertEq(usdc.balanceOf(address(adapter)), 13);
+            assertEq(CoreFlowToken(tokenOut).balanceOf(address(adapter)), 17);
+            if (compound) {
+                assertEq(core.balanceOf(alice), 5);
+                vm.prank(alice);
+                core.requestUnstake(3);
+            } else {
+                assertEq(output.balanceOf(alice), 3);
+            }
+        } else {
+            vm.prank(alice);
+            assertEq(core.claimRewards(), 3);
+        }
+        // Each user retains the half-unit accrued before the failed action.
+        _depositRewards(1);
+        assertEq(core.claimable(alice), 1);
+        assertEq(core.claimable(bob), 4);
+        vm.prank(alice);
+        assertEq(core.claimRewards(), 1);
+        vm.prank(bob);
+        assertEq(core.claimRewards(), 4);
+        assertEq(usdc.balanceOf(address(core)), 0);
+    }
+
+    function _runCappedAction(
+        bool compound,
+        bool automatic,
+        address user,
+        address[] memory users,
+        uint256 minimum,
+        bytes memory data
+    ) private {
+        if (!automatic) vm.prank(user);
+        if (compound) {
+            if (automatic) core.autocompoundBatch(users, minimum, block.timestamp + 1, data);
+            else core.autocompound(minimum, block.timestamp + 1, data);
+        } else {
+            if (automatic) {
+                core.executeAutoStrategyBatch(swapStrategy, users, minimum, new uint256[](0), block.timestamp + 1, data);
+            } else {
+                core.claimAndExecute(swapStrategy, minimum, block.timestamp + 1, data);
+            }
+        }
+    }
+
+    function _scaledDebtWord(address user) private returns (bytes32) {
+        vm.record();
+        core.rewardDebt(user);
+        (bytes32[] memory reads,) = vm.accesses(address(core));
+        assertEq(reads.length, 1);
+        return vm.load(address(core), reads[0]);
     }
 
     function test_CoreManualClaimUsesFinalProxyAndFixedRecipient() public {
@@ -385,7 +547,7 @@ contract XMetroCoreAdapterFlowTest is Test {
         candidates[4] = userB;
         candidates[5] = address(0);
         (uint256 rewardIn, uint256 amountOut) = core.executeAutoStrategyBatch(
-            swapStrategy, candidates, 90e6, new uint256[](0), block.timestamp + 1, _v2Data(address(output))
+            swapStrategy, candidates, 90e6, new uint256[](0), block.timestamp + 1, _v2Data(address(output), 90e6)
         );
 
         assertEq(rewardIn, 90e6);
@@ -414,7 +576,12 @@ contract XMetroCoreAdapterFlowTest is Test {
         users[0] = user;
         vm.expectRevert(xMETRO.NoRewards.selector);
         core.executeAutoStrategyBatch(
-            swapStrategy, users, pendingBefore, new uint256[](0), block.timestamp + 1, _v2Data(address(output))
+            swapStrategy,
+            users,
+            pendingBefore,
+            new uint256[](0),
+            block.timestamp + 1,
+            _v2Data(address(output), pendingBefore)
         );
         assertEq(core.claimable(user), pendingBefore);
         assertEq(output.balanceOf(user), 0);
@@ -422,7 +589,12 @@ contract XMetroCoreAdapterFlowTest is Test {
         vm.prank(user);
         core.enableAutoStrategy(swapStrategy);
         core.executeAutoStrategyBatch(
-            swapStrategy, users, pendingBefore, new uint256[](0), block.timestamp + 1, _v2Data(address(output))
+            swapStrategy,
+            users,
+            pendingBefore,
+            new uint256[](0),
+            block.timestamp + 1,
+            _v2Data(address(output), pendingBefore)
         );
         assertEq(output.balanceOf(user), pendingBefore);
     }
@@ -447,7 +619,7 @@ contract XMetroCoreAdapterFlowTest is Test {
             }
             vm.expectRevert(xMETRO.NoRewards.selector);
             core.executeAutoStrategyBatch(
-                swapStrategy, users, 1, new uint256[](0), block.timestamp + 1, _v2Data(address(output))
+                swapStrategy, users, 1, new uint256[](0), block.timestamp + 1, _v2Data(address(output), 100e6)
             );
             assertEq(core.claimable(user), 100e6);
             vm.prank(user);
@@ -455,7 +627,7 @@ contract XMetroCoreAdapterFlowTest is Test {
         }
 
         (uint256 used, uint256 received) = core.executeAutoStrategyBatch(
-            swapStrategy, users, 100e6, new uint256[](0), block.timestamp + 1, _v2Data(address(output))
+            swapStrategy, users, 100e6, new uint256[](0), block.timestamp + 1, _v2Data(address(output), 100e6)
         );
         assertEq(used, 100e6);
         assertEq(received, 100e6);
@@ -478,7 +650,7 @@ contract XMetroCoreAdapterFlowTest is Test {
         ICoreUUPSUpgrade(proxy).upgradeToAndCall(v2, "");
         assertEq(core.deFiAdapter(), proxy);
         assertEq(core.deFiAdapterEpoch(), 1);
-        assertEq(adapter.implementationVersion(), 2);
+        assertEq(adapter.implementationVersion(), 3);
         assertEq(adapter.logicEpoch(), 2);
         assertTrue(adapter.strategyInfo(swapStrategy).enabled);
 
@@ -486,45 +658,72 @@ contract XMetroCoreAdapterFlowTest is Test {
         users[0] = user;
         vm.expectRevert(xMETRO.NoRewards.selector);
         core.executeAutoStrategyBatch(
-            swapStrategy, users, 1, new uint256[](0), block.timestamp + 1, _v2Data(address(output))
+            swapStrategy, users, 1, new uint256[](0), block.timestamp + 1, _v2Data(address(output), 100e6)
         );
         assertEq(core.claimable(user), 100e6);
         vm.prank(user);
         core.enableAutoStrategy(swapStrategy);
         core.executeAutoStrategyBatch(
-            swapStrategy, users, 100e6, new uint256[](0), block.timestamp + 1, _v2Data(address(output))
+            swapStrategy, users, 100e6, new uint256[](0), block.timestamp + 1, _v2Data(address(output), 100e6)
         );
         assertEq(output.balanceOf(user), 100e6);
         assertEq(core.claimable(user), 0);
     }
 
-    function test_SingleStepOwnerHandoffMovesAdapterConfigurationAuthority() public {
+    function test_TwoStepOwnerHandoffMovesAdapterConfigurationAuthorityOnlyAfterAcceptance() public {
         address nextOwner = makeAddr("next-owner");
-        address outsider = makeAddr("not-owner");
-        vm.prank(outsider);
-        vm.expectRevert();
         core.transferOwnership(nextOwner);
-        vm.expectRevert();
-        core.transferOwnership(address(0));
         assertEq(core.owner(), address(this));
-        core.transferOwnership(nextOwner);
-        assertEq(core.owner(), nextOwner);
-
-        vm.expectRevert();
+        assertEq(core.pendingOwner(), nextOwner);
+        vm.prank(nextOwner);
+        vm.expectRevert(bytes4(keccak256("AccessStateFailure()")));
         ICoreAdapterConfiguration(address(adapter)).setSwapTokenConfig(address(output), false, false);
-        vm.expectRevert();
-        core.setAutoCompoundOperator(outsider, true);
+        ICoreAdapterConfiguration(address(adapter)).setSwapTokenConfig(address(output), true, false);
+        bytes memory nextInitCode = vm.parseJsonBytes(
+            vm.readFile("out-adapter/XMetroDeFiAdapterV2.sol/XMetroDeFiAdapterV2.json"), ".bytecode.object"
+        );
+        address nextImplementation = _create(nextInitCode);
+        vm.prank(nextOwner);
+        vm.expectRevert(bytes4(keccak256("AccessStateFailure()")));
+        ICoreUUPSUpgrade(address(adapter)).upgradeToAndCall(nextImplementation, "");
+        core.pause();
+        output.mint(address(adapter), 1);
+        vm.prank(nextOwner);
+        vm.expectRevert(bytes4(keccak256("AccessStateFailure()")));
+        ICoreAdapterConfiguration(address(adapter)).rescueERC20(address(output), nextOwner, 1);
+        ICoreAdapterConfiguration(address(adapter)).rescueERC20(address(output), address(this), 1);
+        assertEq(output.balanceOf(address(this)), 1);
+        core.setAutoCompoundOperator(nextOwner, true);
+        vm.prank(nextOwner);
+        core.acceptOwnership();
+        assertEq(core.owner(), nextOwner);
+        assertEq(core.pendingOwner(), address(0));
+        assertTrue(core.autoCompoundOperators(nextOwner));
+        assertTrue(core.autoCompoundOperators(address(this)));
+        vm.expectRevert(bytes4(keccak256("AccessStateFailure()")));
+        ICoreAdapterConfiguration(address(adapter)).setSwapTokenConfig(address(output), false, false);
         vm.prank(nextOwner);
         ICoreAdapterConfiguration(address(adapter)).setSwapTokenConfig(address(output), false, false);
         assertFalse(adapter.strategyInfo(swapStrategy).enabled);
+        vm.expectRevert(bytes4(keccak256("AccessStateFailure()")));
+        ICoreUUPSUpgrade(address(adapter)).upgradeToAndCall(nextImplementation, "");
         vm.prank(nextOwner);
-        core.setAutoCompoundOperator(outsider, true);
-        assertTrue(core.autoCompoundOperators(outsider));
+        ICoreUUPSUpgrade(address(adapter)).upgradeToAndCall(nextImplementation, "");
+        assertEq(adapter.implementationVersion(), 3);
+        assertEq(adapter.logicEpoch(), 2);
+        output.mint(address(adapter), 1);
+        vm.expectRevert(bytes4(keccak256("AccessStateFailure()")));
+        ICoreAdapterConfiguration(address(adapter)).rescueERC20(address(output), address(this), 1);
+        vm.prank(nextOwner);
+        ICoreAdapterConfiguration(address(adapter)).rescueERC20(address(output), nextOwner, 1);
+        assertEq(output.balanceOf(nextOwner), 1);
+        vm.prank(nextOwner);
+        core.unpause();
         vm.prank(nextOwner);
         core.renounceOwnership();
         assertEq(core.owner(), address(0));
         vm.prank(nextOwner);
-        vm.expectRevert();
+        vm.expectRevert(bytes4(keccak256("AccessStateFailure()")));
         ICoreAdapterConfiguration(address(adapter)).setSwapTokenConfig(address(output), true, true);
     }
 
@@ -548,7 +747,12 @@ contract XMetroCoreAdapterFlowTest is Test {
         users[0] = user;
         vm.expectRevert(bytes4(keccak256("AccountingFailure()")));
         core.executeAutoStrategyBatch(
-            swapStrategy, users, pendingBefore, new uint256[](0), block.timestamp + 1, _v2Data(address(output))
+            swapStrategy,
+            users,
+            pendingBefore,
+            new uint256[](0),
+            block.timestamp + 1,
+            _v2Data(address(output), pendingBefore)
         );
         assertEq(core.claimable(user), pendingBefore);
         assertEq(usdc.balanceOf(address(core)), coreUsdcBefore);
@@ -587,14 +791,24 @@ contract XMetroCoreAdapterFlowTest is Test {
         users[0] = user;
         vm.expectRevert(xMETRO.NoRewards.selector);
         core.executeAutoStrategyBatch(
-            swapStrategy, users, pendingBefore, new uint256[](0), block.timestamp + 1, _v2Data(address(output))
+            swapStrategy,
+            users,
+            pendingBefore,
+            new uint256[](0),
+            block.timestamp + 1,
+            _v2Data(address(output), pendingBefore)
         );
         assertEq(core.claimable(user), pendingBefore);
 
         vm.prank(user);
         core.enableAutoStrategy(swapStrategy);
         core.executeAutoStrategyBatch(
-            swapStrategy, users, pendingBefore, new uint256[](0), block.timestamp + 1, _v2Data(address(output))
+            swapStrategy,
+            users,
+            pendingBefore,
+            new uint256[](0),
+            block.timestamp + 1,
+            _v2Data(address(output), pendingBefore)
         );
         assertEq(output.balanceOf(user), pendingBefore);
         assertEq(core.deFiAdapterEpoch(), 2);
@@ -663,7 +877,7 @@ contract XMetroCoreAdapterFlowTest is Test {
         candidates[0] = alice;
         candidates[1] = alice;
         candidates[2] = address(0);
-        bytes memory route = _v2Data(compound ? address(metro) : address(output));
+        bytes memory route = _v2Data(compound ? address(metro) : address(output), 1);
         if (automatic) {
             if (compound) {
                 assertEq(core.autocompoundBatch(candidates, 1, block.timestamp + 1, route), 1);
@@ -725,11 +939,11 @@ contract XMetroCoreAdapterFlowTest is Test {
         rewardSource.deposit(amount);
     }
 
-    function _v2Data(address tokenOut) private view returns (bytes memory) {
+    function _v2Data(address tokenOut, uint256 cap) private view returns (bytes memory) {
         address[] memory path = new address[](2);
         path[0] = address(usdc);
         path[1] = tokenOut;
-        return abi.encode(uint8(0), abi.encode(path));
+        return abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(0), cap, abi.encode(path));
     }
 
     function _oneInchData(address tokenOut, uint256 amount) private view returns (bytes memory) {
@@ -745,7 +959,7 @@ contract XMetroCoreAdapterFlowTest is Test {
         bytes memory callData = abi.encodeWithSelector(
             MockOneInchRouter.swap.selector, address(oneInchExecutor), description, bytes("verified-route")
         );
-        return abi.encode(uint8(2), callData);
+        return abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(2), amount, callData);
     }
 
     function _create(bytes memory initCode) private returns (address deployed) {

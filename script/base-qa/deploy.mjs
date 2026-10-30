@@ -333,7 +333,12 @@ async function ownershipStage() {
     ...['TestUSDC', 'TestTHOR', 'TestYTHOR', 'TestUSDT', 'TestWBTC', 'TestGHO', 'TestXAUT', 'TestExtraToken']
       .map(id => [id, 'ERC20Mintable'])
   ];
+  const pendingOwners = {};
   for (const [id, artifact] of ownedContracts) {
+    if (['Core', 'Escrow', 'Distributor'].includes(id)) {
+      pendingOwners[id] = await (await contract(artifact, c(id))).pendingOwner();
+      if (pendingOwners[id] !== ethers.constants.AddressZero) throw new Error('Unexpected pending owner: ' + id);
+    }
     const owner = await (await contract(artifact, c(id))).owner();
     if (owner.toLowerCase() !== addr.deployer.toLowerCase()) throw new Error('Unexpected owner: ' + id);
   }
@@ -343,6 +348,8 @@ async function ownershipStage() {
   if ((await vault.guardian()).toLowerCase() !== addr.owner.toLowerCase()) throw new Error('Unexpected Vault guardian');
   if (await core.paused()) throw new Error('Core unexpectedly paused');
   await recordReadbacks('ownership', {
+    corePendingOwner: pendingOwners.Core, escrowPendingOwner: pendingOwners.Escrow,
+    distributorPendingOwner: pendingOwners.Distributor,
     pendingProjectHandover: true, coreOwner: await core.owner(), corePaused: await core.paused(),
     metroOwner: await (await contract('MetroToken', c('METRO'))).owner(),
     escrowOwner: await (await contract('ThorMigrationEscrow', c('Escrow'))).owner(),
