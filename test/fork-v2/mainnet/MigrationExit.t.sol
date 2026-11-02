@@ -346,8 +346,8 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         assertLt(block.timestamp, fresh.migrationStartTime());
     }
 
-    /// E-12.01: Tests THOR exit curve independent snapshots.
-    function test_E12_ThorExitCurveIndependentSnapshots() public {
+    /// E-12.01: Tests THOR exit levels with independent snapshots.
+    function test_E12_ThorExitLevelsIndependentSnapshots() public {
         _migrateThor(alice, 100 ether);
         (uint128 principal, uint64 migratedAt,,) = core.thorPositions(alice, 0);
         assertEq(principal, 100 ether);
@@ -366,9 +366,13 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         assertTrue(vm.revertToState(snapshot));
         _assertThorExitAt(alice, migratedAt, 30 days, 5_000, 50 ether);
         assertTrue(vm.revertToState(snapshot));
-        _assertThorExitAt(alice, migratedAt, 60 days, 7_500, 75 ether);
+        _assertThorExitAt(alice, migratedAt, 60 days, 5_000, 50 ether);
+        assertTrue(vm.revertToState(snapshot));
+        _assertThorExitAt(alice, migratedAt, 90 days - 1, 5_000, 50 ether);
         assertTrue(vm.revertToState(snapshot));
         _assertThorExitAt(alice, migratedAt, 90 days, 10_000, 100 ether);
+        assertTrue(vm.revertToState(snapshot));
+        _assertThorExitAt(alice, migratedAt, 90 days + 1, 10_000, 100 ether);
         assertTrue(vm.revertToState(snapshot));
         _assertThorExitAt(alice, migratedAt, 91 days, 10_000, 100 ether);
     }
@@ -392,6 +396,9 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         (uint256 actualPayout, uint256 actualForfeited) = core.requestThorExit(0);
         assertEq(actualPayout, expectedPayout);
         assertEq(actualForfeited, forfeited);
+        assertEq(metro.balanceOf(forfeitureRecipient), forfeited);
+        assertEq(metro.balanceOf(address(core)), expectedPayout);
+        assertEq(core.unstakeRequestThor(user, 0).amount, expectedPayout);
     }
 
     /// E-12.02: Tests liquid and stake exit paths.
@@ -403,21 +410,21 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         (uint256 liquid, uint256 liquidForfeited) = core.requestThorExit(0);
         vm.prank(bob);
         (uint256 staked, uint256 stakeForfeited) = core.exitAndStakeThor(0);
-        assertEq(liquid, 75 ether);
-        assertEq(staked, 75 ether);
-        assertEq(liquidForfeited + stakeForfeited, 50 ether);
+        assertEq(liquid, 50 ether);
+        assertEq(staked, 50 ether);
+        assertEq(liquidForfeited + stakeForfeited, 100 ether);
         assertEq(core.unstakeRequestCountThor(alice), 1);
         assertEq(core.unstakeRequestCountFree(alice), 0);
-        assertEq(core.balanceOf(bob), 75 ether);
+        assertEq(core.balanceOf(bob), 50 ether);
         assertEq(core.lockedShares(bob), 0);
-        assertEq(metro.balanceOf(address(core)), 150 ether);
-        assertEq(metro.balanceOf(forfeitureRecipient), 50 ether);
+        assertEq(metro.balanceOf(address(core)), 100 ether);
+        assertEq(metro.balanceOf(forfeitureRecipient), 100 ether);
         uint256 unlock = core.unstakeRequestThor(alice, 0).unlockTime;
         vm.warp(unlock);
         vm.prank(alice);
-        assertEq(core.withdrawThor(0), 75 ether);
-        assertEq(metro.balanceOf(alice), 75 ether);
-        assertEq(metro.balanceOf(address(core)), 75 ether);
+        assertEq(core.withdrawThor(0), 50 ether);
+        assertEq(metro.balanceOf(alice), 50 ether);
+        assertEq(metro.balanceOf(address(core)), 50 ether);
     }
 
     /// E-12.03: Tests forfeiture recipient and METRO backing.

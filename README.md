@@ -1,5 +1,9 @@
 # THOR/yTHOR Migration to METRO
 
+## November 3: Sherlock Issue #24
+
+THOR exits now use two fixed payout levels. Production pays 50% of converted METRO principal from 30 days until just before 90 days, then 100% at 90 days and later. Base QA uses the same levels at 1 hour and 3 hours. Earlier exits are blocked. Each position closes once; queued payouts do not increase later. yTHOR rules and existing deployed instances are unchanged. See [Issue #24](https://github.com/sherlock-audit2/2026-10-thorswap-oct-16th-2026/issues/24) and the [validation results](integration/testing/ethereum-fork/RESULTS.md).
+
 ## October 30 audit remediation
 
 The local source includes capped swap inputs (Adapter implementation version 2), two-step ownership for Core/Escrow/Distributor, transient reentrancy guards, custom business errors, and initial configuration events. Existing deployed instances and historical configuration files retain their original behavior.
@@ -72,7 +76,7 @@ Maple configuration stores a SyrupRouter and `bytes32 depositData`; syrupUSDC is
 ## Migration and exits
 
 - Each address may migrate THOR and yTHOR repeatedly within the migration window and cumulative caps. Each call creates an independently timed position.
-- THOR cannot exit before day 30; the payout rises linearly from 50% on day 30 to 100% on day 90.
+- THOR cannot exit before day 30. The payout is fixed at 50% of converted METRO principal from day 30 until just before day 90, and is 100% at day 90 and later.
 - yTHOR principal uses the configured `ratioYThor`. Reward weight starts at the constructor's `YTHOR_REWARD_WEIGHT_BPS` (`10,000 = 1x`) and may be changed by the xMETRO owner without pausing. The current weight applies to future reward deposits for eligible active yTHOR positions, excluding those owned by `migrationRewardExcludedAddress()`; accrued rewards are not repriced. yTHOR cannot exit before day 120; its payout rises from 20% at that point to 100% of the converted METRO principal over the following four years (4 * 365 days after the initial 120 days).
 - Forfeited principal goes to the immutable `forfeitureRecipient`.
 - Liquid exits for free stake, THOR, yTHOR, and Contributor positions have separate 72-hour withdrawal queues. Exit-to-stake produces transferable xMETRO immediately.
@@ -91,7 +95,7 @@ The Distributor transfers the commission directly to the Vault and deposits the 
 
 ## Production and Base QA versions
 
-The production branch retains the full time constants and is the audit/mainnet baseline. The project-facing Base QA branch shortens seven waiting periods: 30-minute unstake delay; THOR exit at 1–3 hours; yTHOR exit starting at 4 hours with a 12-hour ramp; and a 6-hour Contributor cliff plus 6-hour vesting period. The QA build also allows its owner to change the forfeiture recipient for future exits and accepts a zero Escrow constructor start time as the deployment-block timestamp. The production recipient is immutable, and its Escrow requires an explicit start time. Other business ratios, two-step business-contract ownership, and default unpaused state remain aligned; the two builds do not have identical ABIs or bytecode. QA uses freshly deployed owner-mintable TestTokens, Aave/Maple protocol mocks, and real Base Uniswap V2 liquidity. Mock integration does not prove the production protocols are available on Base.
+The production branch retains the full time constants and is the audit/mainnet baseline. The project-facing Base QA branch shortens seven waiting periods: 30-minute unstake delay; THOR pays a fixed 50% from 1 hour until just before 3 hours, then 100% at 3 hours and later; yTHOR exit starting at 4 hours with a 12-hour ramp; and a 6-hour Contributor cliff plus 6-hour vesting period. The QA build also allows its owner to change the forfeiture recipient for future exits and accepts a zero Escrow constructor start time as the deployment-block timestamp. The production recipient is immutable, and its Escrow requires an explicit start time. Other business ratios, two-step business-contract ownership, and default unpaused state remain aligned; the two builds do not have identical ABIs or bytecode. QA uses freshly deployed owner-mintable TestTokens, Aave/Maple protocol mocks, and real Base Uniswap V2 liquidity. Mock integration does not prove the production protocols are available on Base.
 
 Historical rapid-QA addresses and receipts are test evidence only. The fresh project-facing deployment and its transaction hashes are recorded in the Base QA branch's integration config and checklist. The production branch keeps a Base config template; it must not be mistaken for a second deployment or mixed with historical addresses.
 

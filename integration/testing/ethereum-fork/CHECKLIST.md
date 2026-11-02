@@ -1,5 +1,16 @@
 # Ethereum Mainnet Fork Functional Test Checklist
 
+## November 3: Sherlock Issue #24 acceptance
+
+| Coverage | Tests / evidence |
+| --- | --- |
+| E-12: fixed 50% from 30 days until just before 90 days; 100% at 90 days; adjacent-second boundaries | Updated `MigrationExit.t.sol` and unit/fuzz tests |
+| E-12: liquid and stake amounts, forfeiture balances, historical pending, events and one complete exit | Updated exit tests; delayed withdrawals retain their original payout |
+| E-15: independent position milestones and aggregate previews excluding closed positions and queues | `test_ThorPositionsUseIndependentExitMilestones` and aggregate-preview regression |
+| E-01: rebuilt Core bytecode and unchanged size limits, ABI and storage layout | Core/deployment tests and current validation results |
+
+Executed checks and RPC availability are recorded in [RESULTS.md](RESULTS.md). This section does not reuse historical E-12 passes as evidence for the new rules. Mainnet exit scenarios use production time constants; QA compiles that suite and validates its 1-hour/3-hour milestones through its own local tests.
+
 ## October 30 audit remediation acceptance
 
 | Coverage | Evidence / status |

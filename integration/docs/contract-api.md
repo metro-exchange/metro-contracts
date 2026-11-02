@@ -118,6 +118,16 @@ After each confirmed transaction, read `owner()` from each contract and `pending
 
 ## Position queries and events
 
+THOR uses two fixed payout levels, measured from each position's `migratedAt`:
+
+| Position age in production | Position age in Base QA | THOR exit result |
+| --- | --- | --- |
+| Less than 30 days | Less than 1 hour | Not eligible |
+| At least 30 days and less than 90 days | At least 1 hour and less than 3 hours | 50% of converted METRO principal (`rateBps = 5000`) |
+| At least 90 days | At least 3 hours | 100% of converted METRO principal (`rateBps = 10000`) |
+
+`eligibleAt` remains the earliest exit timestamp, not the full-payout timestamp. Read `previewThorExit` from the matching deployed revision for display and quotes; do not interpolate between the milestones. Payouts round down to token base units, and forfeiture is principal minus payout. Both exit modes close the selected position once. Forfeited principal cannot be claimed later; a liquid payout is fixed when queued and remains subject to the existing 72-hour production / 30-minute QA cooldown. Source changes do not alter older immutable Core instances. yTHOR keeps its existing linear curve.
+
 Read `thorPositionCount(user)` / `yThorPositionCount(user)` before querying `thorPositions(user, positionId)` / `yThorPositions(user, positionId)`. Each returns `(principal, migratedAt, exitedAt, exited)`. IDs start at zero independently for each user and asset, are never reused, and counts include exited positions. Out-of-range queries and exits revert with array `Panic(0x32)`. A valid premature or exited position has an ineligible preview; attempting its exit reverts with `InvalidConfiguration`.
 
 `previewThorExit(user, positionId)` / `previewYThorExit(user, positionId)` return eligibility, rate in BPS, payout, forfeiture and eligibility timestamp. Exit calls select one of the caller's positions: `requestThorExit(positionId)`, `exitAndStakeThor(positionId)`, or `exitYThor(positionId, mode)` (`Liquid=0`, `Stake=1`). Only Liquid creates a withdrawal queue entry; queue indices are independent of position IDs. Counts and individual reads support client-side paging. `previewWithdrawableNow(user)` sums eligible open positions and Contributor value, excludes queues, and scans history; do not make claims or single-position exits depend on that aggregate call for large accounts.

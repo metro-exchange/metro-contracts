@@ -24,7 +24,7 @@ xMETRO is immutable. `XMetroCoreLogic.sol` is internal code compiled into it, no
 - Escrow-only `creditYThorFromMigration(address,uint256)`; user `previewYThorExit(address,uint256)`, `exitYThor(uint256,ExitMode)`, `withdrawYThor(uint256)`
 - Contributor `stakeContributor(uint256,address)`, `requestWithdrawUnlockedContributor(uint256)`, `claimAndStakeUnlockedContributor(uint256)`, `withdrawContributor(uint256)`
 
-The production liquid-withdrawal cooldown is `UNSTAKE_DELAY = 72 hours`. THOR exits at 50% on day 30 and rises to 100% by day 90. yTHOR exits at 20% of converted principal on day 120 and rises to 100% over the next four years (4 * 365 days). `previewWithdrawableNow(address)` aggregates currently exit-eligible THOR/yTHOR payouts and unlocked Contributor value; it excludes every already-requested withdrawal queue. Queue information is available through the corresponding `unstakeRequestCount*`, `unstakeRequest*`, and `unstakeCursor*` getters.
+The production liquid-withdrawal cooldown is `UNSTAKE_DELAY = 72 hours`. THOR cannot exit before day 30; it pays a fixed 50% of converted principal from day 30 until just before day 90, then 100% at day 90 and later. yTHOR exits at 20% of converted principal on day 120 and rises to 100% over the next four years (4 * 365 days). Each THOR position closes once; forfeited principal cannot be claimed later, and its queued payout stays fixed. `previewWithdrawableNow(address)` aggregates currently exit-eligible THOR/yTHOR payouts and unlocked Contributor value; it excludes every already-requested withdrawal queue. Queue information is available through the corresponding `unstakeRequestCount*`, `unstakeRequest*`, and `unstakeCursor*` getters.
 
 ### Reward accounting
 

@@ -33,7 +33,7 @@ Users do not approve the Adapter or Commission Vault for reward USDC. Keeper and
 
 Before migration, read `migrationStartTime`, `deadlineThor`, `ratioThor`, `capThor`, and `migratedThor`. Approve THOR to Escrow and call `migrateThor(amountIn)`. Principal is `floor(amountIn * ratioThor / 1e18)`. Each successful migration appends a new position and creates locked principal. Repeated migrations remain subject to the window, cumulative cap and ratio.
 
-`previewThorExit(user, positionId)` returns `eligible`, `rateBps`, `payout`, `forfeited`, and `eligibleAt`. Production payout is 50% at day 30 and increases linearly to 100% at day 90. `requestThorExit(positionId)` plus `withdrawThor(maxRequests)` is the liquid path; `exitAndStakeThor(positionId)` is the stake path. Either path closes only the selected THOR position in full.
+`previewThorExit(user, positionId)` returns `eligible`, `rateBps`, `payout`, `forfeited`, and `eligibleAt`. Production blocks exits before day 30, pays a fixed 50% of converted METRO principal from day 30 until just before day 90, and pays 100% at day 90 and later. Base QA uses the same two levels at 1 hour and 3 hours. Each position uses its own migration timestamp. `requestThorExit(positionId)` plus `withdrawThor(maxRequests)` is the liquid path; `exitAndStakeThor(positionId)` is the stake path. Either path closes only the selected THOR position in full. Any forfeited principal goes to `forfeitureRecipient` and cannot be claimed later. A liquid payout is fixed when queued and does not increase during or after its cooldown.
 
 ## yTHOR migration and reward presentation
 

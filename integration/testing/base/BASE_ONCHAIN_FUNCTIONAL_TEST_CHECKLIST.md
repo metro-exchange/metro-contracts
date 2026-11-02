@@ -1,5 +1,15 @@
 # Base On-Chain Functional Test Checklist
 
+## November 3: Sherlock Issue #24 future on-chain acceptance
+
+These checks apply to a Core built with the two-level THOR fix. No deployment or on-chain action is performed by this source update; existing addresses, build hashes and receipts below retain their historical meaning.
+
+- [ ] N-03: exits fail before 1 hour; payout stays at 50% from 1 hour through 3 hours minus 1 second, then becomes 100% at 3 hours and later.
+- [ ] N-03: liquid and stake paths settle the quoted amounts and forfeitures, emit matching events, and close each position only once. A delayed withdrawal still pays its original queued amount after the 30-minute cooldown; reaching 3 hours does not restore forfeited principal.
+- [ ] N-06: positions migrated at different times reach their own milestones independently; aggregate previews exclude closed positions and queued payouts.
+
+These items remain unexecuted on Base. Historical N-03/N-06 results do not certify this revision. yTHOR's 4-hour delay and 12-hour linear ramp are unchanged.
+
 ## October 30 audit remediation: future on-chain checks
 
 - [ ] On new Core/Escrow/Distributor instances, verify owner/pendingOwner before and after acceptance; reject paused Core/Escrow renounce while allowing handover.
