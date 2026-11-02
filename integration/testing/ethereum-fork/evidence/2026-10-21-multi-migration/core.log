@@ -1,0 +1,176 @@
+Compiling 6 files with Solc 0.8.30
+Solc 0.8.30 finished in 18.97s
+Compiler run successful with warnings:
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/core/XMetroCore.adapter.t.sol:138:5:
+    |
+138 |     function xMETRO() external view returns (address) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+Note: The shadowed declaration is here:
+  --> src/xMETRO.sol:24:1:
+   |
+24 | contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
+   | ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+  --> test/core/XMetroCore.adapter.invariant.t.sol:40:5:
+   |
+40 |     function xMETRO() external view returns (address) {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+Note: The shadowed declaration is here:
+  --> src/xMETRO.sol:24:1:
+   |
+24 | contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
+   | ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+  --> test/core/XMetroDeposit.invariant.t.sol:70:5:
+   |
+70 |     function xMETRO() external view returns (address) {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+Note: The shadowed declaration is here:
+  --> src/xMETRO.sol:24:1:
+   |
+24 | contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
+   | ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+  --> test/core/XMetroSystem.integration.t.sol:79:5:
+   |
+79 |     function xMETRO() external view returns (address) {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+Note: The shadowed declaration is here:
+  --> src/xMETRO.sol:24:1:
+   |
+24 | contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
+   | ^ (Relevant source part starts here and spans across multiple lines).
+
+
+Ran 3 tests for test/core/XMetroCore.adapter.t.sol:XMetroCoreSizeTest
+[SKIP] test_BasePinned_CreateFinalCoreUnderEIP170() (gas: 0)
+[SKIP] test_EthereumPinned_CreateFinalCoreUnderEIP170() (gas: 0)
+[PASS] test_Local_CreateFinalCoreUnderEIP170() (gas: 5620324)
+Suite result: ok. 1 passed; 0 failed; 2 skipped; finished in 6.49ms (5.43ms CPU time)
+
+Ran 3 tests for test/core/XMetroSystem.integration.t.sol:XMetroSystemIntegrationTest
+[PASS] test_CommissionNetRewardFeedsEveryAdapterPathAndPlainClaim() (gas: 1787948)
+[PASS] test_PausedEmergencySettlesOnlyLedgerRewardsAndLeavesBackingUntouched() (gas: 516219)
+[PASS] test_ThorYThorAndContributorPendingUseTheSameRealAdapterPaths() (gas: 2224445)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 13.07ms (3.45ms CPU time)
+
+Ran 28 tests for test/core/BaseQAProtocolMocks.t.sol:BaseQAProtocolMocksTest
+[PASS] testFuzz_V3_TransferRoundUpAndBalanceConservation(uint96) (runs: 256, μ: 401736, ~: 402034)
+[PASS] test_AllPaths_ProtocolCallbackCannotReenterCore() (gas: 1055403)
+[PASS] test_Maple_AlreadyAuthorizedUsesDepositWithNoSignature() (gas: 369196)
+[PASS] test_Maple_AuthorizationPoolDepositRouterReturnAndEventOrder() (gas: 439098)
+[PASS] test_Maple_BatchDepositsOnceAndLeavesDonatedSharesAlone() (gas: 746999)
+[PASS] test_Maple_ERC20AllowanceAndProtocolApprovalEvent() (gas: 423011)
+[PASS] test_Maple_FaultsRollbackNewAuthorizationAndEveryBalance() (gas: 2124398)
+[PASS] test_Maple_InvalidSignatureWrongLenderNonceBitmapAndExpiryRollback() (gas: 1440387)
+[PASS] test_Maple_PermissionConfigurationEventsAndBatchLengths() (gas: 89246)
+[PASS] test_Maple_PoolDepositAndTransferActuallyCheckBitmaps() (gas: 270652)
+[PASS] test_Maple_RevokedSignerAndRouterPermissionsAreEnforced() (gas: 540899)
+[PASS] test_Maple_SignatureCannotReplayAndExactDeadlineIsValidAtRouter() (gas: 310013)
+[PASS] test_Maple_ZeroAndCustomDepositDataAreBothAccepted() (gas: 588702)
+[PASS] test_QAAdminControlsCanBeHandedOver() (gas: 381304)
+[PASS] test_Tokens_DecimalsMintApprovalAndTransfer() (gas: 1724174)
+[PASS] test_V3_BatchSuppliesOnceAndEmitsScaledTransfers() (gas: 803183)
+[PASS] test_V3_FiniteAllowanceTransferFromAndSelfTransfer() (gas: 419370)
+[PASS] test_V3_InterestMintAndFullTransferCollateralDisable() (gas: 391675)
+[PASS] test_V3_ManualCustodyMintSupplyAndNoUserUSDCApproval() (gas: 382289)
+[PASS] test_V3_MintAndFinalizeArePoolOnlyAndIndexCannotDecrease() (gas: 30099)
+[PASS] test_V3_PartialPullOrLowOutputRollsBackRewardsAndShares() (gas: 936962)
+[PASS] test_V3_SecondMintIncludesPreviouslyAccruedInterest() (gas: 401136)
+[PASS] test_V4_BatchSuppliesForEachUserAndConservesShares() (gas: 691203)
+[PASS] test_V4_FourAccountingFaultsAreRejected() (gas: 1621854)
+[PASS] test_V4_InactiveManagerIsNotAuthorizedEvenIfUserApprovalRemains() (gas: 223177)
+[PASS] test_V4_ManualCallsGiverNotAdapterPositionManagerAndLogsBothLayers() (gas: 293903)
+[PASS] test_V4_RegistrationActivationApprovalEventsAndRevocation() (gas: 237609)
+[PASS] test_V4_SecondUserFailureRollsBackWholeBatch() (gas: 781424)
+Suite result: ok. 28 passed; 0 failed; 0 skipped; finished in 94.91ms (111.92ms CPU time)
+
+Ran 14 tests for test/core/XMetroCore.adapter.t.sol:XMetroCoreAdapterFlowTest
+[PASS] testFuzz_RepeatedStrategyAndRouterChangesPreservePendingUntilFreshOptIn(uint8) (runs: 256, μ: 1207190, ~: 1127047)
+[PASS] testFuzz_StrategySettlementPreservesFractionAcrossAllExecutionPaths(bool,bool) (runs: 256, μ: 691946, ~: 692244)
+[PASS] test_AaveV4MinimaStayAlignedAfterCoreFiltersCandidates() (gas: 1527965)
+[PASS] test_AdapterFailureRollsBackRewardDebtAndBothFundTransfers() (gas: 772437)
+[PASS] test_AutoModesRemainMutuallyExclusive() (gas: 126755)
+[PASS] test_BatchFiltersZeroDuplicateNoPendingAndKeepsSourceAlignment() (gas: 707830)
+[PASS] test_ConfigRevisionMakesPreferenceStaleWithoutConsumingPending() (gas: 737492)
+[PASS] test_CoreAutoSwapBatchFiltersAndForwardsAlignedArrays() (gas: 655198)
+[PASS] test_CoreLegacyAutoCompoundBatchUsesSwapMetroAndMintsShares() (gas: 651720)
+[PASS] test_CoreManualClaimUsesFinalProxyAndFixedRecipient() (gas: 436352)
+[PASS] test_OneInchFailureRollsBackPendingDebtPreferenceAndBalances() (gas: 514710)
+[PASS] test_ProxyReplacementInvalidatesPreferenceAndOldProxyLosesConfigAuthority() (gas: 5883149)
+[PASS] test_SingleStepOwnerHandoffMovesAdapterConfigurationAuthority() (gas: 124212)
+[PASS] test_UUPSUpgradeWithPendingRequiresFreshOptInAndRetainsConfiguration() (gas: 5410026)
+Suite result: ok. 14 passed; 0 failed; 0 skipped; finished in 2.34s (2.53s CPU time)
+
+Ran 3 tests for test/core/XMetroCore.adapter.invariant.t.sol:XMetroCoreAdapterInvariantTest
+[PASS] invariant_AdapterExecutionNeverDisturbsMetroBacking() (runs: 128, calls: 12800, reverts: 0)
+
+╭-----------------------------------+---------------------+-------+---------+----------╮
+| Contract                          | Selector            | Calls | Reverts | Discards |
++======================================================================================+
+| XMetroCoreAdapterInvariantHandler | claim               | 2606  | 0       | 0        |
+|-----------------------------------+---------------------+-------+---------+----------|
+| XMetroCoreAdapterInvariantHandler | depositRewards      | 2520  | 0       | 0        |
+|-----------------------------------+---------------------+-------+---------+----------|
+| XMetroCoreAdapterInvariantHandler | executeAutoCompound | 2536  | 0       | 0        |
+|-----------------------------------+---------------------+-------+---------+----------|
+| XMetroCoreAdapterInvariantHandler | executeAutoSwap     | 2519  | 0       | 0        |
+|-----------------------------------+---------------------+-------+---------+----------|
+| XMetroCoreAdapterInvariantHandler | switchMode          | 2619  | 0       | 0        |
+╰-----------------------------------+---------------------+-------+---------+----------╯
+
+[PASS] invariant_AtMostOneAutomaticPreferenceIsActivePerUser() (runs: 128, calls: 12800, reverts: 0)
+
+╭-----------------------------------+---------------------+-------+---------+----------╮
+| Contract                          | Selector            | Calls | Reverts | Discards |
++======================================================================================+
+| XMetroCoreAdapterInvariantHandler | claim               | 2606  | 0       | 0        |
+|-----------------------------------+---------------------+-------+---------+----------|
+| XMetroCoreAdapterInvariantHandler | depositRewards      | 2520  | 0       | 0        |
+|-----------------------------------+---------------------+-------+---------+----------|
+| XMetroCoreAdapterInvariantHandler | executeAutoCompound | 2536  | 0       | 0        |
+|-----------------------------------+---------------------+-------+---------+----------|
+| XMetroCoreAdapterInvariantHandler | executeAutoSwap     | 2519  | 0       | 0        |
+|-----------------------------------+---------------------+-------+---------+----------|
+| XMetroCoreAdapterInvariantHandler | switchMode          | 2619  | 0       | 0        |
+╰-----------------------------------+---------------------+-------+---------+----------╯
+
+[PASS] invariant_RewardTokenConservationAcrossClaimsAndBothAutomaticPaths() (runs: 128, calls: 12800, reverts: 0)
+
+╭-----------------------------------+---------------------+-------+---------+----------╮
+| Contract                          | Selector            | Calls | Reverts | Discards |
++======================================================================================+
+| XMetroCoreAdapterInvariantHandler | claim               | 2606  | 0       | 0        |
+|-----------------------------------+---------------------+-------+---------+----------|
+| XMetroCoreAdapterInvariantHandler | depositRewards      | 2520  | 0       | 0        |
+|-----------------------------------+---------------------+-------+---------+----------|
+| XMetroCoreAdapterInvariantHandler | executeAutoCompound | 2536  | 0       | 0        |
+|-----------------------------------+---------------------+-------+---------+----------|
+| XMetroCoreAdapterInvariantHandler | executeAutoSwap     | 2519  | 0       | 0        |
+|-----------------------------------+---------------------+-------+---------+----------|
+| XMetroCoreAdapterInvariantHandler | switchMode          | 2619  | 0       | 0        |
+╰-----------------------------------+---------------------+-------+---------+----------╯
+
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 2.34s (6.16s CPU time)
+
+Ran 4 tests for test/core/XMetroDeposit.invariant.t.sol:XMetroDepositInvariantTest
+[PASS] invariant_ThreeDepositPathsConserveRewardAndReceiptBalances() (runs: 128, calls: 12800, reverts: 0)
+
+╭-------------------------+----------------+-------+---------+----------╮
+| Contract                | Selector       | Calls | Reverts | Discards |
++=======================================================================+
+| DepositInvariantHandler | depositRewards | 6329  | 0       | 0        |
+|-------------------------+----------------+-------+---------+----------|
+| DepositInvariantHandler | execute        | 6471  | 0       | 0        |
+╰-------------------------+----------------+-------+---------+----------╯
+
+[PASS] testFuzz_MapleBatchVariableShareRateAndAuthorizationNonce(uint16,bool) (runs: 256, μ: 642279, ~: 608358)
+[PASS] testFuzz_V3BatchAcrossNormalizedIncomeIndices(uint8) (runs: 256, μ: 657592, ~: 657592)
+[PASS] testFuzz_V4BatchMinimaAndRevokedManagerRollback(uint96,uint8) (runs: 256, μ: 593635, ~: 617384)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 4.38s (4.81s CPU time)
+
+Ran 6 test suites in 4.38s (9.17s CPU time): 53 tests passed, 0 failed, 2 skipped (55 total tests)

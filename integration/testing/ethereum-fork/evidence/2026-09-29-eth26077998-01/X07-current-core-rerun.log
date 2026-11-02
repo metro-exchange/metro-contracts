@@ -1,0 +1,44 @@
+Compiling 3 files with Solc 0.8.30
+Solc 0.8.30 finished in 4.17s
+Compiler run successful!
+
+Ran 18 tests for test/fork-v2/mainnet/DeploymentGovernance.t.sol:DeploymentGovernanceMainnetTest
+[PASS] test_E01_ArtifactSizesAndProxySlots() (gas: 3161422)
+[PASS] test_E01_ExplicitPauseConfigurationAndSingleStepOwnership() (gas: 142718)
+[PASS] test_E01_FormalCreateAndReadback() (gas: 141374)
+Logs:
+  METRO: 0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f
+  Core: 0x2e234DAe75C793f67A35089C9d99245E1C58470b
+  Adapter implementation: 0xF62849F9A0B5Bf2913b396098F7c7019b51A820a
+  Adapter proxy: 0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9
+  Distributor: 0xc7183455a4C133Ae270771860664b6B7ec320bB1
+  Escrow: 0xa0Cb889707d426A7A386870A03bc70d1b0697598
+  Commission Vault: 0x1d1499e622D69689cdf9004d05Ec547d650Ff211
+
+[PASS] test_E01_InitializerAndBindingGuards() (gas: 81358)
+[PASS] test_E01_RealUsdcAndNewMetroUniswapV2Liquidity() (gas: 2919746)
+Logs:
+  V2 METRO/USDC pair: 0x32Bab2E53d9081a3Cac251CcEb8faF09548528e3
+  THOR funding EOA: 0x02d9E8506ba56d3F9bE6007f712720EEaDAc5FdC
+  yTHOR funding EOA: 0x46e3A8C8135647b48B2e82198E42E0C69EacbAb8
+  V2 quote for 100 USDC: 98715803439706129885
+
+[PASS] test_E09_AdapterRescueRequiresCurrentOwnerAndPause() (gas: 148623)
+[PASS] test_E09_CoreAndEscrowPauseBoundaries() (gas: 132114)
+[PASS] test_E09_DistributorRescueOwnerOnly() (gas: 78002)
+[PASS] test_E09_OwnershipSemanticsAndIsolatedRenounce() (gas: 3113023)
+[PASS] test_E09_PauseAllowsReadsApprovalsAndDisable() (gas: 210745)
+[PASS] test_E09_PauseBlocksNormalUserMoneyPaths() (gas: 381558)
+[PASS] test_E09_ProtectedTokensAndLegitimateRescue() (gas: 236053)
+[PASS] test_E23_EmergencyFilteringAndOverOneHundredUsers() (gas: 12512276)
+Logs:
+  Emergency 101 users business-call gas: 5796843
+
+[PASS] test_E23_EmergencyInsufficientBalanceRollsBackWholeBatch() (gas: 540799)
+[PASS] test_E23_EmergencyOwnerPauseAndRealPending() (gas: 528474)
+[PASS] test_E23_EmergencyPreservesAllPrincipalLedgers() (gas: 957085)
+[PASS] test_E23_ReplaceAutoCompoundOperatorUsesNewKeeper() (gas: 3373193)
+[PASS] test_E23_ReplaceEscrowAndDistributorRevokesOldRoles() (gas: 3070202)
+Suite result: ok. 18 passed; 0 failed; 0 skipped; finished in 335.31ms (35.26ms CPU time)
+
+Ran 1 test suite in 352.88ms (335.31ms CPU time): 18 tests passed, 0 failed, 0 skipped (18 total tests)

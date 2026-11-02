@@ -1,0 +1,15 @@
+Compiling 1 files with Solc 0.8.30
+Solc 0.8.30 finished in 2.22s
+Compiler run successful!
+
+Ran 4 tests for test/fork-v2/mainnet/AaveV3Deposit.t.sol:AaveV3DepositMainnetTest
+[PASS] test_E18_BatchSingleSupplyScaledConservationAndDonations() (gas: 1267924)
+[PASS] test_E18_ConfigUpdateChangesActualPoolReferral() (gas: 629357)
+[PASS] test_E18_ManualRealSupplyReserveBindingAndReferral() (gas: 624770)
+Logs:
+  Aave V3 manual scaled aUSDC: 84216698
+
+[PASS] test_E18_MinimumAndDisableRollbackThenResume() (gas: 963318)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 228.95ms (9.84ms CPU time)
+
+Ran 1 test suite in 241.67ms (228.95ms CPU time): 4 tests passed, 0 failed, 0 skipped (4 total tests)

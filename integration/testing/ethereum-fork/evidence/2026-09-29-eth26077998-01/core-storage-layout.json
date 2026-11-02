@@ -1,0 +1,404 @@
+{
+  "storage": [
+    {
+      "astId": 483,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "_balances",
+      "offset": 0,
+      "slot": "0",
+      "type": "t_mapping(t_address,t_uint256)"
+    },
+    {
+      "astId": 489,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "_allowances",
+      "offset": 0,
+      "slot": "1",
+      "type": "t_mapping(t_address,t_mapping(t_address,t_uint256))"
+    },
+    {
+      "astId": 491,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "_totalSupply",
+      "offset": 0,
+      "slot": "2",
+      "type": "t_uint256"
+    },
+    {
+      "astId": 493,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "_name",
+      "offset": 0,
+      "slot": "3",
+      "type": "t_string_storage"
+    },
+    {
+      "astId": 495,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "_symbol",
+      "offset": 0,
+      "slot": "4",
+      "type": "t_string_storage"
+    },
+    {
+      "astId": 1625,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "_paused",
+      "offset": 0,
+      "slot": "5",
+      "type": "t_bool"
+    },
+    {
+      "astId": 8,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "_owner",
+      "offset": 1,
+      "slot": "5",
+      "type": "t_address"
+    },
+    {
+      "astId": 156,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "_pendingOwner",
+      "offset": 0,
+      "slot": "6",
+      "type": "t_address"
+    },
+    {
+      "astId": 6885,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "totalLockedShares",
+      "offset": 0,
+      "slot": "7",
+      "type": "t_uint256"
+    },
+    {
+      "astId": 6887,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "accRewardPerShare",
+      "offset": 0,
+      "slot": "8",
+      "type": "t_uint256"
+    },
+    {
+      "astId": 6889,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "_accYThorRewardPerPrincipal",
+      "offset": 0,
+      "slot": "9",
+      "type": "t_uint256"
+    },
+    {
+      "astId": 6949,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "rewardDistributor",
+      "offset": 0,
+      "slot": "10",
+      "type": "t_address"
+    },
+    {
+      "astId": 6951,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "deFiAdapter",
+      "offset": 0,
+      "slot": "11",
+      "type": "t_address"
+    },
+    {
+      "astId": 6953,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "deFiAdapterEpoch",
+      "offset": 20,
+      "slot": "11",
+      "type": "t_uint64"
+    },
+    {
+      "astId": 6955,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "migrationEscrow",
+      "offset": 0,
+      "slot": "12",
+      "type": "t_address"
+    },
+    {
+      "astId": 6960,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "autoCompoundOperators",
+      "offset": 0,
+      "slot": "13",
+      "type": "t_mapping(t_address,t_bool)"
+    },
+    {
+      "astId": 6965,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "autocompoundEnabled",
+      "offset": 0,
+      "slot": "14",
+      "type": "t_mapping(t_address,t_bool)"
+    },
+    {
+      "astId": 6970,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "_autoStrategyPreferences",
+      "offset": 0,
+      "slot": "15",
+      "type": "t_mapping(t_address,t_struct(AutoStrategyPreference)6937_storage)"
+    },
+    {
+      "astId": 6975,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "lockedShares",
+      "offset": 0,
+      "slot": "16",
+      "type": "t_mapping(t_address,t_uint256)"
+    },
+    {
+      "astId": 6977,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "yThorRewardWeightBps",
+      "offset": 0,
+      "slot": "17",
+      "type": "t_uint256"
+    },
+    {
+      "astId": 6979,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "_totalActiveYThorPrincipal",
+      "offset": 0,
+      "slot": "18",
+      "type": "t_uint256"
+    },
+    {
+      "astId": 6984,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "rewardDebt",
+      "offset": 0,
+      "slot": "19",
+      "type": "t_mapping(t_address,t_int256)"
+    },
+    {
+      "astId": 6991,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "_unstakeRequestsFree",
+      "offset": 0,
+      "slot": "20",
+      "type": "t_mapping(t_address,t_array(t_struct(UnstakeRequest)6914_storage)dyn_storage)"
+    },
+    {
+      "astId": 6997,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "_unstakeRequestsThor",
+      "offset": 0,
+      "slot": "21",
+      "type": "t_mapping(t_address,t_array(t_struct(UnstakeRequest)6914_storage)dyn_storage)"
+    },
+    {
+      "astId": 7003,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "_unstakeRequestsYThor",
+      "offset": 0,
+      "slot": "22",
+      "type": "t_mapping(t_address,t_array(t_struct(UnstakeRequest)6914_storage)dyn_storage)"
+    },
+    {
+      "astId": 7009,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "_unstakeRequestsContributor",
+      "offset": 0,
+      "slot": "23",
+      "type": "t_mapping(t_address,t_array(t_struct(UnstakeRequest)6914_storage)dyn_storage)"
+    },
+    {
+      "astId": 7014,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "unstakeCursorFree",
+      "offset": 0,
+      "slot": "24",
+      "type": "t_mapping(t_address,t_uint256)"
+    },
+    {
+      "astId": 7018,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "unstakeCursorThor",
+      "offset": 0,
+      "slot": "25",
+      "type": "t_mapping(t_address,t_uint256)"
+    },
+    {
+      "astId": 7022,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "unstakeCursorYThor",
+      "offset": 0,
+      "slot": "26",
+      "type": "t_mapping(t_address,t_uint256)"
+    },
+    {
+      "astId": 7026,
+      "contract": "src/xMETRO.sol:xMETRO",
+      "label": "unstakeCursorContributor",
+      "offset": 0,
+      "slot": "27",
+      "type": "t_mapping(t_address,t_uint256)"
+    }
+  ],
+  "types": {
+    "t_address": {
+      "encoding": "inplace",
+      "label": "address",
+      "numberOfBytes": "20"
+    },
+    "t_array(t_struct(UnstakeRequest)6914_storage)dyn_storage": {
+      "encoding": "dynamic_array",
+      "label": "struct xMETRO.UnstakeRequest[]",
+      "numberOfBytes": "32",
+      "base": "t_struct(UnstakeRequest)6914_storage"
+    },
+    "t_bool": {
+      "encoding": "inplace",
+      "label": "bool",
+      "numberOfBytes": "1"
+    },
+    "t_bytes32": {
+      "encoding": "inplace",
+      "label": "bytes32",
+      "numberOfBytes": "32"
+    },
+    "t_int256": {
+      "encoding": "inplace",
+      "label": "int256",
+      "numberOfBytes": "32"
+    },
+    "t_mapping(t_address,t_array(t_struct(UnstakeRequest)6914_storage)dyn_storage)": {
+      "encoding": "mapping",
+      "key": "t_address",
+      "label": "mapping(address => struct xMETRO.UnstakeRequest[])",
+      "numberOfBytes": "32",
+      "value": "t_array(t_struct(UnstakeRequest)6914_storage)dyn_storage"
+    },
+    "t_mapping(t_address,t_bool)": {
+      "encoding": "mapping",
+      "key": "t_address",
+      "label": "mapping(address => bool)",
+      "numberOfBytes": "32",
+      "value": "t_bool"
+    },
+    "t_mapping(t_address,t_int256)": {
+      "encoding": "mapping",
+      "key": "t_address",
+      "label": "mapping(address => int256)",
+      "numberOfBytes": "32",
+      "value": "t_int256"
+    },
+    "t_mapping(t_address,t_mapping(t_address,t_uint256))": {
+      "encoding": "mapping",
+      "key": "t_address",
+      "label": "mapping(address => mapping(address => uint256))",
+      "numberOfBytes": "32",
+      "value": "t_mapping(t_address,t_uint256)"
+    },
+    "t_mapping(t_address,t_struct(AutoStrategyPreference)6937_storage)": {
+      "encoding": "mapping",
+      "key": "t_address",
+      "label": "mapping(address => struct xMETRO.AutoStrategyPreference)",
+      "numberOfBytes": "32",
+      "value": "t_struct(AutoStrategyPreference)6937_storage"
+    },
+    "t_mapping(t_address,t_uint256)": {
+      "encoding": "mapping",
+      "key": "t_address",
+      "label": "mapping(address => uint256)",
+      "numberOfBytes": "32",
+      "value": "t_uint256"
+    },
+    "t_string_storage": {
+      "encoding": "bytes",
+      "label": "string",
+      "numberOfBytes": "32"
+    },
+    "t_struct(AutoStrategyPreference)6937_storage": {
+      "encoding": "inplace",
+      "label": "struct xMETRO.AutoStrategyPreference",
+      "numberOfBytes": "64",
+      "members": [
+        {
+          "astId": 6928,
+          "contract": "src/xMETRO.sol:xMETRO",
+          "label": "strategyId",
+          "offset": 0,
+          "slot": "0",
+          "type": "t_bytes32"
+        },
+        {
+          "astId": 6930,
+          "contract": "src/xMETRO.sol:xMETRO",
+          "label": "adapterEpoch",
+          "offset": 0,
+          "slot": "1",
+          "type": "t_uint64"
+        },
+        {
+          "astId": 6932,
+          "contract": "src/xMETRO.sol:xMETRO",
+          "label": "logicEpoch",
+          "offset": 8,
+          "slot": "1",
+          "type": "t_uint64"
+        },
+        {
+          "astId": 6934,
+          "contract": "src/xMETRO.sol:xMETRO",
+          "label": "domainRevision",
+          "offset": 16,
+          "slot": "1",
+          "type": "t_uint64"
+        },
+        {
+          "astId": 6936,
+          "contract": "src/xMETRO.sol:xMETRO",
+          "label": "strategyRevision",
+          "offset": 24,
+          "slot": "1",
+          "type": "t_uint64"
+        }
+      ]
+    },
+    "t_struct(UnstakeRequest)6914_storage": {
+      "encoding": "inplace",
+      "label": "struct xMETRO.UnstakeRequest",
+      "numberOfBytes": "32",
+      "members": [
+        {
+          "astId": 6911,
+          "contract": "src/xMETRO.sol:xMETRO",
+          "label": "amount",
+          "offset": 0,
+          "slot": "0",
+          "type": "t_uint128"
+        },
+        {
+          "astId": 6913,
+          "contract": "src/xMETRO.sol:xMETRO",
+          "label": "unlockTime",
+          "offset": 16,
+          "slot": "0",
+          "type": "t_uint64"
+        }
+      ]
+    },
+    "t_uint128": {
+      "encoding": "inplace",
+      "label": "uint128",
+      "numberOfBytes": "16"
+    },
+    "t_uint256": {
+      "encoding": "inplace",
+      "label": "uint256",
+      "numberOfBytes": "32"
+    },
+    "t_uint64": {
+      "encoding": "inplace",
+      "label": "uint64",
+      "numberOfBytes": "8"
+    }
+  }
+}

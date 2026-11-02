@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "chainId": 8453,
+  "environment": "base-project-qa",
+  "status": "pending_fresh_deployment",
+  "deploymentRunId": "base-qa-project-20260930",
+  "contracts": {
+    "METRO": null,
+    "xMETRO": null,
+    "RewardDistributor": null,
+    "ThorMigrationEscrow": null,
+    "XMetroDeFiAdapterImplementation": null,
+    "XMetroDeFiAdapterProxy": null,
+    "CommissionVault": null
+  },
+  "tokens": {
+    "TestUSDC": null,
+    "TestTHOR": null,
+    "TestYTHOR": null,
+    "TestUSDT": null,
+    "TestWBTC": null,
+    "TestGHO": null,
+    "TestXAUT": null,
+    "TestExtraToken": null,
+    "TestSyrupUSDC": null
+  },
+  "protocolMocks": {
+    "MockAaveV3Pool": null,
+    "MockScaledAToken": null,
+    "MockAaveV4Spoke": null,
+    "MockAaveV4Giver": null,
+    "MockPoolPermissionManager": null,
+    "MockSyrupRouter": null
+  },
+  "routers": { "uniswapV2": null, "uniswapV3": null, "oneInch": null },
+  "v2Pairs": {
+    "METRO": null,
+    "TestUSDT": null,
+    "TestWBTC": null,
+    "TestGHO": null,
+    "TestXAUT": null,
+    "TestSyrupUSDC": null,
+    "TestExtraToken": null
+  },
+  "roles": {
+    "deployer": null,
+    "owner": null,
+    "testTokenOwner": null,
+    "mockOwner": null,
+    "rewardOperator": null,
+    "keeper": null,
+    "contributor": null,
+    "mockMapleSigner": null,
+    "vaultOwner": null,
+    "vaultOperator": null,
+    "vaultGuardian": null
+  },
+  "migration": {
+    "startTime": null,
+    "deadlineThor": null,
+    "deadlineYThor": null,
+    "ratioThor": null,
+    "ratioYThor": null,
+    "capThor": null,
+    "capYThor": null,
+    "forfeitureRecipient": null,
+    "initialYThorRewardWeightBps": null
+  },
+  "deploymentTransactions": {},
+  "commission": { "vaultBound": null, "maxCommissionSplitBps": null },
+  "timeConstantsSeconds": {
+    "unstakeDelay": 1800,
+    "thorExitDelay": 3600,
+    "thorExitFullTime": 10800,
+    "yThorExitDelay": 14400,
+    "yThorExitRamp": 43200,
+    "contributorCliff": 21600,
+    "contributorDuration": 21600
+  },
+  "note": "This file intentionally contains no historical QA contract addresses. Fill it only after the new Base deployment and on-chain verification."
+}

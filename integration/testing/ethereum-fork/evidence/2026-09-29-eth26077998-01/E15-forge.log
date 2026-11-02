@@ -1,0 +1,9 @@
+No files changed, compilation skipped
+
+Ran 3 tests for test/fork-v2/mainnet/MigrationExit.t.sol:MigrationExitMainnetTest
+[PASS] test_E15_AllFourQueuesExcludedEvenAfterMaturity() (gas: 996784)
+[PASS] test_E15_EmptyPartiallyConsumedAndClosedPreview() (gas: 848888)
+[PASS] test_E15_MixedPositionsPreviewIsSourceSum() (gas: 628436)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 249.33ms (10.91ms CPU time)
+
+Ran 1 test suite in 264.98ms (249.33ms CPU time): 3 tests passed, 0 failed, 0 skipped (3 total tests)

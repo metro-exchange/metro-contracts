@@ -1,0 +1,55 @@
+No files changed, compilation skipped
+
+Ran 5 tests for test/fork-v2/mainnet/DeploymentGovernance.t.sol:DeploymentGovernanceMainnetTest
+[PASS] test_E01_ArtifactSizesAndProxySlots() (gas: 3271855)
+[PASS] test_E01_DefaultPauseConfigurationAndTwoStepOwnership() (gas: 156778)
+[PASS] test_E01_FormalCreateAndReadback() (gas: 141347)
+Logs:
+  METRO: 0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f
+  Core: 0x2e234DAe75C793f67A35089C9d99245E1C58470b
+  Adapter implementation: 0xF62849F9A0B5Bf2913b396098F7c7019b51A820a
+  Adapter proxy: 0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9
+  Distributor: 0xc7183455a4C133Ae270771860664b6B7ec320bB1
+  Escrow: 0xa0Cb889707d426A7A386870A03bc70d1b0697598
+  Commission Vault: 0x1d1499e622D69689cdf9004d05Ec547d650Ff211
+
+[PASS] test_E01_InitializerAndBindingGuards() (gas: 81369)
+[PASS] test_E01_RealUsdcAndNewMetroUniswapV2Liquidity() (gas: 2919306)
+Logs:
+  V2 METRO/USDC pair: 0x32Bab2E53d9081a3Cac251CcEb8faF09548528e3
+  THOR funding EOA: 0x02d9E8506ba56d3F9bE6007f712720EEaDAc5FdC
+  yTHOR funding EOA: 0x46e3A8C8135647b48B2e82198E42E0C69EacbAb8
+  V2 quote for 100 USDC: 98715803439706129885
+
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 287.99ms (4.64ms CPU time)
+
+Ran 23 tests for test/fork-v2/mainnet/TokenStakeRewards.t.sol:TokenStakeRewardsMainnetTest
+[PASS] test_E02_Erc20TransfersAndAllowances() (gas: 158174)
+[PASS] test_E02_IsolatedGlobalCapAndInvalidMint() (gas: 1328235)
+[PASS] test_E02_MetadataAndInitialSupply() (gas: 27015)
+[PASS] test_E02_MinterGrantRevokeAndOwnerNotMinter() (gas: 79236)
+[PASS] test_E02_PermitNonceDomainExpiryReplayAndWrongSigner() (gas: 85819)
+[PASS] test_E03_LockedSharesAreNotTransferableErc20() (gas: 274083)
+[PASS] test_E03_MixedSharesTransferFromConservation() (gas: 596377)
+[PASS] test_E03_SelfZeroAllowanceAndPauseBoundaries() (gas: 233623)
+[PASS] test_E03_TransferPreservesOldPendingAndMovesFutureWeight() (gas: 525051)
+[PASS] test_E04_Exact72HourFreeWithdrawalBoundary() (gas: 344569)
+[PASS] test_E04_InvalidStakeAndUnstakeAmounts() (gas: 195135)
+[PASS] test_E04_QueuePaginationAndEmptySemantics() (gas: 368100)
+[PASS] test_E04_RequestUnstakePreservesOldPending() (gas: 516921)
+[PASS] test_E04_StakeAndEnableAutocompoundAtomicity() (gas: 504714)
+[PASS] test_E04_StakeOneToOneAndOldPending() (gas: 455754)
+[PASS] test_E05_ClaimAllAndRepeatedZero() (gas: 522382)
+[PASS] test_E05_ClaimableManyAndDuplicateQuoteBoundary() (gas: 479196)
+[PASS] test_E05_DistributeFromBalance() (gas: 319547)
+[PASS] test_E05_MixedSharesStakeTransferUnstakeAccounting() (gas: 728458)
+[PASS] test_E05_OperatorAndDistributorAccess() (gas: 376737)
+[PASS] test_E05_OperatorDistributeUsesRealUsdc() (gas: 451032)
+Logs:
+  Core USDC after distribute: 100000000
+
+[PASS] test_E05_TinyRewardsRoundingAndNoOverclaim() (gas: 758355)
+[PASS] test_E05_ZeroWeightAndZeroDeltaRevertWithoutFundsLoss() (gas: 432839)
+Suite result: ok. 23 passed; 0 failed; 0 skipped; finished in 292.13ms (35.13ms CPU time)
+
+Ran 2 test suites in 297.01ms (580.11ms CPU time): 28 tests passed, 0 failed, 0 skipped (28 total tests)

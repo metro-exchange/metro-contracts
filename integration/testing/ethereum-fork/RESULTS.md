@@ -1,0 +1,255 @@
+# Ethereum Mainnet Fork Results and Evidence
+
+## November 3, 2026: Sherlock Issue #24
+
+Local, uncommitted production update based on `c922a293131f6ccccb80820c9b787b8d4ae43f72`. The only business-source change is `XMetroCoreLogic._thorExitRateBps()`: THOR pays a fixed 50% of converted principal between its two milestones and 100% from maturity. Production milestones remain 30 and 90 days. yTHOR keeps its existing linear curve. No Git commit, GitHub push, deployment, token transfer or permission change was performed.
+
+| Local validation | Passed | Failed | Skipped |
+| --- | ---: | ---: | ---: |
+| Business regression (unit/mock/fuzz/invariant) | 164 | 0 | 0 |
+| Core profile | 60 | 0 | 2 |
+| Adapter profile | 46 | 0 | 2 |
+| Deployment-script profile | 1 | 0 | 0 |
+| Production migration/exit and deployment/governance fork suites | 41 | 0 | 0 |
+| Total executed checks | 312 | 0 | 4 |
+
+The four optional pinned Ethereum/Base deployment tests in the Core/Adapter profiles were skipped with their RPC variables explicitly empty, and are not counted as passes.
+The separate production fork run executed `MigrationExitMainnetTest` (23 passed) and `DeploymentGovernanceMainnetTest` (18 passed), using the rebuilt Core/Adapter artifacts and Ethereum block `26,077,998`, hash `0xb75cb3bedaa74adf79199d847c94bbca4724d092da355d3e13c354773e2eb2aa`. This is a local fork run, not an on-chain deployment or a rerun of every protocol suite.
+
+Core runtime/initcode are **23,505 / 25,182 bytes**, previously 23,551 / 25,228; initcode excludes constructor arguments. Runtime remains below the unchanged 23,552-byte project limit and 24,576-byte EIP-170 limit. Core and deployment-profile bytecode match. Adapter runtime/initcode remain **20,755 / 20,958 bytes**.
+
+All four exported Core/Adapter/Escrow/Distributor ABIs match the new artifacts and their own pre-change baselines, including constructors, functions, errors and events. Core storage fields, slots and types are unchanged (31 top-level fields); the namespaced position structures are untouched. Source hashes in compiler metadata match the local files. Solidity 0.8.38, Osaka, optimizer settings and profile configuration are unchanged.
+
+New and updated assertions cover both fixed levels and adjacent-second boundaries; liquid and stake exits; matching events and forfeiture balances; independent position clocks; aggregate previews; 1/3-wei rounding and conservation; one-time closure; historical rewards; and delayed withdrawals retaining their original queued amount. Existing yTHOR, treasury exclusion and reward-precision regressions passed.
+
+The existing CI formatting command, formatting of all changed Solidity files, JavaScript syntax checks and `git diff --check` passed locally. All changed tracked files contain no Chinese text. GitHub CI was not run for this uncommitted update. Detailed logs and source/artifact manifests are retained outside the repository.
+
+Changed CoreLogic source SHA-256:
+
+```text
+2613ab11062afadf72b79a22debac47a36d79b594520e6ffc9bfd17ee90e10fd
+```
+
+Reproduction with the matching source and installed dependencies; point `SOLC_0838` to the native Solidity 0.8.38 binary used for the build:
+
+```sh
+SOLC_0838=/absolute/path/to/solc-0.8.38
+FOUNDRY_PROFILE=adapter forge build --offline --use "$SOLC_0838" --sizes
+FOUNDRY_PROFILE=core forge build --offline --use "$SOLC_0838" --sizes
+FOUNDRY_PROFILE=deploy forge build --offline --use "$SOLC_0838" --sizes
+ETH_RPC_URL= BASE_RPC_URL= FOUNDRY_PROFILE=regression forge test --offline --use "$SOLC_0838" -vv
+ETH_RPC_URL= BASE_RPC_URL= FOUNDRY_PROFILE=core forge test --offline --use "$SOLC_0838" -vv
+ETH_RPC_URL= BASE_RPC_URL= FOUNDRY_PROFILE=adapter forge test --offline --use "$SOLC_0838" -vv
+ETH_RPC_URL= BASE_RPC_URL= FOUNDRY_PROFILE=deployment-test forge test --offline --use "$SOLC_0838" -vv
+FOUNDRY_PROFILE=fork-v2 forge build --offline --use "$SOLC_0838"
+```
+
+Actual production fork scope:
+
+```sh
+ETH_RPC_URL=https://eth.drpc.org BASE_RPC_URL= FOUNDRY_PROFILE=fork-v2 \
+  forge test --offline --use "$SOLC_0838" \
+  --match-contract '^(MigrationExitMainnetTest|DeploymentGovernanceMainnetTest)$' --threads 2 -vv
+```
+
+## October 24, 2026: yTHOR exit rates and treasury migration exclusion
+
+Local, uncommitted source update on `xmetro-v2`, based on `bc7db02b19cef17c42dd829c856ddc026cfbd218`. No Git commit, GitHub push, deployment, token transfer or permission change was performed. The tested source digests and artifact information are in the [manifest](evidence/2026-10-24-ythor-treasury/manifest.json); commands and actual outputs are in the [validation log](evidence/2026-10-24-ythor-treasury/validation.log).
+
+| Validation | Result |
+| --- | --- |
+| Business regression, including unit/mock/fuzz/invariant tests | 146 passed, 0 failed, 0 skipped |
+| Core profile | 53 passed, 0 failed, 2 skipped |
+| Adapter profile | 43 passed, 0 failed, 2 skipped |
+| Deployment script profile | 1 passed, 0 failed, 0 skipped |
+| Production migration/reward/governance fork suites | 49 passed, 0 failed, 0 skipped |
+| Exact CI formatting and edited verification script | Passed |
+| ABI | Only `migrationRewardExcludedAddress()` added; existing methods, constructor and events unchanged |
+| Storage layout | Existing fields unchanged; one excluded-THOR-principal counter appended |
+
+The four optional pinned ETH/Base deployment tests were skipped in the Core/Adapter profiles because their RPC variables were unset; they are not counted as passes. The production fork used Ethereum block `26,077,998` and real token contracts on a local fork. QA retains its accelerated timing and is validated by its own local suites.
+
+Core runtime: **23,510 bytes**, below the unchanged **23,552-byte** project limit, with **42 bytes** remaining. Constructor bytecode before arguments: **25,146 bytes**. Adapter runtime remains **20,487 bytes**. The [compiled storage layout](evidence/2026-10-24-ythor-treasury/core-storage-layout.json) preserves reward accumulators at slots 7 and 8. Build tools: Forge 1.7.1 and solc 0.8.30, using the existing profiles.
+
+New coverage includes 0.5-ratio real Escrow migrations; 20%-100% payouts and 1-wei boundaries; migration-only treasury exclusion with ordinary/Contributor/transferred shares; independent reward models; exit-to-stake without retroactive rewards; all Core reward settlement routes; Distributor rollback and commission-only routing; and excluded-principal rollback after mint failure. The invariant fixture now gives its handler TestUSDC mint authority and seeds successful deposits, claims and treasury exits so reward conservation is not vacuous.
+
+
+
+## October 21 update: multi-position migration and precision
+
+Baseline: `ee72ce51529824682bea4092e8f7791f4731ee4b` plus the local uncommitted changes recorded in the [manifest](evidence/2026-10-21-multi-migration/manifest.json). The three changed business sources are `ThorMigrationEscrow.sol`, `XMetroCoreLogic.sol`, and `xMETRO.sol`. Production yTHOR now reaches 50% at migration + 120 days + 4 * 365 days. QA retains its 4-hour delay and 12-hour ramp. Both variants preserve fractional reward debt and use indexed migration positions.
+
+| Suite | Passed | Failed | Skipped | Evidence |
+| --- | ---: | ---: | ---: | --- |
+| regression | 131 | 0 | 0 | [Log](evidence/2026-10-21-multi-migration/regression.log) |
+| core | 53 | 0 | 2 | [Log](evidence/2026-10-21-multi-migration/core.log) |
+| adapter | 43 | 0 | 2 | [Log](evidence/2026-10-21-multi-migration/adapter.log) |
+| deployment | 1 | 0 | 0 | [Log](evidence/2026-10-21-multi-migration/deployment.log) |
+| fork-current | 89 | 0 | 0 | [Log](evidence/2026-10-21-multi-migration/fork-current.log) |
+| fork-protocols | 67 | 0 | 0 | [Log](evidence/2026-10-21-multi-migration/fork-protocols.log) |
+
+The production Ethereum fork suites passed all 156 tests (89 directly affected/accounting tests and 67 protocol/cross-source regressions) at block 26,077,998. E-05.07, E-07.02 and E-14.07 were rerun successfully, including the former F-01 continuous-compound failure.
+
+Core runtime is **22,921 bytes**, under the unchanged **23,552-byte** project limit; constructor bytecode is 24,500 bytes before arguments. Adapter runtime remains 20,487 bytes. Local CREATE/deployment-script tests passed. Four optional pinned ETH/Base deployment tests were skipped because RPC variables were explicitly unset in local profiles; these are not represented as passing tests.
+
+Coverage added to existing test files includes repeated migrations and cap rollback, stable IDs and independent clocks, out-of-order exits and queues, exact yTHOR quarter/boundary payouts, reward fractions in all four settlement helpers, transfers and negative debt, mixed accumulators, an independent accrual reference model, and funded-liability invariants. Fuzz tests use 256 runs; invariant campaigns use 128 runs at depth 100. The former balance-shortfall exceptions were removed from the Adapter invariant handler.
+
+ABI export/signature checks, changed-file formatting, example syntax, zero/large position ID encoding, all four indexed events, and English-only changed-file checks passed. QA Maple script arguments are `16/0/0`; the current deployed addresses, token balances and permissions were not changed. Old F-01 and Base N-04 evidence below remains historical; no new Base acceptance is claimed.
+
+Reproduction from the matching tree after dependencies are installed:
+
+```sh
+FOUNDRY_PROFILE=adapter forge build --offline
+FOUNDRY_PROFILE=core forge build --offline
+FOUNDRY_PROFILE=regression forge test --offline
+FOUNDRY_PROFILE=core forge test --offline
+FOUNDRY_PROFILE=adapter forge test --offline
+FOUNDRY_PROFILE=deployment-test forge test --offline
+FOUNDRY_PROFILE=fork-v2 forge build --offline
+```
+
+Production fork execution only:
+
+```sh
+ETH_RPC_URL=https://eth.drpc.org FOUNDRY_PROFILE=fork-v2 forge test --offline --match-path 'test/fork-v2/mainnet/*.t.sol' -vv
+```
+
+These commands execute locally. They do not broadcast transactions. Historical gas studies and Affiliate coverage were not repeated.
+
+## Historical execution record
+
+This file reports the recorded execution for the [functional checklist](CHECKLIST.md). All transactions occurred on a **local fork**, never on Ethereum mainnet. Check the source/artifact manifest when comparing these results with a later build; a changed source tree is not automatically covered by an older log.
+
+## Recorded run
+
+| Item | Recorded value |
+| --- | --- |
+| Run ID | `2026-09-29-eth26077998-01` |
+| Chain and fork block | Ethereum, chain ID `1`, block `26,077,998` |
+| Block hash | `0xb75cb3bedaa74adf79199d847c94bbca4724d092da355d3e13c354773e2eb2aa` |
+| Block timestamp | `1790623139` |
+| Build | `solc 0.8.30`, Osaka EVM, Core/Adapter optimizer 50 runs, `via_ir=true`; full hashes in [manifest.json](evidence/2026-09-29-eth26077998-01/manifest.json) |
+| Complete 15-suite run | **155 passed, 1 failed, 0 skipped** out of 156; [actual Forge log](evidence/2026-09-29-eth26077998-01/current-mainnet-suite-rerun.log) |
+| Functional checkpoints | **140/143 accepted**; E-05.07, E-07.02 and E-14.07 remain open because of F-01 |
+| Additional cross-check | X-03 partly covered, not accepted as a full real-protocol matrix |
+| Batch gas matrix | **40/45** size/path cells produced successful local receipts; five cells have no successful receipt |
+
+The principal command was:
+
+```bash
+ETH_RPC_URL=<Ethereum RPC> FOUNDRY_PROFILE=fork-v2 \
+  forge test --match-path 'test/fork-v2/mainnet/*.t.sol' -vv
+```
+
+The [fork block readback](evidence/2026-09-29-eth26077998-01/fork-block.json), [version provenance](evidence/2026-09-29-eth26077998-01/continuation-provenance.json), [Core layout](evidence/2026-09-29-eth26077998-01/core-storage-layout.json), and [Adapter layout](evidence/2026-09-29-eth26077998-01/adapter-storage-layout.json) are retained. Historical test functions for the superseded two-step Owner/default-paused design are not counted as current ownership evidence. The current business code uses one-step ownership and does not pause Core in its constructor; later focused regression and artifact checks are recorded in [the current-Core log](evidence/2026-09-29-eth26077998-01/X07-current-core-rerun.log) and [artifact log](evidence/2026-09-29-eth26077998-01/X07-current-release-artifacts.log). These focused reruns do not turn the failed full-suite assertion into a pass.
+
+On 2026-09-30 the 15-suite command above was also rerun against the then-current production source using the public Ethereum RPC: 155 passed, 1 failed, 0 skipped. The same `test_E07_ManualIndependentOfAutoPreference` transfer-balance failure remained. This review rerun was not saved as a new release manifest or full log; the linked manifest identifies the earlier recorded build, not every later source edit. A new full-fork log and manifest are not required for this source upload.
+
+## Project deployment and real assets
+
+The test normally CREATE-deployed fresh METRO, Core, Escrow, Distributor, Adapter implementation, ERC1967 Proxy and a Vault from the supplied source. The recorded local addresses include Core `0x2e234DAe75C793f67A35089C9d99245E1C58470b`, Proxy `0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9`, Distributor `0xc7183455a4C133Ae270771860664b6B7ec320bB1`, and Escrow `0xa0Cb889707d426A7A386870A03bc70d1b0697598`. These are deterministic **local fork addresses**, not production deployments.
+
+USDC, THOR and yTHOR were transferred from accounts with actual balances at the fork block; see [source-account readbacks](evidence/2026-09-29-eth26077998-01/real-token-sources.json). The test did not replace those token contracts or write balance/allowance storage. Fresh METRO was minted by its authorized Minter. The new METRO/USDC V2 pair was funded through the real Router. Its test liquidity and price are not proposed production liquidity.
+
+## Functional evidence index
+
+The links below point to actual Forge logs and test files. A log for a group may contain several test functions; the [checklist](CHECKLIST.md) defines the acceptance scope.
+
+| Checks | Test file(s) | Evidence and outcome |
+| --- | --- | --- |
+| E-01–E-05 | `DeploymentGovernance.t.sol`, `TokenStakeRewards.t.sol` | [Focused base log](evidence/2026-09-29-eth26077998-01/E01-E05-forge.log): 28 passed; E-05's tiny-reward sample passed, but the broader rounding check remains open after F-01. |
+| E-06 | `ContributorVesting.t.sol` | [Cliff/linear/queue log](evidence/2026-09-29-eth26077998-01/E06-forge.log): 8 passed. The known zero-yield cursor rollback was observed, not fixed. |
+| E-07–E-08 | `AutoCompound.t.sol` | [Compound log](evidence/2026-09-29-eth26077998-01/E07-E08-forge.log): 9 passed, 1 failed (E-07.02/F-01). Real V2 succeeded on the other paths. |
+| E-09, E-23 | `DeploymentGovernance.t.sol` | [Governance/emergency log](evidence/2026-09-29-eth26077998-01/E01-E09-E23-forge.log): 18 passed. A 101-user emergency distribution is a Forge transaction, not a separate Anvil gas-matrix receipt. |
+| E-10–E-13 | `MigrationExit.t.sol` | [Real THOR/yTHOR migration and exit log](evidence/2026-09-29-eth26077998-01/E10-E13-forge.log): 20 passed. |
+| E-14 | `YThorRewardWeight.t.sol` | [Weight log](evidence/2026-09-29-eth26077998-01/E14-forge.log): 7 focused tests passed; E-14.07 remains open because the related global reward-debt sequence fails elsewhere. |
+| E-15 | `MigrationExit.t.sol` | [Aggregate preview log](evidence/2026-09-29-eth26077998-01/E15-forge.log): 3 passed. |
+| E-16 | `CommissionRouting.t.sol` | [New Vault integration log](evidence/2026-09-29-eth26077998-01/E16-forge.log): 7 passed. This does not audit the Vault's internal payout implementation. |
+| E-17 | `SwapRoutes.t.sol`, `OneInchSwap.t.sol` | [V2/V3 log](evidence/2026-09-29-eth26077998-01/E17-V2-V3-forge.log), [five-output 1inch log](evidence/2026-09-29-eth26077998-01/E17-X02-X04-final-forge.log), and [website route data](evidence/2026-09-29-eth26077998-01/oneinch-gas-proxy-five-routes.json). Ordinary swap only; no Affiliate acceptance. |
+| E-18 | `AaveV3Deposit.t.sol` | [Real Pool/aUSDC log](evidence/2026-09-29-eth26077998-01/E18-forge.log): 4 passed. |
+| E-19 | `AaveV4GiverDeposit.t.sol` | [Official Giver/Spoke log](evidence/2026-09-29-eth26077998-01/E19-forge.log): 7 passed. The Giver was already registered/active; no simulated Aave administrator approval. |
+| E-20 | `MapleDeposit.t.sol` | [Real Router/syrupUSDC log](evidence/2026-09-29-eth26077998-01/E20-forge.log): 6 passed, with [actual API authorization data](evidence/2026-09-29-eth26077998-01/maple-api-response.json) for this Proxy. |
+| E-21–E-22, X-05 | `AdapterLifecycle.t.sol` | [Complete lifecycle rerun](evidence/2026-09-29-eth26077998-01/X05-E21-E22-forge.log): 14 passed; [new-Proxy Maple authorization](evidence/2026-09-29-eth26077998-01/maple-new-proxy-api-response.json) was obtained separately. |
+| X-01, X-06 | `CrossSourcePaths.t.sol`, `CommissionNetPaths.t.sol` | [Cross-source and commission-net log](evidence/2026-09-29-eth26077998-01/X01-X06-five-swaps-forge.log). |
+| X-02, X-04 | Protocol suites | [Five-swap negative/event rerun](evidence/2026-09-29-eth26077998-01/E17-X02-X04-final-forge.log) and protocol logs above. |
+| X-07 | Release checks | [Artifact verification](evidence/2026-09-29-eth26077998-01/X07-current-release-artifacts.log) and [current-Core rerun](evidence/2026-09-29-eth26077998-01/X07-current-core-rerun.log). |
+
+The Aave V3 test used Pool `0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2` and aUSDC `0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c`. The Aave V4 test used official Giver `0x17A54b8d6D9C68e7fa1C7112AC998EA1BA51d11e`, Spoke `0x94e7A5dCbE816e498b89aB752661904E2F56c485`, and USDC reserve ID `7`. The Maple test used Router `0x134cCaaA4F1e4552eC8aEcb9E4A2360dDcF8df76` and syrupUSDC `0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b`. These are fork-block-specific integration targets, not a claim that they will stay unchanged.
+
+## F-01: reward-debt rounding failure
+
+In `test_E07_ManualIndependentOfAutoPreference`, successive successful compounding actions are followed by a real Distributor injection of `10,000,000` USDC base units. `claimable(user)` returns `10,000,001`, while Core holds only `10,000,000`. The next compound reverts when Core attempts to transfer the extra unit. The trace and assertions are in the [E-07/E-08 log](evidence/2026-09-29-eth26077998-01/E07-E08-forge.log) and the [complete-suite log](evidence/2026-09-29-eth26077998-01/current-mainnet-suite-rerun.log). This is a demonstrated accounting problem, not a missing RPC credential. The observed root-cause candidate is separately rounded reward-debt updates for changed share balances. No fix is claimed in this record. E-05.07, E-07.02, and E-14.07 stay open, and gas receipts on affected sequences do not prove balance-sheet correctness.
+
+X-03 has real atomic-reversion evidence for V4 last-user revocation/minimum failure and other total-minimum or permission failures, but does not cover every requested last-user failure mode on the real 1inch/V3/Maple paths. Mock fault injection is separate evidence and has not been relabeled as real-protocol success.
+
+## 1inch and Affiliate boundary
+
+The five target assets were exercised with calldata obtained from the public 1inch website for the tested Proxy, amount and output asset. Input/output balances, recipient, supported `swap` selector, Router call and events were checked, including [one detailed USDT trace](evidence/2026-09-29-eth26077998-01/E17-USDT-event-trace.log). The public route is **not** proof of an Affiliate fee or referrer payment. No credentialed, fee-bearing Business API response was available for this run. Tests for unknown selectors or incompatible routes must remain negative tests, not claimed successful Affiliate executions.
+
+## Gas receipts and limits
+
+The gas harness used a local Anvil fork and submitted actual transactions to `127.0.0.1`. The [receipt audit](evidence/2026-09-29-eth26077998-01/gas-receipt-audit.json) and [batch receipt records](evidence/2026-09-29-eth26077998-01/G01-G09-anvil-receipts.json) distinguish successful receipts from estimates, retries and capacity failures. Successful size/path cells total **40 of 45**. The five missing cells are Auto-Swap syrupUSDC/200, Aave V3/200, Aave V4/100 and /200, and Maple/200. Aave V4/100 exceeded the single-transaction gas allowance at estimation; the V4/200 estimate reverted without a conclusive independent cause. Do not split a V4 Core batch into multiple transactions to label either cell passed.
+
+Example 100-user successful gas used on the recorded routes: Auto-Compound `5,114,294` for the first batch and `3,370,094` for a later batch; Auto-Swap USDT `7,471,923`/`4,051,923`; WBTC `7,322,861`/`3,902,857`; GHO `7,239,705`/`3,801,552`. See the raw receipt records for the other paths, versions and prior balances. The Auto-Compound later state can still exhibit F-01; successful receipt status is not an accounting acceptance.
+
+The original gas study and later XAUT retry did not always use identical Core artifacts; the [artifact variant record](evidence/2026-09-29-eth26077998-01/gas-artifact-variants.json) separates them. Do not mix their gas figures as one exact build. Public RPC timeouts also affected some retries, and those attempts remain in the evidence rather than being converted into passes.
+
+## October 30 local remediation: Sherlock #13
+
+Validated locally with Solidity 0.8.30 before the subsequent compiler/ownership remediations. No commit, publication or on-chain transaction was made. Tracked sources were copied to an isolated directory using the existing local dependencies; untracked diagnostic tests were excluded and preserved.
+
+| Command (FOUNDRY_PROFILE) | Result |
+| --- | --- |
+| adapter: forge test -vv | 45 passed, 0 failed, 2 RPC-dependent tests skipped |
+| core: forge test -vv | 59 passed, 0 failed, 2 RPC-dependent tests skipped |
+| regression: forge test -vv | 146 passed, 0 failed |
+| deploy: forge build --sizes | Passed |
+| deployment-test: forge test -vv | 1 scenario suite passed, 0 failed |
+| fork-v2: forge build | Passed; actual mainnet fork scenarios not run |
+| Node syntax and local stub-provider assertions | Passed: all DEX envelope encodings agree with cast, version/binding/cap rejection, eligible candidates and unchanged quote data |
+
+Adapter runtime/initcode: 20,574/20,777 bytes. Core runtime remains 23,510 bytes. Existing size limits were retained. Core and Adapter ABI comparisons against the delivered JSON were equal; the Adapter storage namespace/canary regression passed and no storage fields were changed. No ETH_RPC_URL or BASE_RPC_URL was available, so RPC-dependent tests are not claimed as passed. Final combined remediation artifacts must be revalidated after later changes.
+
+
+## October 30 combined local remediation: Sherlock #13/#15/#16/#17/#19
+
+All five remediations are implemented locally. The existing #22/#23 behavior remains in place and is covered by the regression suites. This record describes the combined working tree before submission. At that validation stage, no GitHub operation, deployment, broadcast or chain transaction was performed.
+
+Validation used Forge with official `solc@0.8.38` solc-js (`0.8.38+commit.1835d247`) through an external standard-JSON wrapper passed to `--use`, with the repository's pinned Osaka profiles. A local copy contained all tracked inputs and the existing dependencies; unrelated untracked diagnostics were excluded and preserved. The validated `out-core`, `out-adapter` and `out-deploy` artifacts were also refreshed locally; these generated directories remain ignored.
+
+Source/configuration SHA-256: `2f9445a38e006e6fd9e639bf915df3684434ad2d50ee4698929c404d2e2c8227`. This hashes the sorted tracked `src/**/*.sol` files and `foundry.toml`, concatenating each relative path, NUL, raw file bytes and NUL. It is a working-tree fingerprint, not a commit hash.
+
+| Command (FOUNDRY_PROFILE; same compiler wrapper) | Final result |
+| --- | --- |
+| core: forge build --sizes | Passed; original size limits retained |
+| adapter: forge build --sizes | Passed |
+| adapter: forge test -vv | 46 passed, 0 failed, 2 RPC tests skipped |
+| core: forge test -vv | 60 passed, 0 failed, 2 RPC tests skipped |
+| regression: forge test -vv | 161 passed, 0 failed |
+| deploy: forge build --sizes | Passed; Core/Token/Escrow/Distributor bytecode and ABI match the core-profile artifacts |
+| deployment-test: forge test -vv | 1 scenario suite passed, 0 failed |
+| fork-v2: forge build | Passed; protocol fork execution was not performed |
+| Forge formatting, git diff --check and Node syntax | Passed |
+| Local JS assertions | Passed: DEX encodings agree with cast; version/binding/cap rejection, candidate filtering and saved quotes |
+
+Total: **268 passed, 0 failed, 4 skipped** across the four test profiles. Fuzz and invariant runs are included in those counts. The deployment scenario suite covers unaccepted/partially accepted/completed handovers, a deployer who is also the target owner, live verification with historical pending snapshots, and Adapter upgrade/replacement checks.
+
+Core runtime/initcode: **23,551/25,228 bytes**. Adapter runtime/initcode: **20,755/20,958 bytes**. Initcode lengths exclude constructor arguments. The Core budget remains 23,552 bytes and the EIP-170 limit remains 24,576. Shared internal staking and bounded withdrawal-counter increments keep Core within that budget; return values, events, historical rewards, failed opt-in rollback and queue limits were tested.
+
+AST comparison confirmed that all 42 former string-error checks retain their conditions and order, with zero business string errors left in `src/`. Four delivered business ABIs match the final artifacts; Adapter ABI is unchanged, and no error-selector collision was found. Layout changes are limited to the expected Ownable2Step pending-owner field and resulting shifts; the yTHOR accumulator is at slot 9. Adapter storage namespace/canary tests passed. Constructor/initializer event tests include stored values, zero weight/start cases as applicable, proxy emitters, disabled initial strategies and rejected reinitialization.
+
+No ETH_RPC_URL or BASE_RPC_URL was available. The four skipped tests require those RPCs, and real mainnet protocol execution/target-chain instruction compatibility remains unverified for this build. Historical protocol, address, gas and transaction evidence above is preserved and is not relabeled as validation of the new source. Current Base on-chain checkboxes remain unchecked.
+
+## Per-issue submission validation (October 30)
+
+Each row is a separately tested complete source state. Production stages follow the audit submission order; Base QA uses one combined change. All rows use the unchanged project size budgets. This table records local validation, not protocol-fork or on-chain acceptance.
+
+| Stage | Tests passed / failed / RPC skipped | Core runtime / initcode | Adapter runtime / initcode |
+| --- | --- | --- | --- |
+| #13 | 251 / 0 / 4 | 23,510 / 25,146 | 20,574 / 20,777 |
+| #16 | 254 / 0 / 4 | 23,496 / 25,112 | 20,707 / 20,910 |
+| #15 | 262 / 0 / 4 | 23,551 / 25,176 | 20,707 / 20,910 |
+| #17 | 265 / 0 / 4 | 23,551 / 25,176 | 20,707 / 20,910 |
+| #19 | 268 / 0 / 4 | 23,551 / 25,228 | 20,755 / 20,958 |
+
+Every stage passed the Adapter/Core/regression/deployment-script test profiles, deploy and fork-test compilation, ABI and error-selector checks, deployment artifact comparisons, formatting and JavaScript client assertions. No RPC URL was available: the four RPC-dependent deployment tests were skipped, and real-protocol fork execution was not performed.

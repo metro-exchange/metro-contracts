@@ -1,0 +1,260 @@
+{
+  "runId": "2026-09-29-eth26077998-gas-1790671939411",
+  "generatedAtUtc": "2026-09-29T08:52:19.411Z",
+  "rpc": "http://127.0.0.1:8546",
+  "fork": {
+    "anvil": {
+      "currentBlockNumber": "0x18deb2e",
+      "currentBlockTimestamp": 1790623139,
+      "currentBlockHash": "0xb75cb3bedaa74adf79199d847c94bbca4724d092da355d3e13c354773e2eb2aa",
+      "hardFork": "Osaka",
+      "transactionOrder": "fees",
+      "environment": {
+        "baseFee": "0xb129df60",
+        "chainId": 1,
+        "gasLimit": "0x2255100",
+        "gasPrice": "0xecc4a960"
+      },
+      "forkConfig": {
+        "forkUrl": "https://eth.drpc.org",
+        "forkBlockNumber": 26077998,
+        "forkRetryBackoff": 1000
+      }
+    },
+    "fixedBlock": {
+      "number": 26077998,
+      "hash": "0xb75cb3bedaa74adf79199d847c94bbca4724d092da355d3e13c354773e2eb2aa",
+      "timestamp": 1790623139
+    }
+  },
+  "deployment": {
+    "owner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "metro": "0x19D64A98dF9C628dF51f41A48b9d9e56A8b4a471",
+    "core": "0x1E2c6e631C5822b0fd8Fa74C10b895F49a7D4879",
+    "implementation": "0x4e9F205D87641156321e08Da681491ED8A233903",
+    "proxy": "0x2169b1ec8eF2B10FBcE8ca50d064B6F64D3dfDb0",
+    "distributor": "0xaCa4fC74fedB583075a5073690DaaD6657499E8A",
+    "escrow": "0x5B5E8dD4fcE2EbF8416aB9a1aA7c24a0963808eC",
+    "vault": "0xFb826aC61DDDB5Fffb5EF79Eb2234755DeF3AE6B",
+    "usdcFundingHolder": "0x28C6c06298d514Db089934071355E5743bf21d60",
+    "usdcFundingTransaction": "0x4fda2e6c32256321b7d581eb9dd89a22708a14cdd338dacb17a1ebb1aaeea045"
+  },
+  "sources": {
+    "out-core/metro.sol/MetroToken.json": "857da31cb449b917f582648b2924f3d77815f373d24f75f940969481708036f3",
+    "out-core/xMETRO.sol/xMETRO.json": "128fdc390fe8430bde1a64a75adf07bf9ca733256766b997fbb1d59abb4e7b87",
+    "out-core/RewardDistributor.sol/RewardDistributor.json": "b9d31b8af38f49d4d5c08d8942e39d5aaa0b67295be001bee950cbbe66de3fbc",
+    "out-core/ThorMigrationEscrow.sol/ThorMigrationEscrow.json": "bb99eab14f20064a72a719cc4c26e63d4d908911b4e7dd390197c7cbb052021a",
+    "out-adapter/XMetroDeFiAdapter.sol/XMetroDeFiAdapter.json": "fd6e6a4e68304e5875ff3071b7ed78f9dec9a5b19131263c0cd034d29f7e539c",
+    "out-deploy/ERC1967Proxy.sol/ERC1967Proxy.json": "24e9f8a4571dae59cfc0ff3387e6ee118adae51cf90f459e30a75783aa30f443",
+    "out-fork-v2/CommissionVault.sol/CommissionVault.json": "bd5a03c37673a5062b1ad2c27ff72bd0fb707d13c6259a3af6d681d1e9324bf5"
+  },
+  "external": {
+    "maple": {
+      "bitmap": 16,
+      "deadline": 1790758338,
+      "v": 28,
+      "r": "f56320f1e47261e16e887daf203273248ebc1446899e9b579b17cf1a55cfdbc3",
+      "s": "0b588ac0fbac8fd8155797475b0f2d46b232c7a49a39a0f60da4aa98b2f3858e"
+    },
+    "oneInchSyrup": {
+      "calldata": "0x07ed2379000000000000000000000000111116053f09d34a7eae8102887004445176ca11000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb4800000000000000000000000080ac24aa929eaf5013f6436cda2a7ba190f5cc0b000000000000000000000000111116053f09d34a7eae8102887004445176ca110000000000000000000000002169b1ec8ef2b10fbce8ca50d064b6f64d3dfdb00000000000000000000000000000000000000000000000000000000005f5e1000000000000000000000000000000000000000000000000000000000004fa44ec0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000012000000000000000000000000000000000000000000000000000000000000000f00000000000000000000000000000000000000000d20000a400008a00001a0020d6bdbf78a0b86991c6218b36c1d19d4a2e9eb0ce3606eb485120134ccaaa4f1e4552ec8aecb9e4a2360ddcf8df76a0b86991c6218b36c1d19d4a2e9eb0ce3606eb480004c9630cb00000000000000000000000000000000000000000000000000000000000000000303a31696e6368000000000000000000000000000000000000000000000000000020d6bdbf7880ac24aa929eaf5013f6436cda2a7ba190f5cc0b80a06c4eca2780ac24aa929eaf5013f6436cda2a7ba190f5cc0b111111125421ca6dc452d289314280a0f8842a6500000000000000000000000000000000",
+      "minReturn": "83510508",
+      "sha256": "184e8576c0d7945c75d1ba9bb4e56d9812eb65b546fa256c706a79c56a44d278",
+      "request": {
+        "id": "6d80006a-6e87-452a-ac33-28b62439a6e5:0",
+        "fromTokenAddress": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "toTokenAddress": "0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b",
+        "fromTokenAmount": "100000000",
+        "expectedReturnAmount": "84354049",
+        "slippage": 1,
+        "walletAddress": "0x28C6c06298d514Db089934071355E5743bf21d60",
+        "gasPrice": "1055656324",
+        "enableEstimate": false,
+        "destReceiver": "0x2169b1ec8eF2B10FBcE8ca50d064B6F64D3dfDb0"
+      }
+    }
+  },
+  "blockedPaths": {},
+  "samples": [
+    {
+      "g": "G-01",
+      "path": "compound",
+      "users": 1,
+      "rewardTotal": "100000000",
+      "perUserStakeMetro": "1000000000000000000",
+      "state": {
+        "first": {
+          "status": "passed",
+          "strategy": null,
+          "transactionHash": "0x20f5f6bcbef9543f6a08bae298e4288138dff8e57084ddc798363b9922fb97a4",
+          "receiptStatus": 1,
+          "blockNumber": 26078035,
+          "estimatedGas": "363120",
+          "gasLimit": "465744",
+          "gasUsed": "288748",
+          "gasPrice": "1028653935",
+          "effectiveGasPrice": "1028653935",
+          "costEth": "0.00029702176642338",
+          "blockGasLimit": "36000000",
+          "singleTransactionGasLimit": "16777216",
+          "firstUserPendingAfter": "0",
+          "lastUserPendingAfter": "0",
+          "adapterSpenderAllowanceAfter": "0"
+        }
+      },
+      "error": "batch left pending for first or last user"
+    },
+    {
+      "g": "G-06",
+      "path": "syrup",
+      "users": 1,
+      "rewardTotal": "100000000",
+      "perUserStakeMetro": "1000000000000000000",
+      "state": {
+        "first": {
+          "status": "passed",
+          "strategy": "0x4c2099c6751737ef88b7bf900edea0241bc04f848dcc5319335992a2d80d7253",
+          "transactionHash": "0xfb3b19e65d043748553ddd7fc164a1f1b26f5f85b362123661f9d1be17e81f03",
+          "receiptStatus": 1,
+          "blockNumber": 26078035,
+          "estimatedGas": "742966",
+          "gasLimit": "921559",
+          "gasUsed": "584302",
+          "gasPrice": "1014803479",
+          "effectiveGasPrice": "1014803479",
+          "costEth": "0.000592951702386658",
+          "blockGasLimit": "36000000",
+          "singleTransactionGasLimit": "16777216",
+          "firstUserPendingAfter": "0",
+          "lastUserPendingAfter": "0",
+          "adapterSpenderAllowanceAfter": "0"
+        },
+        "existing": {
+          "status": "passed",
+          "strategy": "0x4c2099c6751737ef88b7bf900edea0241bc04f848dcc5319335992a2d80d7253",
+          "transactionHash": "0xb1846a472351132f38f0ff35d21ee1090f637fea285e7b8fc936c82320f71d45",
+          "receiptStatus": 1,
+          "blockNumber": 26078037,
+          "estimatedGas": "708219",
+          "gasLimit": "879862",
+          "gasUsed": "552882",
+          "gasPrice": "1011398922",
+          "effectiveGasPrice": "1011398922",
+          "costEth": "0.000559184258793204",
+          "blockGasLimit": "36000000",
+          "singleTransactionGasLimit": "16777216",
+          "firstUserPendingAfter": "0",
+          "lastUserPendingAfter": "0",
+          "adapterSpenderAllowanceAfter": "0"
+        }
+      }
+    },
+    {
+      "g": "G-07",
+      "path": "v3",
+      "users": 1,
+      "rewardTotal": "100000000",
+      "perUserStakeMetro": "1000000000000000000",
+      "state": {
+        "first": {
+          "status": "passed",
+          "strategy": "0x639e7097c961b301f380e51bdbde53531dd2fa8ac1c7842a02f00550ee5e4b78",
+          "transactionHash": "0x5fe36a4a98587a8ea2ffdb1ea465f4415b453403f997ccd568b235ed3ecb662b",
+          "receiptStatus": 1,
+          "blockNumber": 26078035,
+          "estimatedGas": "442730",
+          "gasLimit": "561276",
+          "gasUsed": "364077",
+          "gasPrice": "1007684857",
+          "effectiveGasPrice": "1007684857",
+          "costEth": "0.000366874879681989",
+          "blockGasLimit": "36000000",
+          "singleTransactionGasLimit": "16777216",
+          "firstUserPendingAfter": "0",
+          "lastUserPendingAfter": "0",
+          "adapterSpenderAllowanceAfter": "0"
+        },
+        "existing": {
+          "status": "passed",
+          "strategy": "0x639e7097c961b301f380e51bdbde53531dd2fa8ac1c7842a02f00550ee5e4b78",
+          "transactionHash": "0xc65146e374aff5912d17c28bf84357ca573369c85b7306e1e428377a4eccffbf",
+          "receiptStatus": 1,
+          "blockNumber": 26078037,
+          "estimatedGas": "383877",
+          "gasLimit": "490652",
+          "gasUsed": "303718",
+          "gasPrice": "1005907172",
+          "effectiveGasPrice": "1005907172",
+          "costEth": "0.000305512114465496",
+          "blockGasLimit": "36000000",
+          "singleTransactionGasLimit": "16777216",
+          "firstUserPendingAfter": "0",
+          "lastUserPendingAfter": "0",
+          "adapterSpenderAllowanceAfter": "0"
+        }
+      }
+    },
+    {
+      "g": "G-08",
+      "path": "v4",
+      "users": 1,
+      "rewardTotal": "100000000",
+      "perUserStakeMetro": "1000000000000000000",
+      "state": {
+        "first": {
+          "status": "passed",
+          "strategy": "0x0ca9ad727775cdaa863c38b6423cc0b23ffd14f302085ad8a239b7bbd5b9d0b6",
+          "transactionHash": "0xa438fb234684445b1deb75808e28f26e31c3adadca9f4edda70e54184f8ae3e9",
+          "receiptStatus": 1,
+          "blockNumber": 26078036,
+          "estimatedGas": "414547",
+          "gasLimit": "527456",
+          "gasUsed": "325513",
+          "gasPrice": "1003479216",
+          "effectiveGasPrice": "1003479216",
+          "costEth": "0.000326645530037808",
+          "blockGasLimit": "36000000",
+          "singleTransactionGasLimit": "16777216",
+          "firstUserPendingAfter": "0",
+          "lastUserPendingAfter": "0",
+          "adapterSpenderAllowanceAfter": "0"
+        },
+        "existing": {
+          "status": "passed",
+          "strategy": "0x0ca9ad727775cdaa863c38b6423cc0b23ffd14f302085ad8a239b7bbd5b9d0b6",
+          "transactionHash": "0x91db35d3abf22d18f7c9bae3447a6349d4ef117a519910dbf6e4d984b3b625b6",
+          "receiptStatus": 1,
+          "blockNumber": 26078038,
+          "estimatedGas": "376300",
+          "gasLimit": "481560",
+          "gasUsed": "298153",
+          "gasPrice": "1002673577",
+          "effectiveGasPrice": "1002673577",
+          "costEth": "0.000298950135003281",
+          "blockGasLimit": "36000000",
+          "singleTransactionGasLimit": "16777216",
+          "firstUserPendingAfter": "0",
+          "lastUserPendingAfter": "0",
+          "adapterSpenderAllowanceAfter": "0"
+        }
+      }
+    },
+    {
+      "g": "G-09",
+      "path": "maple",
+      "users": 1,
+      "rewardTotal": "100000000",
+      "perUserStakeMetro": "1000000000000000000",
+      "state": {},
+      "error": "execution reverted: custom error 0xc52a9bd3"
+    }
+  ],
+  "unavailableOneInchAssets": {
+    "G-02": "USDT: official frontend PMM signature binds quoted EOA; exclusion returns unsupported selector",
+    "G-03": "WBTC: official frontend PMM signature binds quoted EOA; exclusion returns unsupported selector",
+    "G-04": "GHO: official frontend returns unsupported selector",
+    "G-05": "XAUT: official frontend returns unsupported selector",
+    "evidence": "oneinch-frontend-eoa-wallet-proxy-receiver.json; oneinch-frontend-excluding-pmm.json"
+  },
+  "completedAtUtc": "2026-09-29T08:52:54.292Z"
+}

@@ -1,0 +1,23 @@
+No files changed, compilation skipped
+
+Ran 14 tests for test/fork-v2/mainnet/AdapterLifecycle.t.sol:AdapterLifecycleMainnetTest
+[PASS] test_E21_DisableDepositStrategiesAdvancesOwnRevisions() (gas: 598795)
+[PASS] test_E21_LiveConfigReadbackAndRevisionRules() (gas: 615122)
+[PASS] test_E21_LogicEpochInvalidatesAutoButManualStillExecutes() (gas: 5752177)
+[PASS] test_E21_ManualAutoFlagsAndPreferenceSeparation() (gas: 1022188)
+[PASS] test_E21_OnlyCurrentOperationalCoreCanExecute() (gas: 598021)
+[PASS] test_E21_RealRouterChangeExecutesOnNewRouter() (gas: 684600)
+[PASS] test_E21_RealV4SpokeChangeOnlyExpiresV4AndNeedsNewPermission() (gas: 1555325)
+[PASS] test_E21_StrategyAndRouterRevisionExpireOnlyAffectedUsers() (gas: 1029872)
+[PASS] test_E21_TwoStepOwnerAuthorityAndUpgrade() (gas: 5082584)
+[PASS] test_E22_ReplacementKeepsGiverPermissionButRequiresNewMapleSignature() (gas: 7371137)
+[PASS] test_E22_UupsKeepsRealGiverAndMapleAuthorizations() (gas: 6711184)
+[PASS] test_E22_UupsStorageAndFailureMatrix() (gas: 5680500)
+[PASS] test_E22_WholeProxyReplacementAndOldProxyRescue() (gas: 11996580)
+Logs:
+  replacement Proxy for Maple signer: 0x03A6a84cD762D9707A21605b548aaaB891562aAb
+
+[PASS] test_X05_FullConfigurationAndPreferenceAcrossUpgradeAndReplacement() (gas: 12240628)
+Suite result: ok. 14 passed; 0 failed; 0 skipped; finished in 223.75ms (35.57ms CPU time)
+
+Ran 1 test suite in 230.18ms (223.75ms CPU time): 14 tests passed, 0 failed, 0 skipped (14 total tests)

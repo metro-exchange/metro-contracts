@@ -1,0 +1,103 @@
+{
+  "rpc": "http://127.0.0.1:8555",
+  "forkBlock": 26077998,
+  "forkHash": "0xb75cb3bedaa74adf79199d847c94bbca4724d092da355d3e13c354773e2eb2aa",
+  "sourceFile": "integration/testing/ethereum-fork/evidence/2026-09-29-eth26077998-01/G05-G06-G09-blast-retry.json",
+  "sourceSha256": "00bfe29af08582e3a6928a09c6f8f7bd43d1907fb8140f6eae6862485753553d",
+  "core": "0x1E2c6e631C5822b0fd8Fa74C10b895F49a7D4879",
+  "proxy": "0x2169b1ec8eF2B10FBcE8ca50d064B6F64D3dfDb0",
+  "users": 200,
+  "gasCap": "16777216",
+  "rewardTotal": "100000000",
+  "mapleAuthorization": {
+    "bitmap": 16,
+    "deadline": 1790764389,
+    "v": 28,
+    "r": "0x9d3405108128a0b1975382cfb6f30b4a43323db1b8fd61362e31da9bb6aee7a4",
+    "s": "0x5d197b47aa1799ad2a508b7420349c5d4fef7b9c0d20a36b88f784b1c3c5d2e0"
+  },
+  "states": {
+    "first": {
+      "transactionHash": "0x44df7aecbf7a08959346fdc9b75cb62d054f0e7090f12673889b70aee6dea84e",
+      "receiptStatus": 0,
+      "blockNumber": 26078834,
+      "gasLimit": "16777216",
+      "gasUsed": "16493178",
+      "gasPrice": "1000000008",
+      "effectiveGasPrice": "1000000008",
+      "costEth": "0.016493178131945424",
+      "firstUserPendingBefore": "500000",
+      "firstUserPendingAfter": "500000",
+      "lastUserPendingAfter": "500000",
+      "adapterSpenderAllowanceAfter": "0",
+      "rawReceipt": {
+        "type": "0x0",
+        "status": "0x0",
+        "cumulativeGasUsed": "0xfbaa7a",
+        "logs": [],
+        "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "transactionHash": "0x44df7aecbf7a08959346fdc9b75cb62d054f0e7090f12673889b70aee6dea84e",
+        "transactionIndex": "0x0",
+        "blockHash": "0xeedbcd487f3ab713b8c339a3eaddc4a64b263b3ead67896fa43622089f7e8548",
+        "blockNumber": "0x18dee72",
+        "gasUsed": "0xfbaa7a",
+        "effectiveGasPrice": "0x3b9aca08",
+        "blobGasPrice": "0x1",
+        "from": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+        "to": "0x1e2c6e631c5822b0fd8fa74c10b895f49a7d4879",
+        "contractAddress": null,
+        "blockTimestamp": 1790624313
+      }
+    }
+  },
+  "error": "business reverted first",
+  "diagnostic": {
+    "transactionTrace": {
+      "rootError": "execution reverted",
+      "rootGasUsed": "0xfbaa7a",
+      "failures": [
+        {
+          "depth": 0,
+          "to": "0x1e2c6e631c5822b0fd8fa74c10b895f49a7d4879",
+          "error": "execution reverted",
+          "gas": "0xfe82d0",
+          "gasUsed": "0xfbaa7a"
+        },
+        {
+          "depth": 1,
+          "to": "0x2169b1ec8ef2b10fbce8ca50d064b6f64d3dfdb0",
+          "error": "execution reverted",
+          "gas": "0x897ef3",
+          "gasUsed": "0x8757ff"
+        },
+        {
+          "depth": 2,
+          "to": "0x4e9f205d87641156321e08da681491ed8a233903",
+          "error": "execution reverted",
+          "gas": "0x874d01",
+          "gasUsed": "0x874bb6"
+        },
+        {
+          "depth": 3,
+          "to": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+          "error": "out of gas",
+          "gas": "0x8ad2",
+          "gasUsed": "0x8ad2"
+        }
+      ]
+    },
+    "readOnlyAboveCap": {
+      "method": "debug_traceCall",
+      "gasProvided": "30000000",
+      "gasUsed": "17481928",
+      "error": null,
+      "note": "Read-only diagnostic; not a valid single-transaction success under EIP-7825."
+    }
+  },
+  "afterFailedBusiness": {
+    "firstPending": "500000",
+    "lastPending": "500000",
+    "coreUsdc": "100000000",
+    "adapterAllowance": "0"
+  }
+}

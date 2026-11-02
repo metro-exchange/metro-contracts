@@ -1,0 +1,23 @@
+{
+  "USDC": {
+    "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    "holder": "0x28C6c06298d514Db089934071355E5743bf21d60",
+    "decimals": "6",
+    "holder_balance_raw": "51951297920 [5.195e10]",
+    "holder_code": "0x"
+  },
+  "THOR": {
+    "token": "0xa5f2211B9b8170F694421f2046281775E8468044",
+    "holder": "0x02d9E8506ba56d3F9bE6007f712720EEaDAc5FdC",
+    "decimals": "18",
+    "holder_balance_raw": "2767676829479058934867968 [2.767e24]",
+    "holder_code": "0x"
+  },
+  "yTHOR": {
+    "token": "0x8793CD69895C45b2d2474236b3Cb28FC5C764775",
+    "holder": "0x46e3A8C8135647b48B2e82198E42E0C69EacbAb8",
+    "decimals": "18",
+    "holder_balance_raw": "6900000000000000000000000 [6.9e24]",
+    "holder_code": "0x"
+  }
+}

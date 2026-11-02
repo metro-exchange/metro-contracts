@@ -1,0 +1,17 @@
+Compiling 1 files with Solc 0.8.30
+Solc 0.8.30 finished in 4.65s
+Compiler run successful!
+
+Ran 6 tests for test/fork-v2/mainnet/DeploymentGovernance.t.sol:DeploymentGovernanceMainnetTest
+[PASS] test_E23_EmergencyFilteringAndOverOneHundredUsers() (gas: 12514107)
+Logs:
+  Emergency 101 users business-call gas: 5796843
+
+[PASS] test_E23_EmergencyInsufficientBalanceRollsBackWholeBatch() (gas: 540887)
+[PASS] test_E23_EmergencyOwnerPauseAndRealPending() (gas: 528544)
+[PASS] test_E23_EmergencyPreservesAllPrincipalLedgers() (gas: 957279)
+[PASS] test_E23_ReplaceAutoCompoundOperatorUsesNewKeeper() (gas: 3373391)
+[PASS] test_E23_ReplaceEscrowAndDistributorRevokesOldRoles() (gas: 3070466)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 234.83ms (22.84ms CPU time)
+
+Ran 1 test suite in 243.38ms (234.83ms CPU time): 6 tests passed, 0 failed, 0 skipped (6 total tests)

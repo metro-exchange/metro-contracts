@@ -1,0 +1,17 @@
+No files changed, compilation skipped
+
+Ran 7 tests for test/fork-v2/mainnet/YThorRewardWeight.t.sol:YThorRewardWeightMainnetTest
+[PASS] test_E14_AboveBelowZeroAndRestoredWeights() (gas: 1070439)
+[PASS] test_E14_AllExistingYThorUsersChangeTogether() (gas: 657208)
+[PASS] test_E14_InitialOwnerAndUpperBound() (gas: 50572)
+[PASS] test_E14_MigrationExitClaimTwoAccumulatorsAndDebt() (gas: 1062466)
+[PASS] test_E14_OnlyZeroWeightYThorRejectsThenMixedSharesEarn() (gas: 1001767)
+[PASS] test_E14_SmallPrincipalFractionalBpsAndDust() (gas: 965954)
+Logs:
+  E14 tiny reward claim sum raw: 3
+  E14 tiny reward unallocated tail raw: 1
+
+[PASS] test_E14_WeightsDoNotRewriteHistoricalRewards() (gas: 736394)
+Suite result: ok. 7 passed; 0 failed; 0 skipped; finished in 251.23ms (27.92ms CPU time)
+
+Ran 1 test suite in 265.00ms (251.23ms CPU time): 7 tests passed, 0 failed, 0 skipped (7 total tests)

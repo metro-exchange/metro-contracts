@@ -1,0 +1,18 @@
+Compiling 2 files with Solc 0.8.30
+Solc 0.8.30 finished in 4.77s
+Compiler run successful!
+
+Ran 6 tests for test/fork-v2/mainnet/CrossSourcePaths.t.sol:CrossSourcePathsMainnetTest
+[PASS] test_X01_ContributorReachablePaths() (gas: 10732748)
+[PASS] test_X01_ExitedWithOldPendingReachablePaths() (gas: 7351831)
+[PASS] test_X01_MixedReachablePaths() (gas: 11316802)
+[PASS] test_X01_StakeReachablePaths() (gas: 10594025)
+[PASS] test_X01_ThorReachablePaths() (gas: 10767853)
+[PASS] test_X01_YThorReachablePaths() (gas: 11071636)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 1.05s (4.91s CPU time)
+
+Ran 1 test for test/fork-v2/mainnet/CommissionNetPaths.t.sol:CommissionNetPathsMainnetTest
+[PASS] test_X06_NetRewardReachablePathsAndEmergency() (gas: 12651536)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 1.06s (822.36ms CPU time)
+
+Ran 2 test suites in 1.08s (2.11s CPU time): 7 tests passed, 0 failed, 0 skipped (7 total tests)

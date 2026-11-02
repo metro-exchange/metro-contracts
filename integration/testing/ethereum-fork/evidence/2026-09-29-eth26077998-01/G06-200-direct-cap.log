@@ -1,0 +1,9 @@
+duplicate definition - InvalidAddress()
+duplicate definition - InvalidAmount()
+duplicate definition - InvalidConfiguration()
+duplicate definition - NoRewards()
+optIn 50
+optIn 100
+optIn 150
+optIn 200
+receipt timeout 0x55f61694895ae8bb376ff7ea47419b9ac86cc33d9af0426b097c72bda3a8a615
