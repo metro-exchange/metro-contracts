@@ -306,8 +306,7 @@ library XMetroCoreLogic {
     function _thorExitRateBps(uint64 migratedAt) private view returns (uint256) {
         uint256 elapsed = block.timestamp - uint256(migratedAt);
         if (elapsed >= THOR_EXIT_FULL_TIME) return BPS_DENOMINATOR;
-        return THOR_EXIT_START_BPS + ((elapsed - THOR_EXIT_DELAY) * (BPS_DENOMINATOR - THOR_EXIT_START_BPS))
-            / (THOR_EXIT_FULL_TIME - THOR_EXIT_DELAY);
+        return THOR_EXIT_START_BPS;
     }
 
     function _yThorExitRateBps(uint64 migratedAt) private view returns (uint256) {

@@ -1,5 +1,48 @@
 # Ethereum Mainnet Fork Results and Evidence
 
+## November 3, 2026: Sherlock Issue #24
+
+Local, uncommitted Base QA update based on `194d587a72e4143440fc3373ea181d32619fa64f`. The only business-source change is `XMetroCoreLogic._thorExitRateBps()`: THOR pays a fixed 50% of converted principal between its two milestones and 100% from maturity. QA milestones remain 1 and 3 hours. yTHOR keeps its existing linear curve. No Git commit, GitHub push, deployment, token transfer or permission change was performed.
+
+| Local validation | Passed | Failed | Skipped |
+| --- | ---: | ---: | ---: |
+| Business regression (unit/mock/fuzz/invariant) | 166 | 0 | 0 |
+| Core profile | 60 | 0 | 2 |
+| Adapter profile | 46 | 0 | 2 |
+| Deployment-script profile | 1 | 0 | 0 |
+| Total executed checks | 273 | 0 | 4 |
+
+The four optional pinned Ethereum/Base deployment tests in the Core/Adapter profiles were skipped with their RPC variables explicitly empty, and are not counted as passes.
+The retained production-time mainnet fork suite compiled successfully but was not executed against QA artifacts. QA accelerated timing was exercised in its own unit/fuzz/Core suites; the separate production tree passed 41 migration/exit and deployment/governance fork tests. No new Base on-chain acceptance is claimed.
+
+Core runtime/initcode are **23,391 / 25,074 bytes**, previously 23,435 / 25,118; initcode excludes constructor arguments. Runtime remains below the unchanged 23,552-byte project limit and 24,576-byte EIP-170 limit. Core and deployment-profile bytecode match. Adapter runtime/initcode remain **20,755 / 20,958 bytes**.
+
+All four exported Core/Adapter/Escrow/Distributor ABIs match the new artifacts and their own pre-change baselines, including constructors, functions, errors and events. Core storage fields, slots and types are unchanged (32 top-level fields); the namespaced position structures are untouched. Source hashes in compiler metadata match the local files. Solidity 0.8.38, Osaka, optimizer settings and profile configuration are unchanged.
+
+New and updated assertions cover both fixed levels and adjacent-second boundaries; liquid and stake exits; matching events and forfeiture balances; independent position clocks; aggregate previews; 1/3-wei rounding and conservation; one-time closure; historical rewards; and delayed withdrawals retaining their original queued amount. Existing yTHOR, treasury exclusion and reward-precision regressions passed.
+
+The existing CI formatting command, formatting of all changed Solidity files, JavaScript syntax checks and `git diff --check` passed locally. All changed tracked files contain no Chinese text. GitHub CI was not run for this uncommitted update. Detailed logs and source/artifact manifests are retained outside the repository.
+
+Changed CoreLogic source SHA-256:
+
+```text
+0cf38979cf540032e3a4fbd0895711d8671d8e9b5383be44f321ecfacd6606b3
+```
+
+Reproduction with the matching source and installed dependencies; point `SOLC_0838` to the native Solidity 0.8.38 binary used for the build:
+
+```sh
+SOLC_0838=/absolute/path/to/solc-0.8.38
+FOUNDRY_PROFILE=adapter forge build --offline --use "$SOLC_0838" --sizes
+FOUNDRY_PROFILE=core forge build --offline --use "$SOLC_0838" --sizes
+FOUNDRY_PROFILE=deploy forge build --offline --use "$SOLC_0838" --sizes
+ETH_RPC_URL= BASE_RPC_URL= FOUNDRY_PROFILE=regression forge test --offline --use "$SOLC_0838" -vv
+ETH_RPC_URL= BASE_RPC_URL= FOUNDRY_PROFILE=core forge test --offline --use "$SOLC_0838" -vv
+ETH_RPC_URL= BASE_RPC_URL= FOUNDRY_PROFILE=adapter forge test --offline --use "$SOLC_0838" -vv
+ETH_RPC_URL= BASE_RPC_URL= FOUNDRY_PROFILE=deployment-test forge test --offline --use "$SOLC_0838" -vv
+FOUNDRY_PROFILE=fork-v2 forge build --offline --use "$SOLC_0838"
+```
+
 ## October 24, 2026: yTHOR exit rates and treasury migration exclusion
 
 Local, uncommitted source update on `xmetro-v2-base-qa`, based on `f51d19e6e6a2680bc972665609c2b81676409737`. No Git commit, GitHub push, deployment, token transfer or permission change was performed. The tested source digests and artifact information are in the [manifest](evidence/2026-10-24-ythor-treasury/manifest.json); commands and actual outputs are in the [validation log](evidence/2026-10-24-ythor-treasury/validation.log).

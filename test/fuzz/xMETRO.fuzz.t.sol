@@ -63,7 +63,7 @@ contract xMETROFuzzTest is Test {
         assertEq(metro.balanceOf(address(xmetro)), principal);
     }
 
-    function testFuzz_ThorExitCurveAndFundsConservation(uint128 principalSeed, uint32 elapsedSeed, bool stakeMode)
+    function testFuzz_ThorExitLevelsAndFundsConservation(uint128 principalSeed, uint32 elapsedSeed, bool stakeMode)
         public
     {
         uint256 principal = bound(uint256(principalSeed), 1, metro.MAX_SUPPLY());
@@ -76,19 +76,33 @@ contract xMETROFuzzTest is Test {
         if (elapsed < 3600 seconds) {
             assertFalse(eligible);
             assertEq(rate, 0);
+            vm.prank(userA);
+            vm.expectRevert(XMetroCore.InvalidConfiguration.selector);
+            if (stakeMode) xmetro.exitAndStakeThor(0);
+            else xmetro.requestThorExit(0);
+            (,,, bool closed) = xmetro.thorPositions(userA, 0);
+            assertFalse(closed);
             return;
         }
 
-        uint256 expectedRate =
-            elapsed >= 10800 seconds ? 10_000 : 5_000 + Math.mulDiv(elapsed - 3600 seconds, 5_000, 7200 seconds);
+        uint256 expectedRate = elapsed >= 10800 seconds ? 10_000 : 5_000;
+        uint256 expectedPayout = elapsed >= 10800 seconds ? principal : principal / 2;
+        uint256 expectedForfeited = principal - expectedPayout;
         assertTrue(eligible);
         assertEq(rate, expectedRate);
-        assertEq(payout, Math.mulDiv(principal, expectedRate, 10_000));
+        assertEq(payout, expectedPayout);
+        assertEq(forfeited, expectedForfeited);
         assertEq(payout + forfeited, principal);
 
         vm.prank(userA);
-        if (stakeMode) xmetro.exitAndStakeThor(0);
-        else xmetro.requestThorExit(0);
+        uint256 actualPayout;
+        uint256 actualForfeited;
+        if (stakeMode) (actualPayout, actualForfeited) = xmetro.exitAndStakeThor(0);
+        else (actualPayout, actualForfeited) = xmetro.requestThorExit(0);
+        assertEq(actualPayout, expectedPayout);
+        assertEq(actualForfeited, expectedForfeited);
+        (,,, bool exited) = xmetro.thorPositions(userA, 0);
+        assertTrue(exited);
         assertEq(metro.balanceOf(forfeiture), forfeited);
         assertEq(metro.balanceOf(address(xmetro)), payout);
         assertEq(xmetro.lockedShares(userA), 0);
