@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {xMETRO} from "../../../src/xMETRO.sol";
@@ -36,8 +36,8 @@ contract YThorRewardWeightMainnetTest is MainnetForkBase {
     }
 
     function _yAccumulator() internal view returns (uint256) {
-        // After restoring Ownable, compiler storage layout confirms the independent yTHOR accumulator in slot 8.
-        return uint256(vm.load(address(core), bytes32(uint256(8))));
+        // Ownable2Step adds one slot; verify this against the final compiler storage layout.
+        return uint256(vm.load(address(core), bytes32(uint256(9))));
     }
 
     /// E-14.01: Tests initial owner and upper bound.
@@ -52,6 +52,9 @@ contract YThorRewardWeightMainnetTest is MainnetForkBase {
         core.setYThorRewardWeightBps(5_000);
         assertEq(core.yThorRewardWeightBps(), 5_000);
         core.transferOwnership(alice);
+        assertEq(core.pendingOwner(), alice);
+        vm.prank(alice);
+        core.acceptOwnership();
         assertEq(core.owner(), alice);
         vm.expectRevert();
         core.setYThorRewardWeightBps(10_000);
@@ -160,18 +163,18 @@ contract YThorRewardWeightMainnetTest is MainnetForkBase {
         vm.warp(block.timestamp + 120 days);
         vm.prank(alice);
         (uint256 payout,) = core.exitYThor(0, xMETRO.ExitMode.Stake);
-        assertEq(payout, 10 ether);
-        assertEq(core.rewardWeightOf(alice), 10 ether);
-        assertEq(core.totalRewardWeight(), 110 ether);
-        assertEq(core.rewardDebt(alice), -280e6);
+        assertEq(payout, 20 ether);
+        assertEq(core.rewardWeightOf(alice), 20 ether);
+        assertEq(core.totalRewardWeight(), 120 ether);
+        assertEq(core.rewardDebt(alice), -260e6);
         assertEq(core.claimable(alice), 300e6);
-        _distribute(110e6);
+        _distribute(120e6);
         assertEq(core.accRewardPerShare(), 3e12);
         assertEq(_yAccumulator(), 4e12);
-        assertEq(core.claimable(alice), 310e6);
+        assertEq(core.claimable(alice), 320e6);
         assertEq(core.claimable(bob), 200e6);
         vm.prank(alice);
-        assertEq(core.claimRewards(), 310e6);
+        assertEq(core.claimRewards(), 320e6);
         vm.prank(bob);
         assertEq(core.claimRewards(), 200e6);
         assertEq(core.claimable(alice), 0);
@@ -210,5 +213,46 @@ contract YThorRewardWeightMainnetTest is MainnetForkBase {
         assertEq(IERC20(USDC).balanceOf(address(core)), 4 - claimedAlice - claimedBob);
         emit log_named_uint("E14 tiny reward claim sum raw", claimedAlice + claimedBob);
         emit log_named_uint("E14 tiny reward unallocated tail raw", IERC20(USDC).balanceOf(address(core)));
+    }
+
+    function test_E14_TreasuryRealMigrationsExcludeOnlyMigrationRewards() public {
+        address treasury = forfeitureRecipient;
+        assertEq(core.migrationRewardExcludedAddress(), treasury);
+        _migrateThor(treasury, 100 ether);
+        _migrateY(treasury, 100 ether);
+        _mintAndStake(treasury, 20 ether);
+        _mintAndStake(alice, 100 ether);
+        assertEq(core.totalShares(), 320 ether);
+        assertEq(core.totalRewardWeight(), 120 ether);
+        assertEq(core.rewardWeightOf(treasury), 20 ether);
+        _distribute(120e6);
+        assertEq(core.claimable(treasury), 20e6);
+        assertEq(core.claimable(alice), 100e6);
+        vm.warp(vm.getBlockTimestamp() + 120 days);
+        vm.startPrank(treasury);
+        (uint256 yPayout, uint256 forfeited) = core.exitYThor(0, xMETRO.ExitMode.Stake);
+        (uint256 thorPayout, uint256 thorForfeited) = core.requestThorExit(0);
+        vm.stopPrank();
+        assertEq(yPayout, 20 ether);
+        assertEq(forfeited, 80 ether);
+        assertEq(thorPayout, 100 ether);
+        assertEq(thorForfeited, 0);
+        assertEq(metro.balanceOf(treasury), 80 ether);
+        assertEq(core.lockedShares(treasury), 0);
+        assertEq(core.balanceOf(treasury), 40 ether);
+        assertEq(core.totalRewardWeight(), 140 ether);
+        assertEq(core.claimable(treasury), 20e6);
+        _distribute(140e6);
+        assertEq(core.claimable(treasury), 60e6);
+        assertEq(core.claimable(alice), 200e6);
+        vm.warp(core.unstakeRequestThor(treasury, 0).unlockTime);
+        vm.startPrank(treasury);
+        assertEq(core.withdrawThor(0), 100 ether);
+        assertEq(core.claimRewards(), 60e6);
+        vm.stopPrank();
+        assertEq(metro.balanceOf(treasury), 180 ether);
+        assertEq(metro.balanceOf(address(core)), 140 ether);
+        assertEq(metro.totalSupply(), 320 ether);
+        assertEq(IERC20(USDC).balanceOf(treasury), 60e6);
     }
 }

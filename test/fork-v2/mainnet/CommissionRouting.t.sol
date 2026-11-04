@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
+
+import {RewardDistributor} from "../../../src/RewardDistributor.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Vm} from "forge-std/Vm.sol";
@@ -10,7 +12,14 @@ contract CommissionRoutingMainnetTest is MainnetForkBase {
     address private staker;
 
     event RewardsDistributed(address indexed caller, uint256 amount, uint64 timestamp);
-    event DistributionRouted(address indexed caller, address indexed commissionVault, uint256 grossAmount, uint256 commissionAmount, uint256 netReward, uint64 timestamp);
+    event DistributionRouted(
+        address indexed caller,
+        address indexed commissionVault,
+        uint256 grossAmount,
+        uint256 commissionAmount,
+        uint256 netReward,
+        uint64 timestamp
+    );
 
     function setUp() public {
         _fork();
@@ -19,8 +28,21 @@ contract CommissionRoutingMainnetTest is MainnetForkBase {
         staker = makeAddr("commission-staker");
     }
 
-    function _newVault(address token, address boundDistributor, bool migrationTarget) internal returns (CommissionVault fresh) {
-        fresh = new CommissionVault(token, boundDistributor, address(this), address(this), 1_000_000e6, 1_000_000e6, migrationTarget, 1 days, 1 days);
+    function _newVault(address token, address boundDistributor, bool migrationTarget)
+        internal
+        returns (CommissionVault fresh)
+    {
+        fresh = new CommissionVault(
+            token,
+            boundDistributor,
+            address(this),
+            address(this),
+            1_000_000e6,
+            1_000_000e6,
+            migrationTarget,
+            1 days,
+            1 days
+        );
     }
 
     function _makeShortfall(uint256 amount) internal {
@@ -46,8 +68,12 @@ contract CommissionRoutingMainnetTest is MainnetForkBase {
             if (logs[i].topics[0] == DistributionRouted.selector) {
                 routed = true;
                 assertEq(address(uint160(uint256(logs[i].topics[1]))), address(this));
-                assertEq(address(uint160(uint256(logs[i].topics[2]))), commission == 0 && distributor.maxCommissionSplitBps() == 0 ? address(0) : address(vault));
-                (uint256 actualGross, uint256 actualCommission, uint256 actualNet, uint64 timestamp) = abi.decode(logs[i].data, (uint256, uint256, uint256, uint64));
+                assertEq(
+                    address(uint160(uint256(logs[i].topics[2]))),
+                    commission == 0 && distributor.maxCommissionSplitBps() == 0 ? address(0) : address(vault)
+                );
+                (uint256 actualGross, uint256 actualCommission, uint256 actualNet, uint64 timestamp) =
+                    abi.decode(logs[i].data, (uint256, uint256, uint256, uint64));
                 assertEq(actualGross, gross);
                 assertEq(actualCommission, commission);
                 assertEq(actualNet, net);
@@ -89,25 +115,25 @@ contract CommissionRoutingMainnetTest is MainnetForkBase {
         vm.prank(staker);
         vm.expectRevert();
         distributor.setCommissionVault(address(0));
-        vm.expectRevert("RewardDistributor: bps > 10000");
+        vm.expectRevert(RewardDistributor.InvalidCommissionSplitBps.selector);
         distributor.setMaxCommissionSplitBps(10_001);
-        vm.expectRevert("RewardDistributor: vault not contract");
+        vm.expectRevert(RewardDistributor.CommissionVaultNotContract.selector);
         distributor.setCommissionVault(staker);
         CommissionVault wrongToken = _newVault(THOR, address(distributor), false);
-        vm.expectRevert("RewardDistributor: token mismatch");
+        vm.expectRevert(RewardDistributor.CommissionTokenMismatch.selector);
         distributor.setCommissionVault(address(wrongToken));
         CommissionVault wrongDistributor = _newVault(USDC, staker, false);
-        vm.expectRevert("RewardDistributor: distributor mismatch");
+        vm.expectRevert(RewardDistributor.CommissionDistributorMismatch.selector);
         distributor.setCommissionVault(address(wrongDistributor));
         CommissionVault pending = _newVault(USDC, address(distributor), true);
-        vm.expectRevert("RewardDistributor: vault migration pending");
+        vm.expectRevert(RewardDistributor.CommissionVaultMigrationPending.selector);
         distributor.setCommissionVault(address(pending));
         CommissionVault paused = _newVault(USDC, address(distributor), false);
         paused.pause();
-        vm.expectRevert("RewardDistributor: vault paused");
+        vm.expectRevert(RewardDistributor.CommissionVaultPaused.selector);
         distributor.setCommissionVault(address(paused));
         vault.pause();
-        vm.expectRevert("RewardDistributor: vault paused");
+        vm.expectRevert(RewardDistributor.CommissionVaultPaused.selector);
         distributor.setMaxCommissionSplitBps(2_000);
         vault.unpause();
         distributor.setMaxCommissionSplitBps(2_000);
@@ -208,7 +234,7 @@ contract CommissionRoutingMainnetTest is MainnetForkBase {
         _mintAndStake(staker, 100 ether);
         _makeShortfall(100e6);
         distributor.setMaxCommissionSplitBps(2_000);
-        vm.expectRevert("RewardDistributor: split enabled");
+        vm.expectRevert(RewardDistributor.CommissionSplitEnabled.selector);
         distributor.setCommissionVault(address(0));
         distributor.setMaxCommissionSplitBps(0);
         distributor.setCommissionVault(address(0));

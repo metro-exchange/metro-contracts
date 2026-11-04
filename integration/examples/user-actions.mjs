@@ -11,6 +11,8 @@ const spokeAbi = [
 ];
 const coreAbi = JSON.parse(await readFile(new URL('../abi/xMETRO.json', import.meta.url)));
 const escrowAbi = JSON.parse(await readFile(new URL('../abi/ThorMigrationEscrow.json', import.meta.url)));
+const adapterAbi = JSON.parse(await readFile(new URL('../abi/XMetroDeFiAdapter.json', import.meta.url)));
+const SWAP_DATA_DOMAIN = ethers.utils.id('XMETRO_SWAP_V2');
 
 export async function loadConfig(file) {
   const config = JSON.parse(await readFile(file, 'utf8'));
@@ -63,18 +65,48 @@ export async function claimRewards(signer, config) {
   return (await new ethers.Contract(address(config.contracts.xMETRO, 'xMETRO'), coreAbi, signer).claimRewards()).wait();
 }
 
-export function buildV2ExecutionData(path) {
+export function buildSwapExecutionData(dexType, maxRewardIn, routeData) {
+  if (!Number.isInteger(dexType) || dexType < 0 || dexType > 2) throw new Error('Unsupported DEX type');
+  const cap = ethers.BigNumber.from(maxRewardIn);
+  if (cap.lte(0) || cap.gt(ethers.constants.MaxUint256)) throw new Error('Invalid reward input cap');
+  if (!ethers.utils.isHexString(routeData) || routeData.length % 2 !== 0) throw new Error('Invalid route data');
+  return ethers.utils.defaultAbiCoder.encode(
+    ['bytes32', 'uint8', 'uint256', 'bytes'], [SWAP_DATA_DOMAIN, dexType, cap, routeData]
+  );
+}
+
+export function buildV2ExecutionData(path, maxRewardIn) {
   if (!Array.isArray(path) || path.length < 2) throw new Error('A V2 path needs at least two token addresses');
   const tokens = path.map((token, index) => address(token, `path[${index}]`));
-  return ethers.utils.defaultAbiCoder.encode(
-    ['uint8', 'bytes'],
-    [0, ethers.utils.defaultAbiCoder.encode(['address[]'], [tokens])]
-  );
+  return buildSwapExecutionData(0, maxRewardIn, ethers.utils.defaultAbiCoder.encode(['address[]'], [tokens]));
+}
+
+export async function validateSwapExecution(provider, config, strategyId, executionData, actualInput) {
+  const core = new ethers.Contract(address(config.contracts.xMETRO, 'xMETRO'), coreAbi, provider);
+  const proxy = address(config.contracts.XMetroDeFiAdapterProxy, 'Adapter Proxy');
+  if (address(await core.deFiAdapter(), 'Bound Adapter') !== proxy) throw new Error('Configured Adapter is not bound to Core');
+  const adapter = new ethers.Contract(proxy, adapterAbi, provider);
+  const info = await adapter.strategyInfo(strategyId);
+  if (![1, 2].includes(Number(info.kind))) return null; // Deposits keep their existing encoding.
+  if (!ethers.BigNumber.from(await adapter.implementationVersion()).eq(2)) throw new Error('Unsupported swap Adapter version');
+  let decoded;
+  try {
+    decoded = ethers.utils.defaultAbiCoder.decode(['bytes32', 'uint8', 'uint256', 'bytes'], executionData);
+  } catch {
+    throw new Error('Invalid swap execution data');
+  }
+  const [domain, dexType, cap] = decoded;
+  if (domain !== SWAP_DATA_DOMAIN || dexType > 2 || cap.isZero()) throw new Error('Invalid swap execution data');
+  if (actualInput !== undefined && ethers.BigNumber.from(actualInput).gt(cap)) {
+    throw new Error('Rewards exceed the quoted input cap; obtain a new quote');
+  }
+  return cap;
 }
 
 export async function manualAction(signer, config, { strategyId, minAmountOut, deadline = 0, executionData = '0x' }) {
   await assertChain(signer, config);
   const core = new ethers.Contract(address(config.contracts.xMETRO, 'xMETRO'), coreAbi, signer);
+  await validateSwapExecution(signer.provider, config, strategyId, executionData, await core.claimable(await signer.getAddress()));
   return (await core.claimAndExecute(strategyId, minAmountOut, deadline, executionData)).wait();
 }
 

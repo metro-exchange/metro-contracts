@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -8,14 +8,38 @@ import {IXMetroAdapterAdminFork} from "../XMetroForkBase.sol";
 import {MainnetForkBase, IUniswapV2RouterMainnet} from "./MainnetForkBase.sol";
 
 interface IAdapterLifecycleMainnet {
-    struct AaveV3Config { address pool; address aToken; uint16 referralCode; }
-    struct AaveV4Config { address spoke; uint256 reserveId; }
-    struct MapleConfig { address router; address syrupToken; bytes32 depositData; }
-    function configuration() external view returns (
-        address core, address usdc, address metro, bytes32 family, uint64 epoch,
-        address routerV2, address routerV3, address oneInchRouter,
-        AaveV3Config memory aaveV3, AaveV4Config memory aaveV4, MapleConfig memory maple
-    );
+    struct AaveV3Config {
+        address pool;
+        address aToken;
+        uint16 referralCode;
+    }
+
+    struct AaveV4Config {
+        address spoke;
+        uint256 reserveId;
+    }
+
+    struct MapleConfig {
+        address router;
+        address syrupToken;
+        bytes32 depositData;
+    }
+    function configuration()
+        external
+        view
+        returns (
+            address core,
+            address usdc,
+            address metro,
+            bytes32 family,
+            uint64 epoch,
+            address routerV2,
+            address routerV3,
+            address oneInchRouter,
+            AaveV3Config memory aaveV3,
+            AaveV4Config memory aaveV4,
+            MapleConfig memory maple
+        );
     function aaveV4Giver() external view returns (address);
     function upgradeToAndCall(address newImplementation, bytes calldata data) external payable;
     function proxiableUUID() external view returns (bytes32);
@@ -42,11 +66,17 @@ contract WrongUUIDImplementation {
     function adapterFamilyId() external pure returns (bytes32) {
         return keccak256("XMETRO_DEFI_ADAPTER_FAMILY_V1");
     }
-    function proxiableUUID() external pure returns (bytes32) { return bytes32(uint256(1)); }
+
+    function proxiableUUID() external pure returns (bytes32) {
+        return bytes32(uint256(1));
+    }
 }
 
 contract WrongFamilyImplementation {
-    function adapterFamilyId() external pure returns (bytes32) { return bytes32(uint256(1)); }
+    function adapterFamilyId() external pure returns (bytes32) {
+        return bytes32(uint256(1));
+    }
+
     function proxiableUUID() external pure returns (bytes32) {
         return 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
     }
@@ -75,11 +105,11 @@ contract AdapterLifecycleMainnetTest is MainnetForkBase {
         return keccak256(abi.encode(block.chainid, STRATEGY_DOMAIN, kind, output));
     }
 
-    function _route(address out) private pure returns (bytes memory) {
+    function _route(address out, uint256 cap) private pure returns (bytes memory) {
         address[] memory path = new address[](2);
         path[0] = USDC;
         path[1] = out;
-        return abi.encode(uint8(0), abi.encode(path));
+        return abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(0), cap, abi.encode(path));
     }
 
     function _one(address user) private pure returns (address[] memory list) {
@@ -98,9 +128,12 @@ contract AdapterLifecycleMainnetTest is MainnetForkBase {
 
     function _newProxy() private returns (address newProxy) {
         address newImpl = _newImplementation();
-        newProxy = address(new ERC1967Proxy(
-            newImpl, abi.encodeWithSignature("initialize(address,address,address)", address(core), USDC, address(metro))
-        ));
+        newProxy = address(
+            new ERC1967Proxy(
+                newImpl,
+                abi.encodeWithSignature("initialize(address,address,address)", address(core), USDC, address(metro))
+            )
+        );
         assertGt(newProxy.code.length, 0);
         assertEq(address(uint160(uint256(vm.load(newProxy, IMPLEMENTATION_SLOT)))), newImpl);
     }
@@ -108,8 +141,10 @@ contract AdapterLifecycleMainnetTest is MainnetForkBase {
     function _mapleAuthorization(string memory path) private view returns (bytes memory) {
         string memory fixture = vm.readFile(path);
         return abi.encode(
-            vm.parseJsonUint(fixture, ".bitmap"), vm.parseJsonUint(fixture, ".deadline"),
-            uint8(vm.parseJsonUint(fixture, ".v")), vm.parseJsonBytes32(fixture, ".r"),
+            vm.parseJsonUint(fixture, ".bitmap"),
+            vm.parseJsonUint(fixture, ".deadline"),
+            uint8(vm.parseJsonUint(fixture, ".v")),
+            vm.parseJsonBytes32(fixture, ".r"),
             vm.parseJsonBytes32(fixture, ".s")
         );
     }
@@ -124,11 +159,19 @@ contract AdapterLifecycleMainnetTest is MainnetForkBase {
     }
 
     function _assertAllConfigured(address target, uint64 expectedEpoch) private view {
-        (address configuredCore, address usdc, address token, bytes32 family, uint64 epoch,
-            address routerV2, address routerV3, address oneInch,
+        (
+            address configuredCore,
+            address usdc,
+            address token,
+            bytes32 family,
+            uint64 epoch,
+            address routerV2,
+            address routerV3,
+            address oneInch,
             IAdapterLifecycleMainnet.AaveV3Config memory v3,
             IAdapterLifecycleMainnet.AaveV4Config memory v4,
-            IAdapterLifecycleMainnet.MapleConfig memory maple) = IAdapterLifecycleMainnet(target).configuration();
+            IAdapterLifecycleMainnet.MapleConfig memory maple
+        ) = IAdapterLifecycleMainnet(target).configuration();
         assertEq(configuredCore, address(core));
         assertEq(usdc, USDC);
         assertEq(token, address(metro));
@@ -153,11 +196,19 @@ contract AdapterLifecycleMainnetTest is MainnetForkBase {
         core.unpause();
         (bytes32 swapId, bytes32 v3Id, bytes32 v4Id, bytes32 mapleId) = _configureAll();
         assertFalse(core.paused());
-        (address configuredCore, address usdc, address token, bytes32 family, uint64 epoch,
-            address routerV2, address routerV3, address oneInch,
+        (
+            address configuredCore,
+            address usdc,
+            address token,
+            bytes32 family,
+            uint64 epoch,
+            address routerV2,
+            address routerV3,
+            address oneInch,
             IAdapterLifecycleMainnet.AaveV3Config memory v3,
             IAdapterLifecycleMainnet.AaveV4Config memory v4,
-            IAdapterLifecycleMainnet.MapleConfig memory maple) = IAdapterLifecycleMainnet(proxy).configuration();
+            IAdapterLifecycleMainnet.MapleConfig memory maple
+        ) = IAdapterLifecycleMainnet(proxy).configuration();
         assertEq(configuredCore, address(core));
         assertEq(usdc, USDC);
         assertEq(token, address(metro));
@@ -217,12 +268,20 @@ contract AdapterLifecycleMainnetTest is MainnetForkBase {
         core.unpause();
         IXMetroDeFiAdapter.ManualExecution memory manual = IXMetroDeFiAdapter.ManualExecution({
             strategyId: _strategy(IXMetroDeFiAdapter.StrategyKind.AutoSwap, WETH),
-            account: alice, amountIn: 1, minAmountOut: 1, deadline: block.timestamp + 1 hours, executionData: _route(WETH)
+            account: alice,
+            amountIn: 1,
+            minAmountOut: 1,
+            deadline: block.timestamp + 1 hours,
+            executionData: _route(WETH, 1)
         });
         IXMetroDeFiAdapter.BatchExecution memory batch = IXMetroDeFiAdapter.BatchExecution({
-            strategyId: manual.strategyId, accounts: _one(alice), amountsIn: new uint256[](1),
-            minTotalAmountOut: 1, minUserAmountsOut: new uint256[](0),
-            deadline: block.timestamp + 1 hours, executionData: _route(WETH)
+            strategyId: manual.strategyId,
+            accounts: _one(alice),
+            amountsIn: new uint256[](1),
+            minTotalAmountOut: 1,
+            minUserAmountsOut: new uint256[](0),
+            deadline: block.timestamp + 1 hours,
+            executionData: _route(WETH, 1)
         });
         batch.amountsIn[0] = 1;
         vm.prank(alice);
@@ -245,11 +304,21 @@ contract AdapterLifecycleMainnetTest is MainnetForkBase {
         assertEq(IERC20(USDC).balanceOf(proxy), 0);
     }
 
-    /// E-21.05: Tests single step owner authority and upgrade.
-    function test_E21_SingleStepOwnerAuthorityAndUpgrade() public {
+    /// E-21.05: Tests two-step owner authority and upgrade.
+    function test_E21_TwoStepOwnerAuthorityAndUpgrade() public {
         address nextOwner = makeAddr("lifecycle-next-owner");
         address nextImpl = _newImplementation();
         core.transferOwnership(nextOwner);
+        assertEq(core.pendingOwner(), nextOwner);
+        assertEq(core.owner(), address(this));
+        vm.prank(nextOwner);
+        vm.expectRevert();
+        IAdapterLifecycleMainnet(proxy).upgradeToAndCall(nextImpl, "");
+        vm.prank(nextOwner);
+        vm.expectRevert();
+        IXMetroAdapterAdminFork(proxy).setRouters(V2_ROUTER, V3_ROUTER, ONEINCH_ROUTER);
+        vm.prank(nextOwner);
+        core.acceptOwnership();
         assertEq(core.owner(), nextOwner);
         vm.expectRevert();
         IAdapterLifecycleMainnet(proxy).upgradeToAndCall(nextImpl, "");
@@ -274,9 +343,11 @@ contract AdapterLifecycleMainnetTest is MainnetForkBase {
         vm.expectRevert();
         core.enableAutoStrategy(swap);
         vm.expectRevert();
-        core.executeAutoStrategyBatch(swap, _one(alice), 1, new uint256[](0), block.timestamp + 1 hours, _route(WETH));
+        core.executeAutoStrategyBatch(
+            swap, _one(alice), 1, new uint256[](0), block.timestamp + 1 hours, _route(WETH, 100e6)
+        );
         vm.prank(alice);
-        (uint256 used, uint256 wethOut) = core.claimAndExecute(swap, 1, block.timestamp + 1 hours, _route(WETH));
+        (uint256 used, uint256 wethOut) = core.claimAndExecute(swap, 1, block.timestamp + 1 hours, _route(WETH, 100e6));
         assertEq(used, 100e6);
         assertGt(wethOut, 0);
         assertEq(core.getAutoStrategyPreference(alice).strategyId, bytes32(0));
@@ -284,7 +355,7 @@ contract AdapterLifecycleMainnetTest is MainnetForkBase {
         _distribute(100e6);
         vm.prank(alice);
         vm.expectRevert();
-        core.claimAndExecute(swap, 1, block.timestamp + 1 hours, _route(WETH));
+        core.claimAndExecute(swap, 1, block.timestamp + 1 hours, _route(WETH, 100e6));
         IXMetroAdapterAdminFork(proxy).setSwapTokenConfig(WETH, true, true);
         vm.prank(alice);
         core.enableAutocompound();
@@ -300,7 +371,7 @@ contract AdapterLifecycleMainnetTest is MainnetForkBase {
         core.disableAutocompound();
         assertEq(core.getAutoStrategyPreference(alice).strategyId, swap);
         vm.prank(alice);
-        core.claimAndExecute(swap, 1, block.timestamp + 1 hours, _route(WETH));
+        core.claimAndExecute(swap, 1, block.timestamp + 1 hours, _route(WETH, 100e6));
         assertEq(core.getAutoStrategyPreference(alice).strategyId, swap);
     }
 
@@ -321,18 +392,23 @@ contract AdapterLifecycleMainnetTest is MainnetForkBase {
         IXMetroAdapterAdminFork(proxy).setSwapTokenConfig(WETH, true, false);
         assertEq(core.getAutoStrategyPreference(bob).strategyRevision, bobRevision);
         vm.expectRevert();
-        core.executeAutoStrategyBatch(weth, _one(alice), 1, new uint256[](0), block.timestamp + 1 hours, _route(WETH));
+        core.executeAutoStrategyBatch(
+            weth, _one(alice), 1, new uint256[](0), block.timestamp + 1 hours, _route(WETH, 50e6)
+        );
         assertEq(core.claimable(alice), 50e6);
         uint256 quote = IUniswapV2RouterMainnet(V2_ROUTER).getAmountsOut(50e6, _directUsdt())[1];
-        (uint256 input, uint256 output) =
-            core.executeAutoStrategyBatch(usdt, _one(bob), 1, new uint256[](0), block.timestamp + 1 hours, _route(USDT));
+        (uint256 input, uint256 output) = core.executeAutoStrategyBatch(
+            usdt, _one(bob), 1, new uint256[](0), block.timestamp + 1 hours, _route(USDT, 50e6)
+        );
         assertEq(input, 50e6);
         assertEq(output, quote);
         _distribute(100e6);
         // Advance the domain revision with another real Router set without changing strategy revisions.
         IXMetroAdapterAdminFork(proxy).setRouters(V3_ROUTER, V2_ROUTER, ONEINCH_ROUTER);
         vm.expectRevert();
-        core.executeAutoStrategyBatch(usdt, _one(bob), 1, new uint256[](0), block.timestamp + 1 hours, _route(USDT));
+        core.executeAutoStrategyBatch(
+            usdt, _one(bob), 1, new uint256[](0), block.timestamp + 1 hours, _route(USDT, 50e6)
+        );
         assertEq(core.claimable(bob), 50e6);
         assertEq(core.claimable(alice), 100e6);
     }
@@ -350,17 +426,20 @@ contract AdapterLifecycleMainnetTest is MainnetForkBase {
         IAdapterLifecycleMainnet(proxy).upgradeToAndCall(_newImplementation(), "");
         assertEq(adapter.logicEpoch(), priorEpoch + 1);
         vm.expectRevert();
-        core.executeAutoStrategyBatch(swap, _one(alice), 1, new uint256[](0), block.timestamp + 1 hours, _route(WETH));
+        core.executeAutoStrategyBatch(
+            swap, _one(alice), 1, new uint256[](0), block.timestamp + 1 hours, _route(WETH, 100e6)
+        );
         assertEq(core.claimable(alice), 100e6);
         vm.prank(alice);
-        (uint256 input, uint256 output) = core.claimAndExecute(swap, 1, block.timestamp + 1 hours, _route(WETH));
+        (uint256 input, uint256 output) = core.claimAndExecute(swap, 1, block.timestamp + 1 hours, _route(WETH, 100e6));
         assertEq(input, 100e6);
         assertGt(output, 0);
         _distribute(100e6);
         vm.prank(alice);
         core.enableAutoStrategy(swap);
-        (input, output) =
-            core.executeAutoStrategyBatch(swap, _one(alice), 1, new uint256[](0), block.timestamp + 1 hours, _route(WETH));
+        (input, output) = core.executeAutoStrategyBatch(
+            swap, _one(alice), 1, new uint256[](0), block.timestamp + 1 hours, _route(WETH, 100e6)
+        );
         assertEq(input, 100e6);
         assertGt(output, 0);
     }
@@ -382,7 +461,7 @@ contract AdapterLifecycleMainnetTest is MainnetForkBase {
         assertEq(configuredV2, SUSHI_V2_ROUTER);
         vm.prank(alice);
         (uint256 rewardIn, uint256 output) =
-            core.claimAndExecute(swap, quote * 99 / 100, block.timestamp + 1 hours, _route(WETH));
+            core.claimAndExecute(swap, quote * 99 / 100, block.timestamp + 1 hours, _route(WETH, 100e6));
         assertEq(rewardIn, 100e6);
         assertEq(output, quote);
         assertEq(IERC20(WETH).balanceOf(alice), quote);
@@ -410,8 +489,9 @@ contract AdapterLifecycleMainnetTest is MainnetForkBase {
         vm.expectRevert();
         core.executeAutoStrategyBatch(v4Id, _one(alice), 1, _oneMinimum(), 0, "");
         assertEq(core.claimable(alice), 50e6);
-        (uint256 swapInput, uint256 swapOutput) =
-            core.executeAutoStrategyBatch(swap, _one(bob), 1, new uint256[](0), block.timestamp + 1 hours, _route(WETH));
+        (uint256 swapInput, uint256 swapOutput) = core.executeAutoStrategyBatch(
+            swap, _one(bob), 1, new uint256[](0), block.timestamp + 1 hours, _route(WETH, 50e6)
+        );
         assertEq(swapInput, 50e6);
         assertGt(swapOutput, 0);
         vm.prank(alice);
@@ -491,8 +571,10 @@ contract AdapterLifecycleMainnetTest is MainnetForkBase {
         vm.prank(bob);
         (uint256 mapleInput,) = core.claimAndExecute(mapleId, 1, 0, _mapleAuthorization(oldFixture));
         assertEq(mapleInput, 50e6);
-        assertTrue(IMaplePermissionsLifecycleMainnet(IMapleRouterLifecycleMainnet(MAPLE_ROUTER).poolPermissionManager())
-            .hasPermission(IMapleRouterLifecycleMainnet(MAPLE_ROUTER).poolManager(), proxy, P_DEPOSIT));
+        assertTrue(
+            IMaplePermissionsLifecycleMainnet(IMapleRouterLifecycleMainnet(MAPLE_ROUTER).poolPermissionManager())
+                .hasPermission(IMapleRouterLifecycleMainnet(MAPLE_ROUTER).poolManager(), proxy, P_DEPOSIT)
+        );
         uint256 nonceAfterAuth = IMapleRouterLifecycleMainnet(MAPLE_ROUTER).nonces(proxy);
         IAdapterLifecycleMainnet(proxy).upgradeToAndCall(_newImplementation(), "");
         assertTrue(ISpokeLifecycleMainnet(V4_SPOKE).isPositionManager(alice, V4_GIVER));
@@ -533,7 +615,8 @@ contract AdapterLifecycleMainnetTest is MainnetForkBase {
         vm.expectRevert();
         IAdapterLifecycleMainnet(oldProxy).upgradeToAndCall(spareImpl, "");
         address rescueRecipient = makeAddr("retired-adapter-rescue");
-        (bool rescueOk,) = oldProxy.call(abi.encodeWithSignature("rescueERC20(address,address,uint256)", USDC, rescueRecipient, 5e6));
+        (bool rescueOk,) =
+            oldProxy.call(abi.encodeWithSignature("rescueERC20(address,address,uint256)", USDC, rescueRecipient, 5e6));
         assertTrue(rescueOk);
         assertEq(IERC20(USDC).balanceOf(rescueRecipient), 5e6);
         IXMetroAdapterAdminFork(newProxy).setRouters(V2_ROUTER, V3_ROUTER, ONEINCH_ROUTER);
@@ -541,16 +624,25 @@ contract AdapterLifecycleMainnetTest is MainnetForkBase {
         core.unpause();
         _distribute(100e6);
         vm.expectRevert();
-        core.executeAutoStrategyBatch(swap, _one(alice), 1, new uint256[](0), block.timestamp + 1 hours, _route(WETH));
+        core.executeAutoStrategyBatch(
+            swap, _one(alice), 1, new uint256[](0), block.timestamp + 1 hours, _route(WETH, 100e6)
+        );
         assertEq(core.claimable(alice), 100e6);
         vm.prank(address(core));
         vm.expectRevert();
-        IXMetroDeFiAdapter(oldProxy).execute(IXMetroDeFiAdapter.ManualExecution({
-            strategyId: swap, account: alice, amountIn: 1, minAmountOut: 1,
-            deadline: block.timestamp + 1 hours, executionData: _route(WETH)
-        }));
+        IXMetroDeFiAdapter(oldProxy)
+            .execute(
+                IXMetroDeFiAdapter.ManualExecution({
+                strategyId: swap,
+                account: alice,
+                amountIn: 1,
+                minAmountOut: 1,
+                deadline: block.timestamp + 1 hours,
+                executionData: _route(WETH, 100e6)
+            })
+            );
         vm.prank(alice);
-        (uint256 input, uint256 output) = core.claimAndExecute(swap, 1, block.timestamp + 1 hours, _route(WETH));
+        (uint256 input, uint256 output) = core.claimAndExecute(swap, 1, block.timestamp + 1 hours, _route(WETH, 100e6));
         assertEq(input, 100e6);
         assertGt(output, 0);
         assertEq(IERC20(USDC).balanceOf(newProxy), 0);
@@ -600,10 +692,14 @@ contract AdapterLifecycleMainnetTest is MainnetForkBase {
         assertGt(syrupShares, 0);
         assertEq(IERC20(SYRUP_USDC).balanceOf(bob) - syrupBefore, syrupShares);
         assertEq(IMapleRouterLifecycleMainnet(MAPLE_ROUTER).nonces(newProxy), nonceBefore + 1);
-        assertTrue(IMaplePermissionsLifecycleMainnet(IMapleRouterLifecycleMainnet(MAPLE_ROUTER).poolPermissionManager())
-            .hasPermission(IMapleRouterLifecycleMainnet(MAPLE_ROUTER).poolManager(), newProxy, P_DEPOSIT));
-        assertFalse(IMaplePermissionsLifecycleMainnet(IMapleRouterLifecycleMainnet(MAPLE_ROUTER).poolPermissionManager())
-            .hasPermission(IMapleRouterLifecycleMainnet(MAPLE_ROUTER).poolManager(), oldProxy, P_DEPOSIT));
+        assertTrue(
+            IMaplePermissionsLifecycleMainnet(IMapleRouterLifecycleMainnet(MAPLE_ROUTER).poolPermissionManager())
+                .hasPermission(IMapleRouterLifecycleMainnet(MAPLE_ROUTER).poolManager(), newProxy, P_DEPOSIT)
+        );
+        assertFalse(
+            IMaplePermissionsLifecycleMainnet(IMapleRouterLifecycleMainnet(MAPLE_ROUTER).poolPermissionManager())
+                .hasPermission(IMapleRouterLifecycleMainnet(MAPLE_ROUTER).poolManager(), oldProxy, P_DEPOSIT)
+        );
     }
 
     /// X-05: Tests full configuration and preference across upgrade and replacement.
@@ -634,7 +730,9 @@ contract AdapterLifecycleMainnetTest is MainnetForkBase {
         assertEq(core.getAutoStrategyPreference(alice).strategyId, swapId);
         assertEq(core.getAutoStrategyPreference(alice).logicEpoch, 1);
         vm.expectRevert();
-        core.executeAutoStrategyBatch(swapId, _one(alice), 1, new uint256[](0), block.timestamp + 1 hours, _route(WETH));
+        core.executeAutoStrategyBatch(
+            swapId, _one(alice), 1, new uint256[](0), block.timestamp + 1 hours, _route(WETH, 100e6)
+        );
         assertEq(core.claimable(alice), 100e6);
         core.pause();
         address newProxy = _newProxy();
@@ -652,7 +750,9 @@ contract AdapterLifecycleMainnetTest is MainnetForkBase {
         assertTrue(ISpokeLifecycleMainnet(V4_SPOKE).isPositionManager(alice, V4_GIVER));
         core.unpause();
         vm.expectRevert();
-        core.executeAutoStrategyBatch(newSwap, _one(alice), 1, new uint256[](0), block.timestamp + 1 hours, _route(WETH));
+        core.executeAutoStrategyBatch(
+            newSwap, _one(alice), 1, new uint256[](0), block.timestamp + 1 hours, _route(WETH, 100e6)
+        );
         assertEq(core.claimable(alice), 100e6);
     }
 }

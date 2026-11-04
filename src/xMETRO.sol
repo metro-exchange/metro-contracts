@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -7,8 +7,9 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 
 import {IXMetroDeFiAdapter} from "./interfaces/IXMetroDeFiAdapter.sol";
 import {XMetroCoreLogic} from "./XMetroCoreLogic.sol";
@@ -21,7 +22,7 @@ interface IBoundRewardDistributor {
     function rewardToken() external view returns (address);
 }
 
-contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
+contract xMETRO is ERC20, Pausable, ReentrancyGuardTransient, Ownable2Step {
     error Unauthorized();
     error NoRewards();
     error InvalidAddress();
@@ -46,8 +47,8 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
 
     uint256 private constant BPS_DENOMINATOR = 10_000;
     uint256 public constant THOR_EXIT_START_BPS = 5_000;
-    uint256 public constant YTHOR_EXIT_START_BPS = 1_000;
-    uint256 public constant YTHOR_EXIT_MAX_BPS = 5_000;
+    uint256 public constant YTHOR_EXIT_START_BPS = 2_000;
+    uint256 public constant YTHOR_EXIT_MAX_BPS = 10_000;
 
     uint64 public constant CONTRIBUTOR_CLIFF = 180 days;
 
@@ -106,6 +107,9 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
 
     address public immutable forfeitureRecipient;
 
+    /// @notice Fixed address whose THOR and yTHOR migration positions earn no rewards.
+    address public immutable migrationRewardExcludedAddress;
+
     bytes32 private immutable SWAP_METRO_STRATEGY_ID;
 
     address public rewardDistributor;
@@ -144,6 +148,9 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
     mapping(address => uint256) public unstakeCursorThor;
     mapping(address => uint256) public unstakeCursorYThor;
     mapping(address => uint256) public unstakeCursorContributor;
+
+    /// @dev Active THOR principal of the fixed excluded address; backing remains fully recorded.
+    uint256 private _rewardExcludedThorPrincipal;
 
     event RewardDistributorUpdated(address indexed oldRewardDistributor, address indexed newRewardDistributor);
     event DeFiAdapterUpdated(address indexed oldAdapter, address indexed newAdapter, uint64 adapterEpoch);
@@ -228,7 +235,9 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
         METRO = IMetroTokenMintable(metro_);
         rewardToken = IERC20(rewardToken_);
         forfeitureRecipient = forfeitureRecipient_;
+        migrationRewardExcludedAddress = forfeitureRecipient_;
         yThorRewardWeightBps = initialYThorRewardWeightBps_;
+        emit YThorRewardWeightBpsUpdated(0, initialYThorRewardWeightBps_);
         SWAP_METRO_STRATEGY_ID =
             keccak256(abi.encode(block.chainid, STRATEGY_DOMAIN, IXMetroDeFiAdapter.StrategyKind.SwapMetro, metro_));
     }
@@ -240,11 +249,7 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
 
     /// @notice Stake METRO and receive 1:1 free shares (xMETRO ERC20).
     function stake(uint256 amount) external nonReentrant whenNotPaused returns (uint256 mintedShares) {
-        if (amount == 0) revert InvalidAmount();
-        IERC20(address(METRO)).safeTransferFrom(msg.sender, address(this), amount);
-        _mintFreeShares(msg.sender, amount);
-        mintedShares = amount;
-        emit Staked(msg.sender, amount, mintedShares);
+        return _stake(amount);
     }
 
     /// @notice Stake METRO and enable autocompounding in a single transaction.
@@ -254,12 +259,16 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
         whenNotPaused
         returns (uint256 mintedShares)
     {
+        mintedShares = _stake(amount);
+        _enableAutocompound(msg.sender);
+    }
+
+    function _stake(uint256 amount) private returns (uint256) {
         if (amount == 0) revert InvalidAmount();
         IERC20(address(METRO)).safeTransferFrom(msg.sender, address(this), amount);
         _mintFreeShares(msg.sender, amount);
-        mintedShares = amount;
-        emit Staked(msg.sender, amount, mintedShares);
-        _enableAutocompound(msg.sender);
+        emit Staked(msg.sender, amount, amount);
+        return amount;
     }
 
     /// @notice Request unstake for free shares; burns shares immediately and starts a cooldown.
@@ -288,8 +297,11 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
             if (r.unlockTime > block.timestamp) break;
 
             totalToSend += uint256(r.amount);
-            cursor++;
-            processedCount++;
+            // cursor < len; processedCount <= cursor, so neither increment can overflow.
+            unchecked {
+                ++cursor;
+                ++processedCount;
+            }
 
             if (maxRequests != 0 && processedCount >= maxRequests) break;
         }
@@ -355,9 +367,7 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
     function depositRewards(uint256 amount) external nonReentrant whenNotPaused {
         if (msg.sender != rewardDistributor) revert Unauthorized();
         if (amount == 0) revert InvalidAmount();
-        uint256 activeYThor = _totalActiveYThorPrincipal;
-        uint256 yThorWeight = (activeYThor * yThorRewardWeightBps) / BPS_DENOMINATOR;
-        uint256 weight = totalShares() - activeYThor + yThorWeight;
+        (uint256 activeYThor, uint256 yThorWeight, uint256 weight) = _rewardWeights();
         if (weight == 0) revert InvalidConfiguration();
 
         uint256 delta = (amount * ACC_PRECISION) / weight;
@@ -523,6 +533,10 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
         emit EmergencyBatchExecuted(msg.sender, processedUsers, totalDistributed);
     }
 
+    function renounceOwnership() public override onlyOwner whenNotPaused {
+        super.renounceOwnership();
+    }
+
     function pause() external onlyOwner {
         _pause();
     }
@@ -610,7 +624,7 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
 
         IERC20(address(METRO)).safeTransferFrom(msg.sender, address(this), amount);
 
-        _increaseLockedShares(receiver, amount);
+        _increaseLockedShares(receiver, amount, false);
         emit ContributorStaked(msg.sender, receiver, amount, startTime, duration);
     }
 
@@ -695,7 +709,7 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
         returns (uint256 amountQueued)
     {
         uint256 unlocked = XMetroCoreLogic.consumeContributorVesting(msg.sender, maxSchedules);
-        _decreaseLockedShares(msg.sender, unlocked);
+        _decreaseLockedShares(msg.sender, unlocked, false);
         uint64 unlockTime = uint64(block.timestamp) + UNSTAKE_DELAY;
         _unstakeRequestsContributor[msg.sender].push(UnstakeRequest(uint128(unlocked), unlockTime));
         emit UnstakeRequested(msg.sender, UnstakeSource.Contributor, unlocked, unlockTime);
@@ -712,7 +726,7 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
         returns (uint256 sharesMinted)
     {
         uint256 unlocked = XMetroCoreLogic.consumeContributorVesting(msg.sender, maxSchedules);
-        _decreaseLockedShares(msg.sender, unlocked);
+        _decreaseLockedShares(msg.sender, unlocked, false);
         _mintFreeShares(msg.sender, unlocked);
         emit UnlockedClaimedAsShares(msg.sender, UnstakeSource.Contributor, unlocked);
         return unlocked;
@@ -726,7 +740,7 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
         onlyMigrationEscrow
     {
         (uint256 positionId, uint64 migratedAt) = XMetroCoreLogic.createThorPosition(user, principal);
-        _increaseLockedShares(user, principal);
+        _increaseLockedShares(user, principal, true);
 
         METRO.mint(address(this), principal);
         emit ThorPositionCreated(user, positionId, principal, migratedAt);
@@ -759,7 +773,7 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
         returns (uint256 payout, uint256 forfeited)
     {
         XMetroCoreLogic.ExitResult memory result = XMetroCoreLogic.consumeThorExit(user, positionId);
-        _decreaseLockedShares(user, result.principal);
+        _decreaseLockedShares(user, result.principal, true);
 
         _deliverExitPayout(user, result.payout, UnstakeSource.Thor, mode);
         if (result.forfeited > 0) {
@@ -824,8 +838,7 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
 
     /// @dev Compute base-share and yTHOR rewards without rewriting either historical accumulator.
     function _pendingAndAccumulated(address user) internal view returns (uint256 pending, int256 accumulated) {
-        uint256 yThorPrincipal = _activeYThorPrincipal(user);
-        uint256 baseShares = totalSharesOf(user) - yThorPrincipal;
+        (uint256 baseShares, uint256 yThorPrincipal) = _rewardSharesOf(user);
         accumulated =
             _debtDelta(baseShares, accRewardPerShare) + _debtDelta(yThorPrincipal, _accYThorRewardPerPrincipal);
         int256 debt = _rewardDebtScaled[user];
@@ -1156,17 +1169,25 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
     }
 
     /// @dev Increase locked shares and update reward debt so new shares do not get past rewards.
-    function _increaseLockedShares(address user, uint256 amount) internal {
+    function _increaseLockedShares(address user, uint256 amount, bool thorMigration) internal {
         lockedShares[user] += amount;
         totalLockedShares += amount;
-        _rewardDebtScaled[user] += _debtDelta(amount, accRewardPerShare);
+        if (thorMigration && user == migrationRewardExcludedAddress) {
+            _rewardExcludedThorPrincipal += amount;
+        } else {
+            _rewardDebtScaled[user] += _debtDelta(amount, accRewardPerShare);
+        }
     }
 
     /// @dev Decrease locked shares and update reward debt.
-    function _decreaseLockedShares(address user, uint256 amount) internal {
+    function _decreaseLockedShares(address user, uint256 amount, bool thorMigration) internal {
         lockedShares[user] -= amount;
         totalLockedShares -= amount;
-        _rewardDebtScaled[user] -= _debtDelta(amount, accRewardPerShare);
+        if (thorMigration && user == migrationRewardExcludedAddress) {
+            _rewardExcludedThorPrincipal -= amount;
+        } else {
+            _rewardDebtScaled[user] -= _debtDelta(amount, accRewardPerShare);
+        }
     }
 
     /// @dev Add locked yTHOR shares to their independent reward accumulator.
@@ -1174,7 +1195,9 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
         lockedShares[user] += amount;
         totalLockedShares += amount;
         _totalActiveYThorPrincipal += amount;
-        _rewardDebtScaled[user] += _debtDelta(amount, _accYThorRewardPerPrincipal);
+        if (user != migrationRewardExcludedAddress) {
+            _rewardDebtScaled[user] += _debtDelta(amount, _accYThorRewardPerPrincipal);
+        }
     }
 
     /// @dev Remove yTHOR principal while preserving rewards accrued before exit.
@@ -1182,7 +1205,9 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
         lockedShares[user] -= amount;
         totalLockedShares -= amount;
         _totalActiveYThorPrincipal -= amount;
-        _rewardDebtScaled[user] -= _debtDelta(amount, _accYThorRewardPerPrincipal);
+        if (user != migrationRewardExcludedAddress) {
+            _rewardDebtScaled[user] -= _debtDelta(amount, _accYThorRewardPerPrincipal);
+        }
     }
 
     /// @dev Mint free shares and update reward debt.
@@ -1219,16 +1244,33 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuard, Ownable {
         return XMetroCoreLogic.activeYThorPrincipal(user);
     }
 
+    /// @dev Exclude migration principal before weighting and aggregate rounding.
+    function _rewardWeights() private view returns (uint256 eligibleYThor, uint256 yThorWeight, uint256 weight) {
+        eligibleYThor = _totalActiveYThorPrincipal - _activeYThorPrincipal(migrationRewardExcludedAddress);
+        yThorWeight = (eligibleYThor * yThorRewardWeightBps) / BPS_DENOMINATOR;
+        weight = totalShares() - _totalActiveYThorPrincipal - _rewardExcludedThorPrincipal + yThorWeight;
+    }
+
+    /// @dev Separate actual principal from reward eligibility; Contributor and free shares still earn.
+    function _rewardSharesOf(address user) private view returns (uint256 baseShares, uint256 yThorPrincipal) {
+        yThorPrincipal = _activeYThorPrincipal(user);
+        baseShares = totalSharesOf(user) - yThorPrincipal;
+        if (user == migrationRewardExcludedAddress) {
+            baseShares -= _rewardExcludedThorPrincipal;
+            yThorPrincipal = 0;
+        }
+    }
+
     /// @notice Reward denominator at the currently configured yTHOR multiplier.
     function totalRewardWeight() public view returns (uint256) {
-        return totalShares() - _totalActiveYThorPrincipal + (_totalActiveYThorPrincipal * yThorRewardWeightBps)
-            / BPS_DENOMINATOR;
+        (,, uint256 weight) = _rewardWeights();
+        return weight;
     }
 
     /// @notice Current instantaneous reward weight; historical rewards use the two accumulators above.
     function rewardWeightOf(address user) public view returns (uint256) {
-        uint256 principal = _activeYThorPrincipal(user);
-        return totalSharesOf(user) - principal + (principal * yThorRewardWeightBps) / BPS_DENOMINATOR;
+        (uint256 baseShares, uint256 principal) = _rewardSharesOf(user);
+        return baseShares + (principal * yThorRewardWeightBps) / BPS_DENOMINATOR;
     }
 
     /// @notice Pending claimable rewards for `user` (view).

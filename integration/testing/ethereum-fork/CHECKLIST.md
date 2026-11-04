@@ -1,6 +1,42 @@
 # Ethereum Mainnet Fork Functional Test Checklist
 
-## October 21 source acceptance
+## November 3: Sherlock Issue #24 acceptance
+
+| Coverage | Tests / evidence |
+| --- | --- |
+| E-12: fixed 50% from 30 days until just before 90 days; 100% at 90 days; adjacent-second boundaries | Updated `MigrationExit.t.sol` and unit/fuzz tests |
+| E-12: liquid and stake amounts, forfeiture balances, historical pending, events and one complete exit | Updated exit tests; delayed withdrawals retain their original payout |
+| E-15: independent position milestones and aggregate previews excluding closed positions and queues | `test_ThorPositionsUseIndependentExitMilestones` and aggregate-preview regression |
+| E-01: rebuilt Core bytecode and unchanged size limits, ABI and storage layout | Core/deployment tests and current validation results |
+
+Executed checks and RPC availability are recorded in [RESULTS.md](RESULTS.md). This section does not reuse historical E-12 passes as evidence for the new rules. Mainnet exit scenarios use production time constants; QA compiles that suite and validates its 1-hour/3-hour milestones through its own local tests.
+
+## October 30 audit remediation acceptance
+
+| Coverage | Evidence / status |
+| --- | --- |
+| E-07/E-08/E-17: capped V2/V3/1inch data; stale quotes preserve rewards; fresh quotes succeed | Adapter/Core unit and invariant tests; `AutoCompound.t.sol::test_E07_StaleInputCapRollsBackAndFreshQuoteCompounds`; see current results for executed scope |
+| E-01/E-09: pending ownership, acceptance, paused renounce protection | Updated governance and deployment-script tests |
+| E-21/E-22/X-07: implementation version 2, unchanged epoch rules, ABI/storage compatibility and size | Existing Adapter, Core and deployment tests |
+| E-01/E-09: initial stored configuration events, proxy emitters and rejected reinitialization | Escrow/Core unit and Adapter configuration tests |
+| E-21/E-22/X-07: Solidity 0.8.38 / Osaka artifacts and transient guards on the target fork | Rebuild all profiles; run callback/retry tests locally and protocol scenarios with an available RPC |
+
+Local results and skipped RPC scenarios are recorded in [RESULTS.md](RESULTS.md). The tables below describe earlier revisions, not acceptance of this remediation.
+
+## October 24 source acceptance (historical)
+
+| Updated coverage | Required evidence |
+| --- | --- |
+| E-01: new Core runtime/initcode lengths, unchanged size limits, initial bindings | Actual production-artifact deployment and size tests |
+| E-13: 20%-100% of converted yTHOR principal, one-time exits, balances and cooldown | Unit/fuzz/mock tests and production `MigrationExit.t.sol` |
+| E-14: treasury migration exclusion, normal ordinary rewards, exit-to-stake and preserved historical accrual | Unit/integration/fuzz/invariant tests and production `YThorRewardWeight.t.sol` |
+| Reward settlement and rollback | Claims, emergency payments, manual/batch actions, positive-net-reward rollback and commission-only routing |
+
+Results are recorded in [RESULTS.md](RESULTS.md). QA compiles the production fork suite and runs its own accelerated unit/core tests. These are local checks, with no on-chain deployment or GitHub publication implied.
+
+
+
+## October 21 source acceptance (historical)
 
 The checked tables below are historical results for the previous revision. They do not certify this update. Current commands and results are recorded separately in [RESULTS.md](RESULTS.md).
 

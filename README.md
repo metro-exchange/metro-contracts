@@ -1,8 +1,24 @@
 # THOR/yTHOR Migration to METRO
 
-## October 21 source update
+## November 3: Sherlock Issue #24
 
-This source version supports repeated THOR and yTHOR migrations, independent position IDs, and reward debt at `1e24` internal precision. Production yTHOR pays 10% after 120 days, increasing linearly to 50% over the following `4 * 365 days`. Base QA keeps its 4-hour delay and 12-hour ramp. Each position settles its full principal once; it cannot claim an additional amount later.
+THOR exits now use two fixed payout levels. Production pays 50% of converted METRO principal from 30 days until just before 90 days, then 100% at 90 days and later. Base QA uses the same levels at 1 hour and 3 hours. Earlier exits are blocked. Each position closes once; queued payouts do not increase later. yTHOR rules and existing deployed instances are unchanged. See [Issue #24](https://github.com/sherlock-audit2/2026-10-thorswap-oct-16th-2026/issues/24) and the [validation results](integration/testing/ethereum-fork/RESULTS.md).
+
+## October 30 audit remediation
+
+The local source includes capped swap inputs (Adapter implementation version 2), two-step ownership for Core/Escrow/Distributor, transient reentrancy guards, custom business errors, and initial configuration events. Existing deployed instances and historical configuration files retain their original behavior.
+
+Build with the pinned Solidity **0.8.38** compiler and **Osaka** EVM target in `foundry.toml`. Core, Escrow and Distributor use OpenZeppelin `ReentrancyGuardTransient`; their target chain must support EIP-1153 and the other instructions emitted for Osaka. Adapter keeps its existing proxy-local guard. Rebuild Core, Adapter and deployment artifacts together and recompute approved initcode hashes; old artifacts must not be mixed with this source. See [validation results](integration/testing/ethereum-fork/RESULTS.md) for executed checks and remaining RPC coverage.
+
+## October 24 source update
+
+This source version changes yTHOR exits to 20%-100% of the converted METRO principal. Production opens exits after 120 days and reaches 100% over the following `4 * 365 days`; Base QA keeps its 4-hour delay and 12-hour ramp. Repeated migrations, independent position IDs, one complete exit per position, and `1e24` reward-debt precision are retained.
+
+Only THOR/yTHOR migration positions owned by `migrationRewardExcludedAddress()` earn no USDC rewards and are excluded from the allocation denominator. Ordinary stakes, Contributor shares, received free xMETRO and migration payouts staked after exit retain normal prospective rewards. Existing earned rewards and fractional entitlements are preserved.
+
+The constructor fixes `migrationRewardExcludedAddress` from the existing `forfeitureRecipient_` argument; no constructor argument or user-action signature changes. For production, configure `FORFEITURE_RECIPIENT=0x7D8911eB1C72F0Ba29302bE30301B75Cec81F622`. Both production addresses are immutable. The treasury keeps normal migration and exit rights. If it exits early, forfeited METRO returns to that same recipient and only the payout is queued or staked; the project's intention not to exit early is not an on-chain restriction.
+
+For a future Base QA deployment, explicitly set the existing `BASE_QA_FORFEITURE_RECIPIENT` before creating the deployment plan. The script rejects missing addresses or a different address in a saved plan. QA `setForfeitureRecipient()` changes only the forfeiture recipient; it never changes the fixed migration reward exclusion address or historical rewards. The existing on-chain QA deployment has not acquired these changes.
 
 The existing Base QA deployment and its address/configuration records remain unchanged. Use the ABI and examples from that deployment's revision (QA baseline `60754e05436c6c8056b60eac481d0bdc96a89d4c`) with its existing addresses. This version's ABI/examples target newly created local instances or a future deployment requested by the project. Source changes do not update an immutable deployed Core or migrate its storage.
 
@@ -34,13 +50,15 @@ User / frontend / Keeper
           +--> Maple SyrupRouter
 ```
 
-xMETRO uses one-step `transferOwnership`, permits `renounceOwnership`, and starts unpaused. Renouncing is irreversible: configuration, reward-weight changes, and Adapter upgrades would become unavailable. If xMETRO is paused at that point, it could not be unpaused.
+xMETRO, ThorMigrationEscrow and RewardDistributor use two-step ownership. `transferOwnership(target)` nominates a pending owner; only that address can call `acceptOwnership()` to receive authority. A zero target cancels the nomination. Core and Escrow reject `renounceOwnership()` while paused, but still permit ownership handover and subsequent unpause. Renouncing while unpaused remains irreversible; Distributor retains its existing renounce behavior. MetroToken remains one-step and the Core starts unpaused.
 
 Aave V4 users authorize the configured official GiverPositionManager on the Spoke. The Adapter supplies USDC through that Giver; the Adapter proxy itself does not require separate Spoke activation. A replacement Adapter proxy does not require users to repeat their Giver approval if the Spoke and Giver remain unchanged. Maple authorization, by contrast, is specific to the Adapter proxy and must be obtained again for a new proxy.
 
 The architecture has no external Actions Library, ProxyAdmin, or arbitrary target/selector executor. A normal UUPS upgrade keeps the proxy address and increments `logicEpoch`; replacing the entire proxy increments the core's `deFiAdapterEpoch`. Both changes invalidate stale auto preferences.
 
 ## Reward actions
+
+Adapter implementation version 2 requires the [versioned swap envelope](integration/docs/new-features.md#swap-execution-data) with a nonzero quoted USDC input cap for all four manual/batch swap and compound entrypoints. An increase above that cap reverts the complete action without consuming rewards. Core function signatures and deposit encodings are unchanged. Existing deployment records describe their original revisions.
 
 A user may enable either legacy Auto-Compound or one general auto strategy, not both. A user may disable a preference while paused; enabling and executing actions require an unpaused core.
 
@@ -58,8 +76,8 @@ Maple configuration stores a SyrupRouter and `bytes32 depositData`; syrupUSDC is
 ## Migration and exits
 
 - Each address may migrate THOR and yTHOR repeatedly within the migration window and cumulative caps. Each call creates an independently timed position.
-- THOR cannot exit before day 30; the payout rises linearly from 50% on day 30 to 100% on day 90.
-- yTHOR principal uses the configured `ratioYThor`. Reward weight starts at the constructor's `YTHOR_REWARD_WEIGHT_BPS` (`10,000 = 1x`) and may be changed by the xMETRO owner without pausing. The current weight applies to future reward deposits for all active yTHOR positions; accrued rewards are not repriced. yTHOR cannot exit before day 120; its payout rises from 10% then to 50% over the following four years (4 * 365 days after the initial 120 days).
+- THOR cannot exit before day 30. The payout is fixed at 50% of converted METRO principal from day 30 until just before day 90, and is 100% at day 90 and later.
+- yTHOR principal uses the configured `ratioYThor`. Reward weight starts at the constructor's `YTHOR_REWARD_WEIGHT_BPS` (`10,000 = 1x`) and may be changed by the xMETRO owner without pausing. The current weight applies to future reward deposits for eligible active yTHOR positions, excluding those owned by `migrationRewardExcludedAddress()`; accrued rewards are not repriced. yTHOR cannot exit before day 120; its payout rises from 20% at that point to 100% of the converted METRO principal over the following four years (4 * 365 days after the initial 120 days).
 - Forfeited principal goes to the immutable `forfeitureRecipient`.
 - Liquid exits for free stake, THOR, yTHOR, and Contributor positions have separate 72-hour withdrawal queues. Exit-to-stake produces transferable xMETRO immediately.
 - Contributor vesting has a 180-day cliff followed by 2.5 years of linear release.
@@ -77,7 +95,7 @@ The Distributor transfers the commission directly to the Vault and deposits the 
 
 ## Production and Base QA versions
 
-The production branch retains the full time constants and is the audit/mainnet baseline. The project-facing Base QA branch shortens seven waiting periods: 30-minute unstake delay; THOR exit at 1–3 hours; yTHOR exit starting at 4 hours with a 12-hour ramp; and a 6-hour Contributor cliff plus 6-hour vesting period. The QA build also allows its owner to change the forfeiture recipient for future exits and accepts a zero Escrow constructor start time as the deployment-block timestamp. The production recipient is immutable, and its Escrow requires an explicit start time. Other business ratios, one-step ownership, and default unpaused state remain aligned; the two builds do not have identical ABIs or bytecode. QA uses freshly deployed owner-mintable TestTokens, Aave/Maple protocol mocks, and real Base Uniswap V2 liquidity. Mock integration does not prove the production protocols are available on Base.
+The production branch retains the full time constants and is the audit/mainnet baseline. The project-facing Base QA branch shortens seven waiting periods: 30-minute unstake delay; THOR pays a fixed 50% from 1 hour until just before 3 hours, then 100% at 3 hours and later; yTHOR exit starting at 4 hours with a 12-hour ramp; and a 6-hour Contributor cliff plus 6-hour vesting period. The QA build also allows its owner to change the forfeiture recipient for future exits and accepts a zero Escrow constructor start time as the deployment-block timestamp. The production recipient is immutable, and its Escrow requires an explicit start time. Other business ratios, two-step business-contract ownership, and default unpaused state remain aligned; the two builds do not have identical ABIs or bytecode. QA uses freshly deployed owner-mintable TestTokens, Aave/Maple protocol mocks, and real Base Uniswap V2 liquidity. Mock integration does not prove the production protocols are available on Base.
 
 Historical rapid-QA addresses and receipts are test evidence only. The fresh project-facing deployment and its transaction hashes are recorded in the Base QA branch's integration config and checklist. The production branch keeps a Base config template; it must not be mistaken for a second deployment or mixed with historical addresses.
 
@@ -95,7 +113,7 @@ Historical rapid-QA addresses and receipts are test evidence only. The fresh pro
 
 Copy `.env.example` to an untracked local `.env`. Fill in the signing EOA, intended owner, chain-specific tokens and routers, migration ratios/windows, and integrations that are ready to enable. Never commit a private key. Build and inspect the intended release artifacts before broadcasting; a dry run is not evidence that any transaction was sent. Deployment and configuration consist of multiple transactions, so verify every receipt and on-chain binding.
 
-`script/Deploy.s.sol` transfers xMETRO ownership in one step and leaves it unpaused; no `acceptOwnership()` or initial `unpause()` is required. `script/VerifyDeployment.s.sol` can read back the broadcast deployment.
+`script/Deploy.s.sol` nominates the target owner for Core, Escrow and Distributor after configuration, skipping nomination when the target is the deployer. Its JSON `owner` is the target; per-contract Owner/pendingOwner fields record actual deployment-time state. The target must accept each contract separately. `script/VerifyDeployment.s.sol` requires all three live owners to equal the target and all pending owners to be zero, even if the original deployment snapshot still records pending acceptance. Core starts unpaused; MetroToken ownership still transfers in one step.
 
 ```bash
 # Ethereum

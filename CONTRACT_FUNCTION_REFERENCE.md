@@ -1,5 +1,7 @@
 # Contract Function Reference
 
+Swap and compound `bytes` arguments use the [version-2 envelope](integration/docs/new-features.md#swap-execution-data) with a quoted input cap. The four Core function signatures and all deposit encodings are unchanged.
+
 This index follows the current `src/` contracts. See [legacy integration](integration/docs/existing-features.md), [new actions](integration/docs/new-features.md), and [roles/configuration](integration/docs/contract-api.md) for call flows. Solidity identifiers are preserved exactly.
 
 ## MetroToken
@@ -22,17 +24,23 @@ xMETRO is immutable. `XMetroCoreLogic.sol` is internal code compiled into it, no
 - Escrow-only `creditYThorFromMigration(address,uint256)`; user `previewYThorExit(address,uint256)`, `exitYThor(uint256,ExitMode)`, `withdrawYThor(uint256)`
 - Contributor `stakeContributor(uint256,address)`, `requestWithdrawUnlockedContributor(uint256)`, `claimAndStakeUnlockedContributor(uint256)`, `withdrawContributor(uint256)`
 
-The production liquid-withdrawal cooldown is `UNSTAKE_DELAY = 72 hours`. THOR exits at 50% on day 30 and rises to 100% by day 90. yTHOR exits at 10% on day 120 and rises to 50% over the next four years (4 * 365 days). `previewWithdrawableNow(address)` aggregates currently exit-eligible THOR/yTHOR payouts and unlocked Contributor value; it excludes every already-requested withdrawal queue. Queue information is available through the corresponding `unstakeRequestCount*`, `unstakeRequest*`, and `unstakeCursor*` getters.
+The production liquid-withdrawal cooldown is `UNSTAKE_DELAY = 72 hours`. THOR cannot exit before day 30; it pays a fixed 50% of converted principal from day 30 until just before day 90, then 100% at day 90 and later. yTHOR exits at 20% of converted principal on day 120 and rises to 100% over the next four years (4 * 365 days). Each THOR position closes once; forfeited principal cannot be claimed later, and its queued payout stays fixed. `previewWithdrawableNow(address)` aggregates currently exit-eligible THOR/yTHOR payouts and unlocked Contributor value; it excludes every already-requested withdrawal queue. Queue information is available through the corresponding `unstakeRequestCount*`, `unstakeRequest*`, and `unstakeCursor*` getters.
 
 ### Reward accounting
 
 - `depositRewards(uint256)` accepts calls only from the bound RewardDistributor.
 - `claimRewards()` claims the caller's USDC pending balance.
 - `claimable(address)` and `claimableMany(address[])` provide quotes; the latter is per input element and does not deduplicate.
-- `rewardWeightOf(address)` and `totalRewardWeight()` include the current yTHOR reward multiplier.
+- `rewardWeightOf(address)` and `totalRewardWeight()` apply the current yTHOR multiplier after excluding the fixed treasury's migration principal.
+- `migrationRewardExcludedAddress()` returns the immutable migration-only exclusion address.
+- `YTHOR_EXIT_START_BPS()` is `2000`; `YTHOR_EXIT_MAX_BPS()` is `10000`, both relative to converted METRO principal.
 - `totalSharesOf(address)` and `totalShares()` report actual METRO-principal shares, not multiplied reward weight.
 
-Ordinary shares and yTHOR have separate reward accumulators, so changing the current multiplier does not reprice already-accrued rewards.
+Ordinary shares and eligible yTHOR principal have separate reward accumulators, so changing the multiplier does not reprice accrued rewards. The excluded address keeps normal ordinary-stake, Contributor, transfer and exit-to-stake rewards.
+
+The constructor fixes `migrationRewardExcludedAddress` from the existing `forfeitureRecipient_` argument; no constructor argument or user-action signature changes. For production, configure `FORFEITURE_RECIPIENT=0x7D8911eB1C72F0Ba29302bE30301B75Cec81F622`. Both production addresses are immutable. The treasury keeps normal migration and exit rights. If it exits early, forfeited METRO returns to that same recipient and only the payout is queued or staked; the project's intention not to exit early is not an on-chain restriction.
+
+For a future Base QA deployment, explicitly set the existing `BASE_QA_FORFEITURE_RECIPIENT` before creating the deployment plan. The script rejects missing addresses or a different address in a saved plan. QA `setForfeitureRecipient()` changes only the forfeiture recipient; it never changes the fixed migration reward exclusion address or historical rewards. The existing on-chain QA deployment has not acquired these changes.
 
 ### Manual Adapter action
 
@@ -61,10 +69,10 @@ Legacy compound and general auto strategies are mutually exclusive. A batch swap
 ### Administration
 
 - `setDeFiAdapter(address proxy)` checks runtime code, core/USDC/METRO binding, Adapter family, valid configuration, and logic version. A full replacement increments `deFiAdapterEpoch`.
-- `setYThorRewardWeightBps(uint256)` changes future rewards for all active yTHOR positions without pausing. `10,000=1x`; zero and sub-1x values are valid up to the technical bound.
+- `setYThorRewardWeightBps(uint256)` changes future rewards for all eligible active yTHOR positions without pausing. `10,000=1x`; zero and sub-1x values are valid up to the technical bound.
 - `setAutoCompoundOperator(address,bool)`; `setMigrationEscrow(address)`; `setRewardDistributor(address)`; `setContributor(address,bool)`; `setDefaultMaxVestingSchedules(uint256)`
 - `pause()`; `unpause()`; `rescueERC20(address,address,uint256)` (principal-backing METRO is protected)
-- `transferOwnership(address)` acts in one step; there is no `pendingOwner` or `acceptOwnership()` on the current version. `renounceOwnership()` is irreversible and also prevents later Adapter upgrades. The constructor leaves the core unpaused.
+- Core, Escrow and Distributor expose `pendingOwner()`, `transferOwnership(address)` and `acceptOwnership()`. Nomination preserves the current owner; a zero target cancels it. Acceptance clears pending ownership. `renounceOwnership()` clears both owner fields and is irreversible; Core/Escrow reject it while paused. Paused handovers remain available. MetroToken remains one-step. The Core constructor leaves it unpaused.
 
 Normal configuration and UUPS implementation upgrades do not require a pause. A full proxy replacement should remain paused throughout its multi-transaction handover. A UUPS implementation upgrade increments `logicEpoch` without changing the proxy address; a proxy replacement increments `deFiAdapterEpoch`. Both make older auto preferences stale.
 
@@ -141,3 +149,49 @@ Read `thorPositionCount(user)` / `yThorPositionCount(user)` before querying `tho
 Core tracks signed reward debt at the existing `1e24` accumulator precision. Share changes retain the full debt product. Claims, emergency payments, manual actions, and automatic batches consume only whole USDC base units and retain the fractional remainder. Zero-value claims preserve that remainder. `rewardDebt(user)` keeps its ABI and displays USDC base units, truncating negative fractions toward zero; use `claimable` / `claimableMany` for payable amounts instead of reconstructing them from the display getter. Adapter inputs and event amounts remain in token base units.
 
 `YTHOR_EXIT_RAMP()` returns seconds: `126144000` for production, `43200` for QA. These are compiled constants with no Owner setter.
+
+Initial configuration logs and their emitters are listed in [events and indexing](integration/docs/existing-features.md#events-and-indexing).
+
+## Business errors
+
+The following errors have no arguments. Decode with the matching contract ABI; external failures and Solidity panics retain their original data. Check ordering and business conditions are unchanged.
+
+| Contract | Error | Trigger |
+| --- | --- | --- |
+| MetroToken | `MinterStatusUnchanged()` | same status |
+| MetroToken | `UnauthorizedMinter()` | not minter |
+| MetroToken | `InvalidRecipient()` | bad to |
+| MetroToken | `ZeroAmount()` | zero amount |
+| ThorMigrationEscrow | `ZeroXMetro()` | zero xMETRO |
+| ThorMigrationEscrow | `ZeroMigrationToken()` | zero token |
+| ThorMigrationEscrow | `InvalidMigrationStartTime()` | bad start time |
+| ThorMigrationEscrow | `MigrationNotStarted()` | not started |
+| ThorMigrationEscrow | `ZeroAmount()` | zero amount |
+| ThorMigrationEscrow | `ThorConfigurationMissing()` | thor config not set |
+| ThorMigrationEscrow | `ThorMigrationExpired()` | thor expired |
+| ThorMigrationEscrow | `ZeroMintAmount()` | zero mint |
+| ThorMigrationEscrow | `ThorCapExceeded()` | thor cap |
+| ThorMigrationEscrow | `YThorConfigurationMissing()` | ythor config not set |
+| ThorMigrationEscrow | `YThorMigrationExpired()` | ythor expired |
+| ThorMigrationEscrow | `YThorCapExceeded()` | ythor cap |
+| ThorMigrationEscrow | `InvalidMigrationDeadline()` | bad deadline |
+| ThorMigrationEscrow | `DeadlineNotAfterMigrationStart()` | deadline before start |
+| ThorMigrationEscrow | `InvalidMigrationRatio()` | bad ratio |
+| ThorMigrationEscrow | `MigrationRatiosLocked()` | ratios locked |
+| ThorMigrationEscrow | `InvalidMigrationCap()` | bad cap |
+| ThorMigrationEscrow | `MigrationTokenRescueForbidden()` | cannot rescue migration tokens |
+| ThorMigrationEscrow | `InvalidRecipient()` | bad to |
+| RewardDistributor | `ZeroXMetro()` | zero xMETRO |
+| RewardDistributor | `UnauthorizedOperator()` | only operator |
+| RewardDistributor | `InvalidOperator()` | bad operator |
+| RewardDistributor | `CommissionSplitEnabled()` | split enabled |
+| RewardDistributor | `InvalidCommissionSplitBps()` | bps > 10000 |
+| RewardDistributor | `ZeroAmount()` | zero amount |
+| RewardDistributor | `InsufficientRewardBalance()` | insufficient balance |
+| RewardDistributor | `ZeroCommissionVault()` | zero vault |
+| RewardDistributor | `CommissionVaultNotContract()` | vault not contract |
+| RewardDistributor | `CommissionTokenMismatch()` | token mismatch |
+| RewardDistributor | `CommissionDistributorMismatch()` | distributor mismatch |
+| RewardDistributor | `CommissionVaultMigrationPending()` | vault migration pending |
+| RewardDistributor | `CommissionVaultPaused()` | vault paused |
+| RewardDistributor | `InvalidRecipient()` | bad to |

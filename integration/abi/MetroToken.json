@@ -703,7 +703,17 @@
   },
   {
     "type": "error",
+    "name": "InvalidRecipient",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidShortString",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MinterStatusUnchanged",
     "inputs": []
   },
   {
@@ -738,5 +748,15 @@
         "internalType": "string"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "UnauthorizedMinter",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ZeroAmount",
+    "inputs": []
   }
 ]

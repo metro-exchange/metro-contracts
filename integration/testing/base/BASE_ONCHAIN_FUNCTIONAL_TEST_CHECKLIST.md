@@ -1,6 +1,41 @@
 # Base On-Chain Functional Test Checklist
 
-## October 21 update: local validation only
+## November 3: Sherlock Issue #24 future on-chain acceptance
+
+These checks apply to a Core built with the two-level THOR fix. No deployment or on-chain action is performed by this source update; existing addresses, build hashes and receipts below retain their historical meaning.
+
+- [ ] N-03: exits fail before 1 hour; payout stays at 50% from 1 hour through 3 hours minus 1 second, then becomes 100% at 3 hours and later.
+- [ ] N-03: liquid and stake paths settle the quoted amounts and forfeitures, emit matching events, and close each position only once. A delayed withdrawal still pays its original queued amount after the 30-minute cooldown; reaching 3 hours does not restore forfeited principal.
+- [ ] N-06: positions migrated at different times reach their own milestones independently; aggregate previews exclude closed positions and queued payouts.
+
+These items remain unexecuted on Base. Historical N-03/N-06 results do not certify this revision. yTHOR's 4-hour delay and 12-hour linear ramp are unchanged.
+
+## October 30 audit remediation: future on-chain checks
+
+- [ ] On new Core/Escrow/Distributor instances, verify owner/pendingOwner before and after acceptance; reject paused Core/Escrow renounce while allowing handover.
+- [ ] On a future version-2 Adapter, exercise V2/V3/1inch input caps and rejection of legacy data.
+- [ ] Fund rewards after quoting; confirm all four Core swap/compound paths revert above the saved cap, preserve rewards and succeed with a complete fresh quote.
+
+- [ ] Decode initial Escrow/Core configuration logs and the proxy's two disabled strategies at revision 1; confirm stored getter values and rejected reinitialization.
+- [ ] Verify target-chain support for the pinned Solidity 0.8.38 / Osaka artifacts, including transient storage; exercise callback protection and sequential calls.
+
+No deployment or on-chain transaction was performed for this source change. The historical deployment rows and hashes below remain unchanged.
+
+## October 24 source acceptance: future on-chain checks
+
+These items apply to a future deployment of the updated source. The existing QA addresses, transactions and permissions below remain historical deployment facts and have not been changed. Local tests do not mark an on-chain checkbox as passed.
+
+| Check | Status |
+| --- | --- |
+| yTHOR pays 20/40/60/80/100% of converted principal at 4/7/10/13/16 hours, including adjacent-second boundaries | [ ] Not deployed |
+| 100 yTHOR at a 0.5 test ratio creates 50 principal and pays 10 at the start or 50 at maturity; actual QA ratios remain configured | [ ] Not deployed |
+| Fixed exclusion address matches the explicitly selected initial QA treasury; changing the forfeiture recipient leaves the exclusion unchanged | [ ] Not deployed |
+| Treasury migration principal has zero weight; ordinary stakes, Contributor shares and exit-to-stake payouts retain rewards | [ ] Not deployed |
+| Normal treasury exits, self-recipient forfeitures, queue cooldowns and no retroactive rewards | [ ] Not deployed |
+
+
+
+## October 21 update: historical local-validation scope
 
 The deployment records below describe existing QA contracts. This source update does not redeploy them or change their addresses or permissions. Use their matching deployed revision's ABI. New indexed interfaces are validated locally and require a later project-requested deployment for on-chain acceptance.
 
@@ -41,7 +76,7 @@ The yTHOR ramp starts after its exit delay; the maximum yTHOR exit scenario take
 | ID | New deployment | Check | New Base evidence |
 | --- | --- | --- | --- |
 | P-01 | [ ] | Deploy all test tokens and METRO; verify decimals, cap, owners, mint rights, and a single TestUSDC. | — |
-| P-02 | [ ] | Deploy Core, Escrow, Distributor, Adapter implementation and ERC1967 Proxy; verify code, one-step Owner model, initial pause state, and bindings. | — |
+| P-02 | [ ] | Deploy Core, Escrow, Distributor, Adapter implementation and ERC1967 Proxy; verify code, two-step business Owner acceptance, initial pause state, and bindings. | — |
 | P-03 | [ ] | Deploy/configure Mock V3 Pool/aUSDC, V4 Spoke/Giver, Maple Router/PermissionManager/Syrup; verify owners, interfaces, permissions, and tested events. | — |
 | P-04 | [ ] | Deploy a fresh Commission Vault for the new TestUSDC and Distributor, bind it in the Distributor, and verify the initial split is zero until the project configures it. | — |
 | P-05 | [ ] | Create and fund real V2 pairs for METRO, five initial output assets, and ExtraToken against TestUSDC; verify Router/Factory and reserves. | — |
@@ -61,7 +96,7 @@ The yTHOR ramp starts after its exit delay; the maximum yTHOR exit scenario take
 | O-06 | [ ] | Single-user legacy Auto-Compound through the funded real V2 pair, including opt-in/out, output minimum, deadline, and allowance cleanup. | — |
 | O-07 | [ ] | Keeper-only `autocompoundBatch`: one swap, proportional user allocation, skipped candidates, rounding, and revoked Keeper. | — |
 | O-08 | [ ] | Contributor allowlist, schedule creation, cliff/linear vesting, preview, scan/cursor, liquid and stake claims, and withdrawal queue. | — |
-| O-09 | [ ] | Core/Escrow pause, unpause, rescue and role boundaries under the current one-step Owner implementation. | — |
+| O-09 | [ ] | Core/Escrow pause, unpause, rescue and role boundaries under the two-step Owner implementation, including paused renounce rejection. | — |
 
 ## N. New and replaced-function testing
 
@@ -71,7 +106,7 @@ The yTHOR ramp starts after its exit delay; the maximum yTHOR exit scenario take
 | N-02 | [ ] | THOR/yTHOR migration start, deadlines, conversion ratios, per-path caps, and mint/accounting results. | — |
 | N-03 | [ ] | THOR position preview and early/mid/full exit, liquid vs stake, payout, forfeiture, and independent withdrawal queue. | — |
 | N-04 | [ ] | yTHOR position preview and early/mid/full exit, liquid vs stake, payout, forfeiture, pending rewards, and queue; specifically check the historical one-micro-USDC discrepancy. | — |
-| N-05 | [ ] | Adjustable yTHOR reward weight: historical rewards settle first, all unexited holders receive future weight, and accounting stays conserved. | — |
+| N-05 | [ ] | Adjustable yTHOR reward weight: accrued rewards remain unchanged; future weight applies only to eligible active yTHOR principal, excluding the fixed treasury's migration positions; accounting stays conserved. | — |
 | N-06 | [ ] | `previewWithdrawableNow` includes the intended matured sources and excludes unrelated or queued amounts. | — |
 | N-07 | [ ] | Distributor commission split to the new Vault and net reward to xMETRO; test zero/partial/full shortfall and both funding paths. | — |
 | N-08 | [ ] | Adapter Proxy binding, initialization guard, router and strategy configuration, enable/disable, revisions, and adding ExtraToken. | — |

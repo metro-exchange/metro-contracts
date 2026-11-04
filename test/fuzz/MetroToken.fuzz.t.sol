@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import "forge-std/Test.sol";
 
@@ -45,7 +45,7 @@ contract MetroTokenFuzzTest is Test {
 
         vm.prank(minter);
         if (!allowed) {
-            vm.expectRevert(bytes("MetroToken: not minter"));
+            vm.expectRevert(MetroToken.UnauthorizedMinter.selector);
             metro.mint(to, value);
             return;
         }

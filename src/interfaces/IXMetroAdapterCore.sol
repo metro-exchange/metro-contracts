@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 /// @notice Minimal immutable-Core surface used by the upgradeable DeFi adapter.
 interface IXMetroAdapterCore {

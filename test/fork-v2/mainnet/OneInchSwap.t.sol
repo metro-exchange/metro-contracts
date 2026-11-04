@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -18,7 +18,9 @@ interface IOneInchRouterMainnet {
         uint256 flags;
     }
     function swap(address executor, SwapDescription calldata desc, bytes calldata data)
-        external payable returns (uint256, uint256);
+        external
+        payable
+        returns (uint256, uint256);
 }
 
 /// @notice Diagnosis of official 1inch.com frontend calldata for the exact CREATE-deployed Proxy.
@@ -47,7 +49,9 @@ contract OneInchSwapMainnetTest is MainnetForkBase {
         bytes memory data = _data(index);
         assertEq(bytes4(data), IOneInchRouterMainnet.swap.selector);
         bytes memory args = new bytes(data.length - 4);
-        for (uint256 i; i < args.length; ++i) args[i] = data[i + 4];
+        for (uint256 i; i < args.length; ++i) {
+            args[i] = data[i + 4];
+        }
         (, IOneInchRouterMainnet.SwapDescription memory desc,) =
             abi.decode(args, (address, IOneInchRouterMainnet.SwapDescription, bytes));
         assertEq(address(desc.srcToken), USDC);
@@ -62,7 +66,12 @@ contract OneInchSwapMainnetTest is MainnetForkBase {
         uint256 beforeCore = IERC20(USDC).balanceOf(address(core));
         vm.prank(user);
         vm.expectRevert(bytes4(keccak256("InvalidExecutionRequest()")));
-        core.claimAndExecute(strategy, 1, block.timestamp + 1 hours, abi.encode(uint8(2), data));
+        core.claimAndExecute(
+            strategy,
+            1,
+            block.timestamp + 1 hours,
+            abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(2), uint256(100e6), data)
+        );
         assertEq(core.claimable(user), 100e6);
         assertEq(IERC20(USDC).balanceOf(address(core)), beforeCore);
         assertEq(IERC20(tokenOut).balanceOf(user), beforeOut);
@@ -79,7 +88,12 @@ contract OneInchSwapMainnetTest is MainnetForkBase {
         uint256 beforeCore = IERC20(USDC).balanceOf(address(core));
         vm.prank(user);
         vm.expectRevert();
-        core.claimAndExecute(strategy, 1, block.timestamp + 1 hours, abi.encode(uint8(2), data));
+        core.claimAndExecute(
+            strategy,
+            1,
+            block.timestamp + 1 hours,
+            abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(2), uint256(100e6), data)
+        );
         assertEq(core.claimable(user), 100e6);
         assertEq(IERC20(USDC).balanceOf(address(core)), beforeCore);
     }
@@ -118,7 +132,10 @@ contract OneInchSwapMainnetTest is MainnetForkBase {
         vm.recordLogs();
         vm.prank(user);
         (uint256 rewardIn, uint256 amountOut) = core.claimAndExecute(
-            strategy, desc.minReturnAmount, block.timestamp + 1 hours, abi.encode(uint8(2), data)
+            strategy,
+            desc.minReturnAmount,
+            block.timestamp + 1 hours,
+            abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(2), uint256(100e6), data)
         );
         Vm.Log[] memory logs = vm.getRecordedLogs();
         assertEq(rewardIn, 100e6);
@@ -129,7 +146,9 @@ contract OneInchSwapMainnetTest is MainnetForkBase {
         assertEq(IERC20(USDC).allowance(proxy, ONEINCH_ROUTER), 0);
         bool foundManual;
         for (uint256 i; i < logs.length; ++i) {
-            if (logs[i].emitter != address(core) || logs[i].topics.length != 3 || logs[i].topics[0] != MANUAL) continue;
+            if (logs[i].emitter != address(core) || logs[i].topics.length != 3 || logs[i].topics[0] != MANUAL) {
+                continue;
+            }
             assertEq(logs[i].topics[1], bytes32(uint256(uint160(user))));
             assertEq(logs[i].topics[2], strategy);
             (uint256 eventIn, uint256 eventOut) = abi.decode(logs[i].data, (uint256, uint256));
@@ -163,8 +182,12 @@ contract OneInchSwapMainnetTest is MainnetForkBase {
         _fundUSDC(proxy, 5e6);
         vm.recordLogs();
         (uint256 rewardIn, uint256 amountOut) = core.executeAutoStrategyBatch(
-            strategy, users, desc.minReturnAmount, new uint256[](0), block.timestamp + 1 hours,
-            abi.encode(uint8(2), data)
+            strategy,
+            users,
+            desc.minReturnAmount,
+            new uint256[](0),
+            block.timestamp + 1 hours,
+            abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(2), uint256(100e6), data)
         );
         Vm.Log[] memory logs = vm.getRecordedLogs();
         assertEq(rewardIn, 100e6);
@@ -196,7 +219,9 @@ contract OneInchSwapMainnetTest is MainnetForkBase {
     function _decode(bytes memory data) private pure returns (IOneInchRouterMainnet.SwapDescription memory desc) {
         assertEq(bytes4(data), IOneInchRouterMainnet.swap.selector);
         bytes memory args = new bytes(data.length - 4);
-        for (uint256 i; i < args.length; ++i) args[i] = data[i + 4];
+        for (uint256 i; i < args.length; ++i) {
+            args[i] = data[i + 4];
+        }
         (, desc,) = abi.decode(args, (address, IOneInchRouterMainnet.SwapDescription, bytes));
     }
 
@@ -224,7 +249,11 @@ contract OneInchSwapMainnetTest is MainnetForkBase {
         vm.recordLogs();
         vm.prank(user);
         (uint256 rewardIn, uint256 amountOut) = core.claimAndExecute(
-            strategy, desc.minReturnAmount, block.timestamp + 1 hours, abi.encode(uint8(2), data));
+            strategy,
+            desc.minReturnAmount,
+            block.timestamp + 1 hours,
+            abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(2), uint256(100e6), data)
+        );
         Vm.Log[] memory logs = vm.getRecordedLogs();
         assertEq(rewardIn, 100e6);
         assertGe(amountOut, desc.minReturnAmount);
@@ -237,20 +266,24 @@ contract OneInchSwapMainnetTest is MainnetForkBase {
         bool outputTransfer;
         for (uint256 i; i < logs.length; ++i) {
             if (logs[i].topics.length == 3 && logs[i].topics[0] == TRANSFER) {
-                if (logs[i].emitter == USDC
-                    && logs[i].topics[1] == bytes32(uint256(uint160(proxy)))
-                    && logs[i].topics[2] == bytes32(uint256(uint160(address(desc.srcReceiver))))) {
+                if (
+                    logs[i].emitter == USDC && logs[i].topics[1] == bytes32(uint256(uint160(proxy)))
+                        && logs[i].topics[2] == bytes32(uint256(uint160(address(desc.srcReceiver))))
+                ) {
                     assertEq(abi.decode(logs[i].data, (uint256)), 100e6);
                     inputTransfer = true;
                 }
-                if (logs[i].emitter == tokenOut
-                    && logs[i].topics[1] == bytes32(uint256(uint160(proxy)))
-                    && logs[i].topics[2] == bytes32(uint256(uint160(user)))) {
+                if (
+                    logs[i].emitter == tokenOut && logs[i].topics[1] == bytes32(uint256(uint160(proxy)))
+                        && logs[i].topics[2] == bytes32(uint256(uint160(user)))
+                ) {
                     assertEq(abi.decode(logs[i].data, (uint256)), amountOut);
                     outputTransfer = true;
                 }
             }
-            if (logs[i].emitter != address(core) || logs[i].topics.length != 3 || logs[i].topics[0] != MANUAL) continue;
+            if (logs[i].emitter != address(core) || logs[i].topics.length != 3 || logs[i].topics[0] != MANUAL) {
+                continue;
+            }
             assertEq(logs[i].topics[1], bytes32(uint256(uint160(user))));
             assertEq(logs[i].topics[2], strategy);
             (uint256 loggedIn, uint256 loggedOut) = abi.decode(logs[i].data, (uint256, uint256));
@@ -299,15 +332,26 @@ contract OneInchSwapMainnetTest is MainnetForkBase {
         uint256[] memory wrongMinima = new uint256[](1);
         wrongMinima[0] = 1;
         vm.expectRevert();
-        core.executeAutoStrategyBatch(strategy, candidates, desc.minReturnAmount, wrongMinima,
-            block.timestamp + 1 hours, abi.encode(uint8(2), data));
+        core.executeAutoStrategyBatch(
+            strategy,
+            candidates,
+            desc.minReturnAmount,
+            wrongMinima,
+            block.timestamp + 1 hours,
+            abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(2), uint256(100e6), data)
+        );
         assertEq(core.claimable(users[0]), 20e6);
         assertEq(core.claimable(users[1]), 30e6);
         assertEq(core.claimable(users[2]), 50e6);
         vm.recordLogs();
         (uint256 rewardIn, uint256 amountOut) = core.executeAutoStrategyBatch(
-            strategy, candidates, desc.minReturnAmount, new uint256[](0), block.timestamp + 1 hours,
-            abi.encode(uint8(2), data));
+            strategy,
+            candidates,
+            desc.minReturnAmount,
+            new uint256[](0),
+            block.timestamp + 1 hours,
+            abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(2), uint256(100e6), data)
+        );
         Vm.Log[] memory logs = vm.getRecordedLogs();
         assertEq(rewardIn, 100e6);
         assertGe(amountOut, desc.minReturnAmount);
@@ -327,16 +371,18 @@ contract OneInchSwapMainnetTest is MainnetForkBase {
         bool inputTransfer;
         for (uint256 i; i < logs.length; ++i) {
             if (logs[i].topics.length == 3 && logs[i].topics[0] == TRANSFER) {
-                if (logs[i].emitter == USDC
-                    && logs[i].topics[1] == bytes32(uint256(uint160(proxy)))
-                    && logs[i].topics[2] == bytes32(uint256(uint160(address(desc.srcReceiver))))) {
+                if (
+                    logs[i].emitter == USDC && logs[i].topics[1] == bytes32(uint256(uint160(proxy)))
+                        && logs[i].topics[2] == bytes32(uint256(uint160(address(desc.srcReceiver))))
+                ) {
                     assertEq(abi.decode(logs[i].data, (uint256)), 100e6);
                     inputTransfer = true;
                 }
-                if (logs[i].emitter == tokenOut
-                    && logs[i].topics[1] == bytes32(uint256(uint160(proxy)))) {
+                if (logs[i].emitter == tokenOut && logs[i].topics[1] == bytes32(uint256(uint160(proxy)))) {
                     address outputRecipient = address(uint160(uint256(logs[i].topics[2])));
-                    assertTrue(outputRecipient == users[0] || outputRecipient == users[1] || outputRecipient == users[2]);
+                    assertTrue(
+                        outputRecipient == users[0] || outputRecipient == users[1] || outputRecipient == users[2]
+                    );
                     assertEq(abi.decode(logs[i].data, (uint256)), IERC20(tokenOut).balanceOf(outputRecipient));
                     ++outputTransfers;
                 }
@@ -357,14 +403,37 @@ contract OneInchSwapMainnetTest is MainnetForkBase {
         emit log_named_uint("1inch forced batch output", amountOut);
     }
 
-    function test_E17_ForcedUsdtManual() public { _forcedManual(0, USDT, 6); }
-    function test_E17_ForcedUsdtBatch() public { _forcedBatch(0, USDT, 6); }
-    function test_E17_ForcedWbtcManual() public { _forcedManual(1, WBTC, 8); }
-    function test_E17_ForcedWbtcBatch() public { _forcedBatch(1, WBTC, 8); }
-    function test_E17_ForcedGhoManual() public { _forcedManual(2, GHO, 18); }
-    function test_E17_ForcedGhoBatch() public { _forcedBatch(2, GHO, 18); }
-    function test_E17_ForcedXautManual() public { _forcedManual(3, XAUT, 6); }
-    function test_E17_ForcedXautBatch() public { _forcedBatch(3, XAUT, 6); }
+    function test_E17_ForcedUsdtManual() public {
+        _forcedManual(0, USDT, 6);
+    }
+
+    function test_E17_ForcedUsdtBatch() public {
+        _forcedBatch(0, USDT, 6);
+    }
+
+    function test_E17_ForcedWbtcManual() public {
+        _forcedManual(1, WBTC, 8);
+    }
+
+    function test_E17_ForcedWbtcBatch() public {
+        _forcedBatch(1, WBTC, 8);
+    }
+
+    function test_E17_ForcedGhoManual() public {
+        _forcedManual(2, GHO, 18);
+    }
+
+    function test_E17_ForcedGhoBatch() public {
+        _forcedBatch(2, GHO, 18);
+    }
+
+    function test_E17_ForcedXautManual() public {
+        _forcedManual(3, XAUT, 6);
+    }
+
+    function test_E17_ForcedXautBatch() public {
+        _forcedBatch(3, XAUT, 6);
+    }
 
     function test_X02_OneInchWbtcZeroRoundedUserRollsBackBatch() public {
         bytes memory data = _forcedData(1);
@@ -385,8 +454,14 @@ contract OneInchSwapMainnetTest is MainnetForkBase {
         users[0] = dust;
         users[1] = whale;
         vm.expectRevert(bytes4(keccak256("InvalidExecutionRequest()")));
-        core.executeAutoStrategyBatch(strategy, users, desc.minReturnAmount, new uint256[](0),
-            block.timestamp + 1 hours, abi.encode(uint8(2), data));
+        core.executeAutoStrategyBatch(
+            strategy,
+            users,
+            desc.minReturnAmount,
+            new uint256[](0),
+            block.timestamp + 1 hours,
+            abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(2), uint256(100e6), data)
+        );
         assertEq(core.claimable(dust), 1);
         assertEq(core.claimable(whale), 99_999_999);
         assertEq(IERC20(USDC).balanceOf(address(core)), 100e6);
@@ -398,7 +473,9 @@ contract OneInchSwapMainnetTest is MainnetForkBase {
 
     function _invalidSwapData(bytes memory original, uint8 variant) private pure returns (bytes memory changed) {
         bytes memory args = new bytes(original.length - 4);
-        for (uint256 i; i < args.length; ++i) args[i] = original[i + 4];
+        for (uint256 i; i < args.length; ++i) {
+            args[i] = original[i + 4];
+        }
         (address executor, IOneInchRouterMainnet.SwapDescription memory desc, bytes memory payload) =
             abi.decode(args, (address, IOneInchRouterMainnet.SwapDescription, bytes));
         if (variant == 0) desc.dstReceiver = payable(address(0xBEEF));
@@ -423,7 +500,12 @@ contract OneInchSwapMainnetTest is MainnetForkBase {
             bytes memory changed = _invalidSwapData(original, variant);
             vm.prank(user);
             vm.expectRevert(bytes4(keccak256("InvalidExecutionRequest()")));
-            core.claimAndExecute(strategy, desc.minReturnAmount, block.timestamp + 1 hours, abi.encode(uint8(2), changed));
+            core.claimAndExecute(
+                strategy,
+                desc.minReturnAmount,
+                block.timestamp + 1 hours,
+                abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(2), uint256(100e6), changed)
+            );
             assertEq(core.claimable(user), 100e6);
             assertEq(IERC20(USDC).balanceOf(address(core)), 100e6);
             assertEq(IERC20(USDC).balanceOf(proxy), 5e6);
@@ -432,11 +514,20 @@ contract OneInchSwapMainnetTest is MainnetForkBase {
         }
         vm.prank(user);
         vm.expectRevert();
-        core.claimAndExecute(strategy, desc.minReturnAmount, block.timestamp, abi.encode(uint8(2), original));
+        core.claimAndExecute(
+            strategy,
+            desc.minReturnAmount,
+            block.timestamp,
+            abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(2), uint256(100e6), original)
+        );
         vm.prank(user);
         vm.expectRevert(bytes4(keccak256("InvalidExecutionRequest()")));
-        core.claimAndExecute(strategy, desc.minReturnAmount + 1, block.timestamp + 1 hours,
-            abi.encode(uint8(2), original));
+        core.claimAndExecute(
+            strategy,
+            desc.minReturnAmount + 1,
+            block.timestamp + 1 hours,
+            abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(2), uint256(100e6), original)
+        );
         assertEq(core.claimable(user), 100e6);
         assertEq(IERC20(USDC).balanceOf(address(core)), 100e6);
         assertEq(IERC20(USDC).balanceOf(proxy), 5e6);

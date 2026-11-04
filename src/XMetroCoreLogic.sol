@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 /// @dev Internal-only Core state helpers. Every function is inlined into xMETRO;
 ///      this source creates no linked/deployed business Library.
@@ -20,8 +20,8 @@ library XMetroCoreLogic {
     uint64 private constant YTHOR_EXIT_RAMP = 4 * 365 days;
     uint256 private constant BPS_DENOMINATOR = 10_000;
     uint256 private constant THOR_EXIT_START_BPS = 5_000;
-    uint256 private constant YTHOR_EXIT_START_BPS = 1_000;
-    uint256 private constant YTHOR_EXIT_MAX_BPS = 5_000;
+    uint256 private constant YTHOR_EXIT_START_BPS = 2_000;
+    uint256 private constant YTHOR_EXIT_MAX_BPS = 10_000;
     uint64 private constant CONTRIBUTOR_CLIFF = 180 days;
     uint64 private constant CONTRIBUTOR_DURATION = (5 * 365 days) / 2;
 
@@ -306,8 +306,7 @@ library XMetroCoreLogic {
     function _thorExitRateBps(uint64 migratedAt) private view returns (uint256) {
         uint256 elapsed = block.timestamp - uint256(migratedAt);
         if (elapsed >= THOR_EXIT_FULL_TIME) return BPS_DENOMINATOR;
-        return THOR_EXIT_START_BPS + ((elapsed - THOR_EXIT_DELAY) * (BPS_DENOMINATOR - THOR_EXIT_START_BPS))
-            / (THOR_EXIT_FULL_TIME - THOR_EXIT_DELAY);
+        return THOR_EXIT_START_BPS;
     }
 
     function _yThorExitRateBps(uint64 migratedAt) private view returns (uint256) {

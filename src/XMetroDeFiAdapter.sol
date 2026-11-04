@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
@@ -155,6 +155,7 @@ contract XMetroDeFiAdapter is Initializable, UUPSUpgradeable, IXMetroDeFiAdapter
     uint8 private constant DEX_V2 = 0;
     uint8 private constant DEX_V3 = 1;
     uint8 private constant DEX_ONEINCH = 2;
+    bytes32 private constant SWAP_DATA_DOMAIN = keccak256("XMETRO_SWAP_V2");
     uint256 private constant ONEINCH_FORBIDDEN_FLAGS = 7;
 
     bytes32 private constant ADAPTER_FAMILY_ID = keccak256("XMETRO_DEFI_ADAPTER_FAMILY_V1");
@@ -238,10 +239,12 @@ contract XMetroDeFiAdapter is Initializable, UUPSUpgradeable, IXMetroDeFiAdapter
         bytes32 metroId = _deriveStrategyId(StrategyKind.SwapMetro, metro_);
         state.swapMetroId = metroId;
         state.strategies[metroId] = StrategyConfig(StrategyKind.SwapMetro, false, false, 1, metro_);
+        emit ConfigurationChanged(metroId, 1);
 
         bytes32 v4Id = _deriveStrategyId(StrategyKind.AaveV4, address(0));
         state.aaveV4Id = v4Id;
         state.strategies[v4Id] = StrategyConfig(StrategyKind.AaveV4, false, false, 1, address(0));
+        emit ConfigurationChanged(v4Id, 1);
     }
 
     modifier onlyConfigAuthority() {
@@ -290,7 +293,7 @@ contract XMetroDeFiAdapter is Initializable, UUPSUpgradeable, IXMetroDeFiAdapter
     }
 
     function implementationVersion() external pure virtual returns (uint64) {
-        return 1;
+        return 2;
     }
 
     function logicEpoch() external view returns (uint64) {
@@ -712,7 +715,11 @@ contract XMetroDeFiAdapter is Initializable, UUPSUpgradeable, IXMetroDeFiAdapter
         uint256 deadline,
         bytes calldata swapData
     ) internal returns (uint256 amountOut) {
-        (uint8 dexType, bytes memory routeData) = abi.decode(swapData, (uint8, bytes));
+        (bytes32 domain, uint8 dexType, uint256 maxRewardIn, bytes memory routeData) =
+            abi.decode(swapData, (bytes32, uint8, uint256, bytes));
+        if (domain != SWAP_DATA_DOMAIN || maxRewardIn == 0 || amountIn > maxRewardIn) {
+            revert InvalidExecutionRequest();
+        }
         IERC20 output = IERC20(tokenOut);
         uint256 outputBefore = output.balanceOf(address(this));
         uint256 reported;

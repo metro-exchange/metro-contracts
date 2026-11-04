@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.38;
 
 import {Test} from "forge-std/Test.sol";
 import {MockAaveV4Giver} from "../mocks/MockAaveV4Giver.sol";
@@ -269,7 +269,7 @@ contract XMetroSystemIntegrationTest is Test {
         address[] memory one = new address[](1);
         one[0] = users[2];
         core.executeAutoStrategyBatch(
-            swapStrategy, one, 200e6, new uint256[](0), block.timestamp + 1, _v2Data(address(output))
+            swapStrategy, one, 200e6, new uint256[](0), block.timestamp + 1, _v2Data(address(output), 200e6)
         );
         one[0] = users[3];
         core.executeAutoStrategyBatch(mapleStrategy, one, 300e6, new uint256[](0), 0, "");
@@ -277,7 +277,7 @@ contract XMetroSystemIntegrationTest is Test {
         core.claimRewards();
         one[0] = users[5];
         uint256 sharesBefore = core.balanceOf(users[5]);
-        core.autocompoundBatch(one, 200e6, block.timestamp + 1, _v2Data(address(metro)));
+        core.autocompoundBatch(one, 200e6, block.timestamp + 1, _v2Data(address(metro), 200e6));
         assertEq(core.balanceOf(users[5]) - sharesBefore, 200e6);
         assertEq(output.balanceOf(users[2]), 200e6);
         assertEq(syrupUsdc.balanceOf(users[3]), 300e6);
@@ -306,11 +306,32 @@ contract XMetroSystemIntegrationTest is Test {
         return keccak256(abi.encode(block.chainid, keccak256("XMETRO_DEFI_STRATEGY_V1"), kind, token));
     }
 
-    function _v2Data(address tokenOut) private view returns (bytes memory) {
+    function test_DistributorNewRewardsInvalidateOldSwapQuoteWithoutAffectingClaims() public {
+        usdc.mint(address(this), 1_200e6);
+        usdc.approve(address(distributor), 1_200e6);
+        distributor.distribute(600e6);
+        uint256 cap = core.claimable(users[0]);
+        bytes memory quote = _v2Data(address(output), cap);
+        distributor.distribute(600e6);
+        uint256 pending = core.claimable(users[0]);
+        assertGt(pending, cap);
+        uint256 coreBefore = usdc.balanceOf(address(core));
+        uint256 vaultBefore = usdc.balanceOf(address(vault));
+        vm.prank(users[0]);
+        vm.expectRevert(bytes4(keccak256("InvalidExecutionRequest()")));
+        core.claimAndExecute(swapStrategy, cap, block.timestamp + 1, quote);
+        assertEq(core.claimable(users[0]), pending);
+        assertEq(usdc.balanceOf(address(core)), coreBefore);
+        assertEq(usdc.balanceOf(address(vault)), vaultBefore);
+        vm.prank(users[0]);
+        assertEq(core.claimRewards(), pending);
+    }
+
+    function _v2Data(address tokenOut, uint256 cap) private view returns (bytes memory) {
         address[] memory path = new address[](2);
         path[0] = address(usdc);
         path[1] = tokenOut;
-        return abi.encode(uint8(0), abi.encode(path));
+        return abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(0), cap, abi.encode(path));
     }
 
     function _oneInchData(address tokenOut, uint256 amount) private view returns (bytes memory) {
@@ -326,7 +347,7 @@ contract XMetroSystemIntegrationTest is Test {
         bytes memory callData = abi.encodeWithSelector(
             MockOneInchRouter.swap.selector, address(oneInchExecutor), description, bytes("verified-route")
         );
-        return abi.encode(uint8(2), callData);
+        return abi.encode(keccak256("XMETRO_SWAP_V2"), uint8(2), amount, callData);
     }
 
     function _adapterInitCode() private view returns (bytes memory) {
