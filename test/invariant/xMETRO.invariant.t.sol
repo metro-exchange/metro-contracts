@@ -48,6 +48,7 @@ contract xMETROInvariantTest is StdInvariant, Test {
         handler.stake(1, 10 ether);
         handler.depositRewards(20e6);
         handler.claimRewards(0);
+        handler.setForfeitureRecipient(1);
         handler.advanceTime(14400 seconds);
         handler.exitThor(0, 0, false);
         handler.exitYThor(0, 0, true);
@@ -55,7 +56,7 @@ contract xMETROInvariantTest is StdInvariant, Test {
         handler.creditYThor(0, 10 ether);
 
         targetContract(address(handler));
-        bytes4[] memory selectors = new bytes4[](15);
+        bytes4[] memory selectors = new bytes4[](16);
         selectors[0] = handler.stake.selector;
         selectors[1] = handler.creditThor.selector;
         selectors[2] = handler.creditYThor.selector;
@@ -71,10 +72,13 @@ contract xMETROInvariantTest is StdInvariant, Test {
         selectors[12] = handler.advanceTime.selector;
         selectors[13] = handler.claimRewards.selector;
         selectors[14] = handler.setYThorRewardWeight.selector;
+        selectors[15] = handler.setForfeitureRecipient.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: selectors}));
     }
 
     function invariant_GlobalAndPerUserRewardWeightFormulaAlwaysHolds() public view {
+        assertEq(xmetro.migrationRewardExcludedAddress(), handler.actorAt(0));
+        assertGt(handler.recipientUpdates(), 0);
         uint256 sumShares;
         uint256 sumLocked;
         uint256 sumActiveYThor;
@@ -204,6 +208,7 @@ contract xMETROHandlerV2 is Test {
     address[] internal actors;
     uint256 public totalRewardsDeposited;
     uint256 public totalRewardsClaimed;
+    uint256 public recipientUpdates;
     mapping(address => mapping(uint256 => uint256)) public thorExitSuccesses;
     mapping(address => mapping(uint256 => uint256)) public yThorExitSuccesses;
     mapping(address => uint256) public thorCredits;
@@ -367,6 +372,11 @@ contract xMETROHandlerV2 is Test {
         } catch {
             unexpectedClaimFailures++;
         }
+    }
+
+    function setForfeitureRecipient(uint256 actorSeed) external {
+        xmetro.setForfeitureRecipient(_actor(actorSeed));
+        ++recipientUpdates;
     }
 
     function setYThorRewardWeight(uint16 weightSeed) external {

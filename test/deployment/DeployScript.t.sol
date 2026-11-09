@@ -135,6 +135,13 @@ contract DeployScriptTest is Test {
         assertEq(core.owner(), deployer);
         assertEq(escrow.owner(), deployer);
         assertEq(distributor.owner(), deployer);
+        address initialRecipient = record.readAddress(".forfeitureRecipient");
+        address updatedRecipient = makeAddr("deployment-updated-recipient");
+        assertEq(core.forfeitureRecipient(), initialRecipient);
+        assertEq(core.migrationRewardExcludedAddress(), initialRecipient);
+        vm.prank(finalOwner);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", finalOwner));
+        core.setForfeitureRecipient(updatedRecipient);
         VerifyDeployment verifier = new VerifyDeployment();
         vm.expectRevert("VerifyDeploy: Core ownership");
         verifier.run();
@@ -152,6 +159,20 @@ contract DeployScriptTest is Test {
         assertEq(core.pendingOwner(), address(0));
         assertEq(escrow.pendingOwner(), address(0));
         assertEq(distributor.pendingOwner(), address(0));
+        vm.prank(deployer);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", deployer));
+        core.setForfeitureRecipient(updatedRecipient);
+        vm.prank(finalOwner);
+        core.setForfeitureRecipient(updatedRecipient);
+        assertEq(core.forfeitureRecipient(), updatedRecipient);
+        assertEq(core.migrationRewardExcludedAddress(), initialRecipient);
+        assertEq(vm.readFile(_deploymentPath()).readAddress(".forfeitureRecipient"), initialRecipient);
+        assertEq(vm.readFile(_deploymentPath()).readAddress(".migrationRewardExcludedAddress"), initialRecipient);
+        vm.expectRevert("VerifyDeploy: Core bindings");
+        verifier.run();
+        vm.prank(finalOwner);
+        core.setForfeitureRecipient(initialRecipient);
+        verifier.run();
         // Pending snapshots remain historical; final verification reads live contract state.
         assertEq(vm.readFile(_deploymentPath()).readAddress(".corePendingOwner"), finalOwner);
         vm.prank(finalOwner);

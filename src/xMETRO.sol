@@ -249,7 +249,7 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuardTransient, Ownable2Step {
         _;
     }
 
-    /// @notice Base QA only: redirect future THOR/yTHOR exit forfeitures after ownership handover.
+    /// @notice Set the recipient of future THOR and yTHOR exit forfeitures.
     function setForfeitureRecipient(address newRecipient) external onlyOwner {
         if (newRecipient == address(0)) revert InvalidAddress();
         address oldRecipient = forfeitureRecipient;

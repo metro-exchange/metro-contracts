@@ -1,5 +1,17 @@
 # Base On-Chain Functional Test Checklist
 
+## November 9: Sherlock Issue #23 recipient follow-up
+
+These are future on-chain checks for the matching deployed Core revision. This source update does not deploy contracts or change existing addresses, permissions or receipts.
+
+- [ ] Verify the initial recipient and the independently fixed migration exclusion address; decode the initial `ForfeitureRecipientUpdated` event.
+- [ ] Verify current-owner access, pending/previous-owner rejection, the zero-address error, and updates while paused.
+- [ ] Change the recipient after positions exist. Exercise THOR/yTHOR Liquid and Stake exits, including exits by the excluded treasury, and match events to the new recipient's METRO balance.
+- [ ] Confirm the fixed treasury exclusion, reward weights and accrued fractional rewards do not change; receiving forfeited METRO alone creates no shares.
+- [ ] Rotate the recipient again and withdraw previously queued payouts with their original amounts and unlock times; do not reinterpret historical transfers.
+
+Production now exposes the same recipient setter already present in QA. The accelerated QA times remain unchanged. These boxes are not marked passed by local tests.
+
 ## November 3: Sherlock Issue #24 future on-chain acceptance
 
 These checks apply to a Core built with the two-level THOR fix. No deployment or on-chain action is performed by this source update; existing addresses, build hashes and receipts below retain their historical meaning.
@@ -59,7 +71,7 @@ The new environment uses one owner-mintable TestUSDC throughout, owner-mintable 
 
 TestUSDC is not accepted by production Aave or Maple USDC markets. Base therefore tests our **real project contracts** against interface-compatible Aave V3 Pool/aToken, Aave V4 Spoke/GiverPositionManager, and Maple Router/PermissionManager/Syrup mocks. Each mock must perform the relevant permission check, token debit, accounting, and protocol event emission; a success-only stub is insufficient. The Mock protocol events must decode with the corresponding protocol ABI for the tested path. Actual Ethereum protocol compatibility is tested separately on an Ethereum mainnet fork. Swaps on Base use the real Uniswap V2 Router and funded TestUSDC pairs. Test-token routes need not be supported by 1inch, so 1inch and Affiliate validation belong to the Ethereum fork, not this Base run.
 
-Seven waiting-period constants are shortened. QA also permits an Owner-only change of the forfeiture recipient and an Escrow constructor start value of zero to use the deployment block; production keeps its immutable recipient and explicit future start time. Other business ratios and permissions remain aligned. The Vault is deployed from the supplied source and tested only at the RewardDistributor integration boundary.
+The QA build shortens seven time constants. Both builds allow the Core owner to update the forfeiture recipient. QA interprets a zero Escrow constructor start time as the deployment block; production requires an explicit start time. Their bytecode differs. Other business ratios and permissions remain aligned. The Vault is deployed from the supplied source and tested only at the RewardDistributor integration boundary.
 
 | Constant | Production | New Base QA |
 | --- | ---: | ---: |

@@ -38,9 +38,11 @@ This Base QA build has `UNSTAKE_DELAY = 30 minutes`, THOR exits blocked before 1
 
 Ordinary shares and eligible yTHOR principal have separate reward accumulators, so changing the multiplier does not reprice accrued rewards. The excluded address keeps normal ordinary-stake, Contributor, transfer and exit-to-stake rewards.
 
-The constructor fixes `migrationRewardExcludedAddress` from the existing `forfeitureRecipient_` argument; no constructor argument or user-action signature changes. For production, configure `FORFEITURE_RECIPIENT=0x7D8911eB1C72F0Ba29302bE30301B75Cec81F622`. Both production addresses are immutable. The treasury keeps normal migration and exit rights. If it exits early, forfeited METRO returns to that same recipient and only the payout is queued or staked; the project's intention not to exit early is not an on-chain restriction.
+The constructor initializes `forfeitureRecipient` and permanently fixes `migrationRewardExcludedAddress` from the same `forfeitureRecipient_` argument. For production, keep `FORFEITURE_RECIPIENT=0x7D8911eB1C72F0Ba29302bE30301B75Cec81F622` at construction. To use another forfeiture destination, the current Core owner calls `setForfeitureRecipient(newRecipient)` afterward; passing the new destination to the constructor instead would also change the fixed exclusion address.
 
-For a future Base QA deployment, explicitly set the existing `BASE_QA_FORFEITURE_RECIPIENT` before creating the deployment plan. The script rejects missing addresses or a different address in a saved plan. QA `setForfeitureRecipient()` changes only the forfeiture recipient; it never changes the fixed migration reward exclusion address or historical rewards. The existing on-chain QA deployment has not acquired these changes.
+Both production and Base QA allow a nonzero forfeiture recipient to be set, including while paused. The change applies to future THOR/yTHOR exits by all users, including already-created open positions. It does not change the fixed excluded treasury, reward weights, accrued rewards, prior transfers or queued payouts. The treasury retains normal exit and ordinary-staking rights; its own forfeitures return to it only while it is the configured recipient. This does not enforce a 90-day treasury lock.
+
+For a future Base QA deployment, explicitly set `BASE_QA_FORFEITURE_RECIPIENT` to the initial excluded treasury before creating the deployment plan. The script rejects missing addresses or a conflicting saved plan. Read `forfeitureRecipient()` and `migrationRewardExcludedAddress()` independently after any owner update. Source changes do not modify existing deployments; use the ABI matching the deployed revision.
 
 ### Manual Adapter action
 
@@ -70,7 +72,7 @@ Legacy compound and general auto strategies are mutually exclusive. A batch swap
 
 - `setDeFiAdapter(address proxy)` checks runtime code, core/USDC/METRO binding, Adapter family, valid configuration, and logic version. A full replacement increments `deFiAdapterEpoch`.
 - `setYThorRewardWeightBps(uint256)` changes future rewards for all eligible active yTHOR positions without pausing. `10,000=1x`; zero and sub-1x values are valid up to the technical bound.
-- `setForfeitureRecipient(address)` is Base QA-only and lets the current owner redirect future THOR/yTHOR exit forfeitures to a nonzero address. Production has an immutable recipient and no setter.
+- `setForfeitureRecipient(address)` lets the current owner redirect future THOR/yTHOR exit forfeitures in both builds. Zero reverts with `InvalidAddress`; paused and same-address updates are allowed. `ForfeitureRecipientUpdated(oldRecipient,newRecipient)` records each update. The fixed migration exclusion address and previously settled amounts do not change.
 - `setAutoCompoundOperator(address,bool)`; `setMigrationEscrow(address)`; `setRewardDistributor(address)`; `setContributor(address,bool)`; `setDefaultMaxVestingSchedules(uint256)`
 - `pause()`; `unpause()`; `rescueERC20(address,address,uint256)` (principal-backing METRO is protected)
 - Core, Escrow and Distributor expose `pendingOwner()`, `transferOwnership(address)` and `acceptOwnership()`. Nomination preserves the current owner; a zero target cancels it. Acceptance clears pending ownership. `renounceOwnership()` clears both owner fields and is irreversible; Core/Escrow reject it while paused. Paused handovers remain available. MetroToken remains one-step. The Core constructor leaves it unpaused.

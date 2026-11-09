@@ -1,5 +1,45 @@
 # Ethereum Mainnet Fork Results and Evidence
 
+## November 9, 2026: Sherlock Issue #23 recipient follow-up
+
+Local validation based on `xmetro-v2-base-qa` at `6c80cbbf7959256ac92e8a8425e854cfb0248bae`. Production now allows its current owner to update the nonzero THOR/yTHOR forfeiture recipient, matching the existing QA behavior. Only the recipient changes: the fixed migration-reward exclusion, payout rules, timing and previous transfers/queues remain intact. No Git commit, GitHub publication, deployment, token transfer or permission transaction was performed for this validation.
+
+| Executed local checks | Passed | Failed | Skipped |
+| --- | ---: | ---: | ---: |
+| Business regression (unit/mock/fuzz/invariant) | 169 | 0 | 0 |
+| Core profile | 60 | 0 | 2 |
+| Adapter profile | 46 | 0 | 2 |
+| Deployment-script profile | 1 | 0 | 0 |
+| Total | 276 | 0 | 4 |
+
+The four optional pinned Ethereum/Base deployment checks in Core/Adapter profiles were skipped with their RPC variables explicitly empty; skips are not passes. Core, Adapter, deployment and fork-test builds succeeded with Solidity 0.8.38, Osaka and the existing optimizer profiles.
+
+Production-timing fork suites compiled successfully but were not executed against this QA build. QA's accelerated times and all recipient paths were exercised by its own unit/fuzz/invariant tests. The separate production build's fork result is not counted as a QA pass.
+
+Core runtime/initcode are **23,391 / 25,074 bytes**; initcode excludes constructor arguments. The unchanged project runtime limit is **23,552 bytes**, leaving **161 bytes**. Core and deployment-profile bytecode match. Adapter runtime/initcode remain **20,755 / 20,958 bytes**. No size limit, dependency or compiler setting was relaxed.
+
+The existing QA recipient setter and its events are retained; the only business-source edit is their now-shared NatSpec description. The exported Core ABI and all 32 top-level storage fields remain unchanged. In both builds the ordinary and yTHOR accumulators remain at slots 8 and 9. All five business ABI exports match their compiled artifacts; the other four are unchanged. Compiler metadata source hashes match the local source.
+
+Coverage includes constructor/update events; exact unauthorized and zero-address failures; pending and former owners; paused/same-address updates; all THOR/yTHOR Liquid/Stake paths for ordinary users and the treasury; full exits without forfeiture; existing independently timed positions; repeated recipient changes; preserved prior transfers and queues; prospective ordinary rewards; fractional entitlements; and funded-liability invariants with random owner updates. The deployment test verifies configuration after ownership acceptance and distinguishes the original manifest from later authorized changes.
+
+The new fork fixture uses `vm.getBlockTimestamp()` and explicit event times across `vm.warp` calls. Initial fixture clock mismatches were corrected without changing contract behavior; the final production fork passed all 50 checks. Raw initial and final logs remain outside the repository.
+
+The exact CI formatting command, changed-file formatting, example syntax and `git diff --check` passed. All changed tracked files contain no Chinese. Current interface/configuration documentation was updated; historical receipts and deployment records remain unchanged. Detailed logs, storage layouts and the final file/hash manifest are retained locally outside the repository. GitHub CI and new on-chain QA acceptance were not executed.
+
+Reproduce with the matching source, dependencies and native compiler:
+
+```sh
+SOLC_0838=/absolute/path/to/solc-0.8.38
+FOUNDRY_PROFILE=core forge build --offline --use "$SOLC_0838" --sizes
+FOUNDRY_PROFILE=adapter forge build --offline --use "$SOLC_0838" --sizes
+FOUNDRY_PROFILE=deploy forge build --offline --use "$SOLC_0838" --sizes
+FOUNDRY_PROFILE=fork-v2 forge build --offline --use "$SOLC_0838"
+ETH_RPC_URL= BASE_RPC_URL= FOUNDRY_PROFILE=regression forge test --offline --use "$SOLC_0838" --threads 2 -vv
+ETH_RPC_URL= BASE_RPC_URL= FOUNDRY_PROFILE=core forge test --offline --use "$SOLC_0838" --threads 2 -vv
+ETH_RPC_URL= BASE_RPC_URL= FOUNDRY_PROFILE=adapter forge test --offline --use "$SOLC_0838" --threads 2 -vv
+ETH_RPC_URL= BASE_RPC_URL= FOUNDRY_PROFILE=deployment-test forge test --offline --use "$SOLC_0838" --threads 1 -vv
+```
+
 ## November 3, 2026: Sherlock Issue #24
 
 Local, uncommitted Base QA update based on `194d587a72e4143440fc3373ea181d32619fa64f`. The only business-source change is `XMetroCoreLogic._thorExitRateBps()`: THOR pays a fixed 50% of converted principal between its two milestones and 100% from maturity. QA milestones remain 1 and 3 hours. yTHOR keeps its existing linear curve. No Git commit, GitHub push, deployment, token transfer or permission change was performed.
