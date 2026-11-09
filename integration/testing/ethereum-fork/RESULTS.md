@@ -1,5 +1,50 @@
 # Ethereum Mainnet Fork Results and Evidence
 
+## November 9, 2026: Sherlock Issue #23 recipient follow-up
+
+Local validation based on `xmetro-v2` at `2d8c7bdd003bfe4814a4f16ac98f399a5d92b85d`. Production now allows its current owner to update the nonzero THOR/yTHOR forfeiture recipient, matching the existing QA behavior. Only the recipient changes: the fixed migration-reward exclusion, payout rules, timing and previous transfers/queues remain intact. No Git commit, GitHub publication, deployment, token transfer or permission transaction was performed for this validation.
+
+| Executed local checks | Passed | Failed | Skipped |
+| --- | ---: | ---: | ---: |
+| Business regression (unit/mock/fuzz/invariant) | 168 | 0 | 0 |
+| Core profile | 60 | 0 | 2 |
+| Adapter profile | 46 | 0 | 2 |
+| Deployment-script profile | 1 | 0 | 0 |
+| Focused production migration, governance and reward-weight fork suites | 50 | 0 | 0 |
+| Total | 325 | 0 | 4 |
+
+The four optional pinned Ethereum/Base deployment checks in Core/Adapter profiles were skipped with their RPC variables explicitly empty; skips are not passes. Core, Adapter, deployment and fork-test builds succeeded with Solidity 0.8.38, Osaka and the existing optimizer profiles.
+
+The production fork ran `MigrationExitMainnetTest` (24 passed), `DeploymentGovernanceMainnetTest` (18 passed) and `YThorRewardWeightMainnetTest` (8 passed) at Ethereum block **26,077,998**, hash `0xb75cb3bedaa74adf79199d847c94bbca4724d092da355d3e13c354773e2eb2aa`. These are local fork calls, not mainnet transactions. The new scenario covers real THOR/yTHOR treasury migrations, both exit modes, redirected METRO forfeitures, normal exit-to-stake rewards and old queues.
+
+Core runtime/initcode are **23,434 / 25,117 bytes**; initcode excludes constructor arguments. The unchanged project runtime limit is **23,552 bytes**, leaving **118 bytes**. Core and deployment-profile bytecode match. Adapter runtime/initcode remain **20,755 / 20,958 bytes**. No size limit, dependency or compiler setting was relaxed.
+
+The exported Core ABI adds only `setForfeitureRecipient(address)` and `ForfeitureRecipientUpdated(address,address)`. Existing getters, constructor arguments, errors, user-action signatures and exit events retain their ABI. The Core gains the recipient storage field at slot 10, moving later fields by one slot; there are now 32 top-level fields. This is not a proxy upgrade or a migration of deployed Core state. In both builds the ordinary and yTHOR accumulators remain at slots 8 and 9. All five business ABI exports match their compiled artifacts; the other four are unchanged. Compiler metadata source hashes match the local source.
+
+Coverage includes constructor/update events; exact unauthorized and zero-address failures; pending and former owners; paused/same-address updates; all THOR/yTHOR Liquid/Stake paths for ordinary users and the treasury; full exits without forfeiture; existing independently timed positions; repeated recipient changes; preserved prior transfers and queues; prospective ordinary rewards; fractional entitlements; and funded-liability invariants with random owner updates. The deployment test verifies configuration after ownership acceptance and distinguishes the original manifest from later authorized changes.
+
+The new fork fixture uses `vm.getBlockTimestamp()` and explicit event times across `vm.warp` calls. Initial fixture clock mismatches were corrected without changing contract behavior; the final production fork passed all 50 checks. Raw initial and final logs remain outside the repository.
+
+The exact CI formatting command, changed-file formatting, example syntax and `git diff --check` passed. All changed tracked files contain no Chinese. Current interface/configuration documentation was updated; historical receipts and deployment records remain unchanged. Detailed logs, storage layouts and the final file/hash manifest are retained locally outside the repository. GitHub CI and new on-chain QA acceptance were not executed.
+
+Reproduce with the matching source, dependencies and native compiler:
+
+```sh
+SOLC_0838=/absolute/path/to/solc-0.8.38
+FOUNDRY_PROFILE=core forge build --offline --use "$SOLC_0838" --sizes
+FOUNDRY_PROFILE=adapter forge build --offline --use "$SOLC_0838" --sizes
+FOUNDRY_PROFILE=deploy forge build --offline --use "$SOLC_0838" --sizes
+FOUNDRY_PROFILE=fork-v2 forge build --offline --use "$SOLC_0838"
+ETH_RPC_URL= BASE_RPC_URL= FOUNDRY_PROFILE=regression forge test --offline --use "$SOLC_0838" --threads 2 -vv
+ETH_RPC_URL= BASE_RPC_URL= FOUNDRY_PROFILE=core forge test --offline --use "$SOLC_0838" --threads 2 -vv
+ETH_RPC_URL= BASE_RPC_URL= FOUNDRY_PROFILE=adapter forge test --offline --use "$SOLC_0838" --threads 2 -vv
+ETH_RPC_URL= BASE_RPC_URL= FOUNDRY_PROFILE=deployment-test forge test --offline --use "$SOLC_0838" --threads 1 -vv
+
+ETH_RPC_URL=https://eth.drpc.org BASE_RPC_URL= FOUNDRY_PROFILE=fork-v2 \
+  forge test --offline --use "$SOLC_0838" --threads 2 \
+  --match-contract '^(MigrationExitMainnetTest|DeploymentGovernanceMainnetTest|YThorRewardWeightMainnetTest)$' -vv
+```
+
 ## November 3, 2026: Sherlock Issue #24
 
 Local, uncommitted production update based on `c922a293131f6ccccb80820c9b787b8d4ae43f72`. The only business-source change is `XMetroCoreLogic._thorExitRateBps()`: THOR pays a fixed 50% of converted principal between its two milestones and 100% from maturity. Production milestones remain 30 and 90 days. yTHOR keeps its existing linear curve. No Git commit, GitHub push, deployment, token transfer or permission change was performed.

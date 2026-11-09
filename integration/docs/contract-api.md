@@ -23,6 +23,7 @@ Owners do not automatically receive these business permissions. `true` grants an
 | --- | --- | --- |
 | METRO owner | `setMinter(minter,allowed)` | Controls mint access; no owner setter can change the 100,000,000 METRO cap. |
 | xMETRO owner | `setYThorRewardWeightBps(weightBps)` | `10,000=1x`, `20,000=2x`; values from zero to the contract technical bound. Applies to future reward deposits for all eligible active yTHOR positions, never reprices accrued rewards; no pause required. |
+| xMETRO owner | `setForfeitureRecipient(newRecipient)` | Nonzero recipient for future THOR/yTHOR exit forfeitures in both builds, including existing open positions. Available while paused; same-address calls emit an update. Never changes the fixed excluded treasury, rewards, prior transfers or queued payouts. |
 | xMETRO owner | `setContributor(account,allowed)`; `setAutoCompoundOperator(account,allowed)` | Contributor and Keeper allowlists. |
 | xMETRO owner | `setDeFiAdapter(proxy)` | Must be the current-family proxy correctly bound to this core, USDC, and METRO. Use the proxy address, not the implementation. |
 | xMETRO owner | `setMigrationEscrow(escrow)`; `setRewardDistributor(distributor)` | Requires binding to this core; Distributor must use the same USDC. |
@@ -49,6 +50,16 @@ coreReward    = grossAmount - commission
 ```
 
 The Distributor transfers commission USDC directly to the Vault; it neither approves the Vault nor invokes a deposit callback. To clear a Vault, first set the split to zero, then call `setCommissionVault(address(0))`.
+
+## Exit forfeiture recipient
+
+Call `setForfeitureRecipient(newRecipient)` on Core from its current owner, with zero ETH value. A pending owner must first accept ownership. A zero destination reverts with `InvalidAddress`; an unauthorized caller reverts with `OwnableUnauthorizedAccount(caller)`. The setter changes only the address and emits `ForfeitureRecipientUpdated(oldRecipient,newRecipient)` with both addresses indexed. Construction emits the same event with an old address of zero. Setting the current address again is allowed and emits an event; pausing is not required.
+
+The current recipient receives forfeited METRO from future THOR and yTHOR exits in either Liquid or Stake mode, including positions migrated before the update. No payment is made by the setter itself. Already-transferred forfeitures and existing withdrawal queues retain their original amounts, beneficiaries and unlock times. `ThorExited` and `YThorExited` keep their signatures and report the recipient used for that exit. Receiving METRO alone creates no reward-bearing shares. Transfers to a nonzero dead address do not burn supply.
+
+At construction, the initial recipient also fixes `migrationRewardExcludedAddress`. Initialize with the intended excluded treasury, then set a different recipient if needed. Do not replace the construction parameter with a new destination unless it is also the intended excluded treasury. This setting does not force the treasury to wait 90 days or remove its normal staking rewards.
+
+`VerifyDeployment.s.sol` checks both fields against the supplied deployment record. Run initial verification before subsequent recipient changes. An authorized later update intentionally differs from the original snapshot; retain that historical record and verify the new event and both current getters separately instead of weakening the initial checks.
 
 ## Adapter configuration
 
@@ -114,7 +125,7 @@ Core, Escrow and Distributor use two-step transfer. Until acceptance the old own
 
 ## Readback checklist
 
-After each confirmed transaction, read `owner()` from each contract and `pendingOwner()` from Core/Escrow/Distributor. Final handover requires all three owners to equal A and all three pending owners to be zero. Also read `METRO.isMinter`, `Distributor.operators`, `xMETRO.autoCompoundOperators`, `xMETRO.contributorWhitelist`, `xMETRO.yThorRewardWeightBps`, `xMETRO.migrationRewardExcludedAddress`, core bindings and pause status, Escrow start/deadline/ratio/cap getters, Distributor Vault/split getters, Adapter `configuration`/`strategyInfo`/`aaveV4Giver`, and each user's auto preference when relevant. For QA, also read each TestToken/Mock `owner()` and public mint rights. A local `.env` edit, UI status, or dry run does not change chain state.
+After each confirmed transaction, read `owner()` from each contract and `pendingOwner()` from Core/Escrow/Distributor. Final handover requires all three owners to equal A and all three pending owners to be zero. Also read `METRO.isMinter`, `Distributor.operators`, `xMETRO.autoCompoundOperators`, `xMETRO.contributorWhitelist`, `xMETRO.yThorRewardWeightBps`, `xMETRO.migrationRewardExcludedAddress`, `xMETRO.forfeitureRecipient`, core bindings and pause status, Escrow start/deadline/ratio/cap getters, Distributor Vault/split getters, Adapter `configuration`/`strategyInfo`/`aaveV4Giver`, and each user's auto preference when relevant. For QA, also read each TestToken/Mock `owner()` and public mint rights. A local `.env` edit, UI status, or dry run does not change chain state.
 
 ## Position queries and events
 
@@ -166,8 +177,10 @@ Exclude principal before rounding. The yTHOR accumulator divides only by eligibl
 
 `YTHOR_EXIT_START_BPS()` is `2000` and `YTHOR_EXIT_MAX_BPS()` is `10000`. Production reaches full converted principal at 1,580 days from each migration; QA at 16 hours.
 
-The constructor fixes `migrationRewardExcludedAddress` from the existing `forfeitureRecipient_` argument; no constructor argument or user-action signature changes. For production, configure `FORFEITURE_RECIPIENT=0x7D8911eB1C72F0Ba29302bE30301B75Cec81F622`. Both production addresses are immutable. The treasury keeps normal migration and exit rights. If it exits early, forfeited METRO returns to that same recipient and only the payout is queued or staked; the project's intention not to exit early is not an on-chain restriction.
+The constructor initializes `forfeitureRecipient` and permanently fixes `migrationRewardExcludedAddress` from the same `forfeitureRecipient_` argument. For production, keep `FORFEITURE_RECIPIENT=0x7D8911eB1C72F0Ba29302bE30301B75Cec81F622` at construction. To use another forfeiture destination, the current Core owner calls `setForfeitureRecipient(newRecipient)` afterward; passing the new destination to the constructor instead would also change the fixed exclusion address.
 
-For a future Base QA deployment, explicitly set the existing `BASE_QA_FORFEITURE_RECIPIENT` before creating the deployment plan. The script rejects missing addresses or a different address in a saved plan. QA `setForfeitureRecipient()` changes only the forfeiture recipient; it never changes the fixed migration reward exclusion address or historical rewards. The existing on-chain QA deployment has not acquired these changes.
+Both production and Base QA allow a nonzero forfeiture recipient to be set, including while paused. The change applies to future THOR/yTHOR exits by all users, including already-created open positions. It does not change the fixed excluded treasury, reward weights, accrued rewards, prior transfers or queued payouts. The treasury retains normal exit and ordinary-staking rights; its own forfeitures return to it only while it is the configured recipient. This does not enforce a 90-day treasury lock.
+
+For a future Base QA deployment, explicitly set `BASE_QA_FORFEITURE_RECIPIENT` to the initial excluded treasury before creating the deployment plan. The script rejects missing addresses or a conflicting saved plan. Read `forfeitureRecipient()` and `migrationRewardExcludedAddress()` independently after any owner update. Source changes do not modify existing deployments; use the ABI matching the deployed revision.
 
 Business validation failures from MetroToken, Escrow and Distributor use custom errors listed in the [function reference](../../CONTRACT_FUNCTION_REFERENCE.md#business-errors). Decode with the corresponding ABI; Core can bubble a MetroToken error, so include that ABI when reporting migration failures. External protocol/token errors and Solidity panics are not rewritten.

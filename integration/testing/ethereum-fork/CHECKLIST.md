@@ -1,5 +1,17 @@
 # Ethereum Mainnet Fork Functional Test Checklist
 
+## November 9: Sherlock Issue #23 recipient follow-up acceptance
+
+| Coverage | Tests / evidence |
+| --- | --- |
+| E-01/E-09: initialization event, current-owner access, pending/old-owner rejection, zero address and paused updates | Core unit tests and `DeployScript.t.sol` |
+| E-12/E-13: future exits from existing positions route forfeitures to the current recipient; ordinary users and the treasury, both modes and full exits | Unit/fuzz tests and `MigrationExit.t.sol::test_TreasuryExitForfeituresCanBeRedirectedWithoutChangingRewards` |
+| E-12/E-13: recipient rotations preserve past transfers and outstanding withdrawal queues | Core unit tests and the focused migration fork scenario |
+| E-14: fixed treasury exclusion, normal staking rewards, preserved fractional rewards and funded liabilities | Unit/invariant tests and existing reward-weight regressions |
+| X-07: new production setter/event ABI, unchanged QA ABI, measured Core size and deliberate production storage-field insertion | Compiled artifacts, deployment/size tests and current validation results |
+
+See [RESULTS.md](RESULTS.md) for actual execution and RPC skips. Production runs the focused mainnet-fork suites; QA compiles those suites and exercises its accelerated behavior locally. Historical records below do not certify this revision.
+
 ## November 3: Sherlock Issue #24 acceptance
 
 | Coverage | Tests / evidence |

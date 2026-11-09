@@ -31,7 +31,7 @@ contract DeployScriptTest is Test {
 
     uint256 internal constant DEPLOYER_KEY = 0xD3F10;
     uint256 internal constant ADAPTER_RUNTIME = 20_755;
-    uint256 internal constant CORE_RUNTIME = 23_505;
+    uint256 internal constant CORE_RUNTIME = 23_434;
     bytes32 internal constant P_DEPOSIT = bytes32("P:deposit");
     bytes32 internal constant IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
     bytes32 internal constant ADMIN_SLOT = 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103;
@@ -135,6 +135,13 @@ contract DeployScriptTest is Test {
         assertEq(core.owner(), deployer);
         assertEq(escrow.owner(), deployer);
         assertEq(distributor.owner(), deployer);
+        address initialRecipient = record.readAddress(".forfeitureRecipient");
+        address updatedRecipient = makeAddr("deployment-updated-recipient");
+        assertEq(core.forfeitureRecipient(), initialRecipient);
+        assertEq(core.migrationRewardExcludedAddress(), initialRecipient);
+        vm.prank(finalOwner);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", finalOwner));
+        core.setForfeitureRecipient(updatedRecipient);
         VerifyDeployment verifier = new VerifyDeployment();
         vm.expectRevert("VerifyDeploy: Core ownership");
         verifier.run();
@@ -152,6 +159,20 @@ contract DeployScriptTest is Test {
         assertEq(core.pendingOwner(), address(0));
         assertEq(escrow.pendingOwner(), address(0));
         assertEq(distributor.pendingOwner(), address(0));
+        vm.prank(deployer);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", deployer));
+        core.setForfeitureRecipient(updatedRecipient);
+        vm.prank(finalOwner);
+        core.setForfeitureRecipient(updatedRecipient);
+        assertEq(core.forfeitureRecipient(), updatedRecipient);
+        assertEq(core.migrationRewardExcludedAddress(), initialRecipient);
+        assertEq(vm.readFile(_deploymentPath()).readAddress(".forfeitureRecipient"), initialRecipient);
+        assertEq(vm.readFile(_deploymentPath()).readAddress(".migrationRewardExcludedAddress"), initialRecipient);
+        vm.expectRevert("VerifyDeploy: Core bindings");
+        verifier.run();
+        vm.prank(finalOwner);
+        core.setForfeitureRecipient(initialRecipient);
+        verifier.run();
         // Pending snapshots remain historical; final verification reads live contract state.
         assertEq(vm.readFile(_deploymentPath()).readAddress(".corePendingOwner"), finalOwner);
         vm.prank(finalOwner);

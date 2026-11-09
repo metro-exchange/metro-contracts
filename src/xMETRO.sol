@@ -105,7 +105,7 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuardTransient, Ownable2Step {
 
     IERC20 public immutable rewardToken;
 
-    address public immutable forfeitureRecipient;
+    address public forfeitureRecipient;
 
     /// @notice Fixed address whose THOR and yTHOR migration positions earn no rewards.
     address public immutable migrationRewardExcludedAddress;
@@ -170,6 +170,7 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuardTransient, Ownable2Step {
     event DefaultMaxVestingSchedulesUpdated(uint256 maxVestingSchedules);
 
     event MigrationEscrowUpdated(address indexed oldMigrationEscrow, address indexed newMigrationEscrow);
+    event ForfeitureRecipientUpdated(address indexed oldRecipient, address indexed newRecipient);
 
     event ThorPositionCreated(address indexed user, uint256 indexed positionId, uint256 principal, uint64 migratedAt);
     event YThorPositionCreated(address indexed user, uint256 indexed positionId, uint256 principal, uint64 migratedAt);
@@ -235,6 +236,7 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuardTransient, Ownable2Step {
         METRO = IMetroTokenMintable(metro_);
         rewardToken = IERC20(rewardToken_);
         forfeitureRecipient = forfeitureRecipient_;
+        emit ForfeitureRecipientUpdated(address(0), forfeitureRecipient_);
         migrationRewardExcludedAddress = forfeitureRecipient_;
         yThorRewardWeightBps = initialYThorRewardWeightBps_;
         emit YThorRewardWeightBpsUpdated(0, initialYThorRewardWeightBps_);
@@ -245,6 +247,14 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuardTransient, Ownable2Step {
     modifier onlyMigrationEscrow() {
         if (msg.sender != migrationEscrow) revert Unauthorized();
         _;
+    }
+
+    /// @notice Set the recipient of future THOR and yTHOR exit forfeitures.
+    function setForfeitureRecipient(address newRecipient) external onlyOwner {
+        if (newRecipient == address(0)) revert InvalidAddress();
+        address oldRecipient = forfeitureRecipient;
+        forfeitureRecipient = newRecipient;
+        emit ForfeitureRecipientUpdated(oldRecipient, newRecipient);
     }
 
     /// @notice Stake METRO and receive 1:1 free shares (xMETRO ERC20).

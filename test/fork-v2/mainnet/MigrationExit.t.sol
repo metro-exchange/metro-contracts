@@ -443,6 +443,78 @@ contract MigrationExitMainnetTest is MainnetForkBase {
         assertEq(IERC20(THOR).balanceOf(address(escrow)), 100 ether);
     }
 
+    /// E-12/E-13: Existing treasury positions use the current recipient in both exit modes.
+    function test_TreasuryExitForfeituresCanBeRedirectedWithoutChangingRewards() public {
+        address treasury = core.migrationRewardExcludedAddress();
+        address recipient = makeAddr("fork-new-forfeiture-recipient");
+        _migrateThor(treasury, 100 ether);
+        _migrateThor(treasury, 100 ether);
+        _migrateYThor(treasury, 100 ether);
+        _migrateYThor(treasury, 100 ether);
+        _mintAndStake(alice, 100 ether);
+        _distribute(10e6);
+        assertEq(core.claimable(treasury), 0);
+        assertEq(core.claimable(alice), 10e6);
+        assertEq(core.rewardWeightOf(treasury), 0);
+        // Keep an explicit timestamp across warps; TIMESTAMP may be optimized within one test call.
+        uint256 start = vm.getBlockTimestamp();
+        core.setForfeitureRecipient(recipient);
+        assertEq(core.migrationRewardExcludedAddress(), treasury);
+        vm.warp(start + 30 days);
+        vm.expectEmit(true, true, true, true, address(core));
+        emit ThorExited(
+            treasury,
+            0,
+            100 ether,
+            50 ether,
+            50 ether,
+            5_000,
+            xMETRO.ExitMode.Liquid,
+            uint64(start + 30 days),
+            recipient
+        );
+        vm.prank(treasury);
+        core.requestThorExit(0);
+        vm.prank(treasury);
+        core.exitAndStakeThor(1);
+        xMETRO.UnstakeRequest memory thorQueue = core.unstakeRequestThor(treasury, 0);
+        assertEq(metro.balanceOf(recipient), 100 ether);
+        assertEq(metro.balanceOf(treasury), 0);
+        assertEq(core.rewardWeightOf(treasury), 50 ether);
+        assertEq(core.claimable(treasury), 0);
+        _distribute(15e6);
+        assertEq(core.claimable(treasury), 5e6);
+        assertEq(core.claimable(alice), 20e6);
+
+        core.setForfeitureRecipient(bob);
+        vm.warp(start + 120 days);
+        assertEq(core.unstakeRequestThor(treasury, 0).amount, thorQueue.amount);
+        assertEq(core.unstakeRequestThor(treasury, 0).unlockTime, thorQueue.unlockTime);
+        vm.expectEmit(true, true, true, true, address(core));
+        emit YThorExited(
+            treasury, 0, 100 ether, 20 ether, 80 ether, 2_000, xMETRO.ExitMode.Liquid, uint64(start + 120 days), bob
+        );
+        vm.prank(treasury);
+        core.exitYThor(0, xMETRO.ExitMode.Liquid);
+        vm.prank(treasury);
+        core.exitYThor(1, xMETRO.ExitMode.Stake);
+        assertEq(metro.balanceOf(bob), 160 ether);
+        assertEq(metro.balanceOf(recipient), 100 ether);
+        assertEq(core.rewardWeightOf(bob), 0);
+        assertEq(core.rewardWeightOf(treasury), 70 ether);
+        assertEq(core.claimable(treasury), 5e6);
+        assertEq(core.migrationRewardExcludedAddress(), treasury);
+        core.setForfeitureRecipient(carol);
+        vm.prank(treasury);
+        assertEq(core.withdrawThor(0), 50 ether);
+        vm.warp(core.unstakeRequestYThor(treasury, 0).unlockTime);
+        vm.prank(treasury);
+        assertEq(core.withdrawYThor(0), 20 ether);
+        assertEq(metro.balanceOf(treasury), 70 ether);
+        assertEq(metro.balanceOf(carol), 0);
+        assertEq(metro.balanceOf(address(core)), 170 ether);
+    }
+
     /// E-12.04: Tests one time close and historical rewards.
     function test_E12_OneTimeCloseAndHistoricalRewards() public {
         _migrateThor(alice, 100 ether);

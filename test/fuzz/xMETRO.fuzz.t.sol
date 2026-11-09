@@ -63,13 +63,21 @@ contract xMETROFuzzTest is Test {
         assertEq(metro.balanceOf(address(xmetro)), principal);
     }
 
-    function testFuzz_ThorExitLevelsAndFundsConservation(uint128 principalSeed, uint32 elapsedSeed, bool stakeMode)
-        public
-    {
+    function testFuzz_ThorExitLevelsAndFundsConservation(
+        uint128 principalSeed,
+        uint32 elapsedSeed,
+        bool stakeMode,
+        address recipient
+    ) public {
+        vm.assume(
+            recipient != address(0) && recipient != userA && recipient != forfeiture && recipient != address(xmetro)
+        );
         uint256 principal = bound(uint256(principalSeed), 1, metro.MAX_SUPPLY());
         uint256 elapsed = bound(uint256(elapsedSeed), 0, 200 days);
         xmetro.creditThorFromMigration(userA, principal);
         (, uint64 migratedAt,,) = xmetro.thorPositions(userA, 0);
+        xmetro.setForfeitureRecipient(recipient);
+        assertEq(xmetro.migrationRewardExcludedAddress(), forfeiture);
         vm.warp(uint256(migratedAt) + elapsed);
 
         (bool eligible, uint256 rate, uint256 payout, uint256 forfeited,) = xmetro.previewThorExit(userA, 0);
@@ -103,21 +111,31 @@ contract xMETROFuzzTest is Test {
         assertEq(actualForfeited, expectedForfeited);
         (,,, bool exited) = xmetro.thorPositions(userA, 0);
         assertTrue(exited);
-        assertEq(metro.balanceOf(forfeiture), forfeited);
+        assertEq(metro.balanceOf(recipient), forfeited);
+        assertEq(metro.balanceOf(forfeiture), 0);
+        assertEq(xmetro.rewardWeightOf(recipient), 0);
         assertEq(metro.balanceOf(address(xmetro)), payout);
         assertEq(xmetro.lockedShares(userA), 0);
         assertEq(xmetro.rewardWeightOf(userA), stakeMode ? payout : 0);
         assertEq(xmetro.unstakeRequestCountThor(userA), !stakeMode && payout > 0 ? 1 : 0);
     }
 
-    function testFuzz_YThorExitCurveAndFundsConservation(uint128 principalSeed, uint32 elapsedSeed, bool stakeMode)
-        public
-    {
+    function testFuzz_YThorExitCurveAndFundsConservation(
+        uint128 principalSeed,
+        uint32 elapsedSeed,
+        bool stakeMode,
+        address recipient
+    ) public {
+        vm.assume(
+            recipient != address(0) && recipient != userA && recipient != forfeiture && recipient != address(xmetro)
+        );
         uint256 principal = bound(uint256(principalSeed), 1, metro.MAX_SUPPLY());
         uint256 maxElapsed = 120 days + 10 * 365 days;
         uint256 elapsed = bound(uint256(elapsedSeed), 0, maxElapsed);
         xmetro.creditYThorFromMigration(userA, principal);
         (, uint64 migratedAt,,) = xmetro.yThorPositions(userA, 0);
+        xmetro.setForfeitureRecipient(recipient);
+        assertEq(xmetro.migrationRewardExcludedAddress(), forfeiture);
         vm.warp(uint256(migratedAt) + elapsed);
 
         (bool eligible, uint256 rate, uint256 payout, uint256 forfeited,) = xmetro.previewYThorExit(userA, 0);
@@ -147,7 +165,9 @@ contract xMETROFuzzTest is Test {
             assertEq(actualPayout, principal);
             assertEq(actualForfeited, 0);
         }
-        assertEq(metro.balanceOf(forfeiture), forfeited);
+        assertEq(metro.balanceOf(recipient), forfeited);
+        assertEq(metro.balanceOf(forfeiture), 0);
+        assertEq(xmetro.rewardWeightOf(recipient), 0);
         assertEq(metro.balanceOf(address(xmetro)), payout);
         assertEq(xmetro.lockedShares(userA), 0);
         assertEq(_activeYThorPrincipal(userA), 0);
