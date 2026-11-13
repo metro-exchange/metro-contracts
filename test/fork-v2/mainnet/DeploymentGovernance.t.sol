@@ -36,7 +36,7 @@ contract DeploymentGovernanceMainnetTest is MainnetForkBase {
         assertEq(block.chainid, 1);
         assertEq(block.number, FORK_BLOCK);
         assertGt(address(metro).code.length, 0);
-        assertEq(address(core).code.length, 23_391);
+        assertEq(address(core).code.length, 23_396);
         assertEq(implementation.code.length, 20_755);
         assertEq(proxy.code.length, 76);
         assertGt(address(distributor).code.length, 0);
@@ -65,6 +65,7 @@ contract DeploymentGovernanceMainnetTest is MainnetForkBase {
         assertEq(distributor.owner(), address(this));
         assertEq(core.owner(), address(this));
         assertEq(metro.owner(), address(this));
+        assertEq(metro.pendingOwner(), address(0));
         assertEq(vault.owner(), address(this));
         assertTrue(distributor.operators(address(this)));
         assertTrue(metro.isMinter(address(core)));
@@ -308,6 +309,15 @@ contract DeploymentGovernanceMainnetTest is MainnetForkBase {
         core.acceptOwnership();
         assertEq(core.owner(), nextOwner);
         metro.transferOwnership(nextOwner);
+        assertEq(metro.owner(), address(this));
+        assertEq(metro.pendingOwner(), nextOwner);
+        vm.prank(nextOwner);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", nextOwner));
+        metro.setMinter(nextOwner, true);
+        vm.prank(nextOwner);
+        metro.acceptOwnership();
+        assertEq(metro.pendingOwner(), address(0));
+        assertTrue(metro.isMinter(address(core)));
         escrow.transferOwnership(nextOwner);
         assertEq(escrow.pendingOwner(), nextOwner);
         vm.prank(nextOwner);

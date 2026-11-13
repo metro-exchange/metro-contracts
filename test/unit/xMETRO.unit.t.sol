@@ -6,6 +6,7 @@ import {MaliciousERC20} from "../mocks/MaliciousERC20.sol";
 
 import {xMETRO as XMetroCore} from "../../src/xMETRO.sol";
 import {MetroToken} from "../../src/metro.sol";
+import {RewardDistributor} from "../../src/RewardDistributor.sol";
 import {ERC20Mintable} from "../mocks/ERC20Mintable.sol";
 import {IXMetroDeFiAdapter} from "../../src/interfaces/IXMetroDeFiAdapter.sol";
 import {MockXMetroDeFiAdapter} from "../mocks/MockXMetroDeFiAdapter.sol";
@@ -1467,6 +1468,432 @@ contract xMETROUnitTest is Test {
         (uint128 thorPrincipal,,, bool thorExited) = xmetro.thorPositions(userA, 0);
         assertEq(thorPrincipal, 100 ether);
         assertFalse(thorExited);
+    }
+
+    function _revocationDebt(XMetroCore core, address user) internal returns (int256) {
+        vm.record();
+        core.rewardDebt(user);
+        (bytes32[] memory reads,) = vm.accesses(address(core));
+        assertEq(reads.length, 1);
+        return int256(uint256(vm.load(address(core), reads[0])));
+    }
+
+    function test_RevokeContributorReleasesVestedSharesAndRecoversOnlyUnvestedMetro() public {
+        _stakeContributor(userB, userA, 100 ether);
+        XMetroCore.VestingSchedule memory schedule = xmetro.contributorVesting(userA, 0);
+        vm.warp(uint256(schedule.startTime) + schedule.duration / 2);
+        _depositRewards(10e6);
+        uint256 supply = metro.totalSupply();
+        vm.expectEmit(true, true, false, true, address(xmetro));
+        emit XMetroCore.UnlockedClaimedAsShares(userA, XMetroCore.UnstakeSource.Contributor, 50 ether);
+        vm.expectEmit(true, true, true, true, address(xmetro));
+        emit XMetroCore.ContributorVestingRevoked(userA, 0, 50 ether, 50 ether, forfeitureRecipient);
+        xmetro.revokeContributorVesting(userA, 0);
+        assertEq(metro.totalSupply(), supply);
+        assertEq(metro.balanceOf(forfeitureRecipient), 50 ether);
+        assertEq(metro.balanceOf(address(xmetro)), 50 ether);
+        assertEq(xmetro.balanceOf(userA), 50 ether);
+        assertEq(xmetro.lockedShares(userA), 0);
+        assertEq(xmetro.totalRewardWeight(), 50 ether);
+        assertEq(xmetro.claimable(userA), 10e6);
+        assertEq(usdc.balanceOf(userA), 0);
+        assertEq(xmetro.contributorVesting(userA, 0).totalAmount, 50 ether);
+        assertEq(xmetro.contributorVesting(userA, 0).claimed, 50 ether);
+        assertEq(xmetro.unstakeRequestCountContributor(userA), 0);
+        assertEq(xmetro.unstakeRequestCountFree(userA), 0);
+        _depositRewards(5e6);
+        vm.prank(userA);
+        assertEq(xmetro.claimRewards(), 15e6);
+        vm.prank(userA);
+        xmetro.transfer(userB, 10 ether);
+        vm.prank(userA);
+        xmetro.requestUnstake(40 ether);
+        XMetroCore.UnstakeRequest memory request = xmetro.unstakeRequestFree(userA, 0);
+        assertEq(request.unlockTime, block.timestamp + xmetro.UNSTAKE_DELAY());
+        vm.prank(userA);
+        vm.expectRevert(XMetroCore.NothingToWithdraw.selector);
+        xmetro.withdrawFree(0);
+        vm.warp(request.unlockTime);
+        vm.prank(userA);
+        assertEq(xmetro.withdrawFree(0), 40 ether);
+    }
+
+    function test_RevokeContributorCliffAndEndBoundariesWithIntegerRounding() public {
+        for (uint256 i; i < 7; ++i) {
+            _stakeContributor(userB, userA, 101);
+        }
+        XMetroCore.VestingSchedule memory schedule = xmetro.contributorVesting(userA, 0);
+        uint256 start = schedule.startTime;
+        uint256 end = start + schedule.duration;
+        uint256[7] memory times = [start - 1, start, start + 1, start + schedule.duration / 2, end - 1, end, end + 1];
+        uint256 totalReleased;
+        uint256 totalReclaimed;
+        for (uint256 i; i < times.length; ++i) {
+            vm.warp(times[i]);
+            uint256 released =
+                times[i] <= start ? 0 : times[i] >= end ? 101 : 101 * (times[i] - start) / schedule.duration;
+            if (released == 101) {
+                vm.mockCallRevert(
+                    address(metro),
+                    abi.encodeWithSelector(metro.transfer.selector, forfeitureRecipient, 0),
+                    "zero transfer"
+                );
+            }
+            vm.expectEmit(true, true, true, true, address(xmetro));
+            emit XMetroCore.ContributorVestingRevoked(userA, i, released, 101 - released, forfeitureRecipient);
+            xmetro.revokeContributorVesting(userA, i);
+            vm.clearMockedCalls();
+            totalReleased += released;
+            totalReclaimed += 101 - released;
+            XMetroCore.VestingSchedule memory closed = xmetro.contributorVesting(userA, i);
+            assertEq(closed.totalAmount, released);
+            assertEq(closed.claimed, released);
+            assertEq(closed.startTime, schedule.startTime);
+            assertEq(closed.duration, schedule.duration);
+            vm.expectRevert(XMetroCore.InvalidConfiguration.selector);
+            xmetro.revokeContributorVesting(userA, i);
+        }
+        assertEq(xmetro.balanceOf(userA), totalReleased);
+        assertEq(metro.balanceOf(forfeitureRecipient), totalReclaimed);
+        assertEq(xmetro.lockedShares(userA), 0);
+        assertEq(xmetro.contributorVestingCount(userA), 7);
+        vm.warp(end + 365 days);
+        (,, uint256 unlockable,) = xmetro.previewWithdrawableNow(userA);
+        assertEq(unlockable, 0);
+        vm.prank(userA);
+        vm.expectRevert(XMetroCore.NoRewards.selector);
+        xmetro.claimAndStakeUnlockedContributor(7);
+    }
+
+    function testFuzz_RevokeContributorPreservesEarlierClaimsAndCooldowns(bool liquid) public {
+        _stakeContributor(userB, userA, 100 ether);
+        XMetroCore.VestingSchedule memory schedule = xmetro.contributorVesting(userA, 0);
+        vm.warp(uint256(schedule.startTime) + schedule.duration / 4);
+        vm.prank(userA);
+        if (liquid) xmetro.requestWithdrawUnlockedContributor(0);
+        else xmetro.claimAndStakeUnlockedContributor(0);
+        XMetroCore.UnstakeRequest memory request;
+        if (liquid) {
+            request = xmetro.unstakeRequestContributor(userA, 0);
+        } else {
+            vm.prank(userA);
+            xmetro.transfer(outsider, 10 ether);
+        }
+        _depositRewards(3e6);
+        uint256 pending = xmetro.claimable(userA);
+        vm.warp(uint256(schedule.startTime) + schedule.duration / 2);
+        xmetro.revokeContributorVesting(userA, 0);
+        assertEq(xmetro.contributorVesting(userA, 0).claimed, 50 ether);
+        assertEq(xmetro.contributorVesting(userA, 0).totalAmount, 50 ether);
+        assertEq(xmetro.balanceOf(userA), liquid ? 25 ether : 40 ether);
+        assertEq(xmetro.balanceOf(outsider), liquid ? 0 : 10 ether);
+        assertEq(metro.balanceOf(forfeitureRecipient), 50 ether);
+        assertEq(xmetro.claimable(userA), pending);
+        assertEq(xmetro.unstakeRequestCountContributor(userA), liquid ? 1 : 0);
+        if (liquid) {
+            assertEq(abi.encode(xmetro.unstakeRequestContributor(userA, 0)), abi.encode(request));
+            if (block.timestamp < request.unlockTime) vm.warp(request.unlockTime);
+            vm.prank(userA);
+            assertEq(xmetro.withdrawContributor(0), 25 ether);
+        }
+        assertEq(metro.balanceOf(address(xmetro)), xmetro.totalShares());
+    }
+
+    function test_RevokeContributorImmediatelyAfterClaimRecoversRemainder() public {
+        _stakeContributor(userB, userA, 100 ether);
+        XMetroCore.VestingSchedule memory schedule = xmetro.contributorVesting(userA, 0);
+        vm.warp(uint256(schedule.startTime) + schedule.duration / 4);
+        vm.prank(userA);
+        xmetro.claimAndStakeUnlockedContributor(0);
+        vm.expectEmit(true, true, true, true, address(xmetro));
+        emit XMetroCore.ContributorVestingRevoked(userA, 0, 0, 75 ether, forfeitureRecipient);
+        xmetro.revokeContributorVesting(userA, 0);
+        assertEq(xmetro.balanceOf(userA), 25 ether);
+        assertEq(metro.balanceOf(forfeitureRecipient), 75 ether);
+        assertEq(xmetro.lockedShares(userA), 0);
+    }
+
+    function test_RevokeContributorOnlyCoreOwnerRegardlessOfOtherRoles() public {
+        _stakeContributor(userB, userA, 100 ether);
+        assertFalse(xmetro.contributorWhitelist(address(this)));
+        RewardDistributor distributor = new RewardDistributor(address(xmetro), address(this));
+        distributor.setOperator(outsider, true);
+        xmetro.setRewardDistributor(address(distributor));
+        assertTrue(distributor.operators(outsider));
+        xmetro.setAutoCompoundOperator(outsider, true);
+        metro.setMinter(outsider, true);
+        metro.transferOwnership(outsider);
+        vm.prank(outsider);
+        metro.acceptOwnership();
+        address[4] memory denied = [userA, userB, outsider, forfeitureRecipient];
+        for (uint256 i; i < denied.length; ++i) {
+            vm.prank(denied[i]);
+            vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", denied[i]));
+            xmetro.revokeContributorVesting(userA, 0);
+        }
+        xmetro.setContributor(userB, false);
+        assertEq(xmetro.lockedShares(userA), 100 ether);
+        xmetro.revokeContributorVesting(userA, 0);
+        assertEq(metro.balanceOf(forfeitureRecipient), 100 ether);
+    }
+
+    function test_RevokeContributorAuthorityFollowsAcceptedCoreOwner() public {
+        _stakeContributor(address(this), userA, 10 ether);
+        _stakeContributor(address(this), userA, 20 ether);
+        xmetro.transferOwnership(userB);
+        vm.prank(userB);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", userB));
+        xmetro.revokeContributorVesting(userA, 0);
+        xmetro.revokeContributorVesting(userA, 0);
+        vm.prank(userB);
+        xmetro.acceptOwnership();
+        assertTrue(xmetro.contributorWhitelist(address(this)));
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", address(this)));
+        xmetro.revokeContributorVesting(userA, 1);
+        vm.prank(userB);
+        xmetro.revokeContributorVesting(userA, 1);
+        assertEq(metro.balanceOf(forfeitureRecipient), 30 ether);
+    }
+
+    function test_RevokeContributorPauseAndRenounceDoNotGrantFallbackAuthority() public {
+        _stakeContributor(userB, userA, 100 ether);
+        xmetro.pause();
+        vm.expectRevert(bytes4(keccak256("EnforcedPause()")));
+        xmetro.revokeContributorVesting(userA, 0);
+        assertEq(xmetro.lockedShares(userA), 100 ether);
+        xmetro.unpause();
+        xmetro.revokeContributorVesting(userA, 0);
+        assertEq(xmetro.lockedShares(userA), 0);
+        _stakeContributor(userB, userA, 100 ether);
+        xmetro.transferOwnership(userB);
+        xmetro.renounceOwnership();
+        address[3] memory denied = [address(this), userA, userB];
+        for (uint256 i; i < denied.length; ++i) {
+            vm.prank(denied[i]);
+            vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", denied[i]));
+            xmetro.revokeContributorVesting(userA, 1);
+        }
+        assertEq(xmetro.owner(), address(0));
+        assertEq(xmetro.pendingOwner(), address(0));
+    }
+
+    function test_RevokeContributorRejectsInvalidAndAlreadyProcessedSchedules() public {
+        vm.expectRevert(stdError.indexOOBError);
+        xmetro.revokeContributorVesting(userA, 0);
+        _stakeContributor(userB, userA, 100 ether);
+        vm.expectRevert(stdError.indexOOBError);
+        xmetro.revokeContributorVesting(userA, 1);
+        vm.expectRevert(stdError.indexOOBError);
+        xmetro.revokeContributorVesting(address(0), 0);
+        XMetroCore.VestingSchedule memory schedule = xmetro.contributorVesting(userA, 0);
+        vm.warp(uint256(schedule.startTime) + schedule.duration);
+        vm.prank(userA);
+        xmetro.claimAndStakeUnlockedContributor(0);
+        vm.expectRevert(XMetroCore.InvalidConfiguration.selector);
+        xmetro.revokeContributorVesting(userA, 0);
+        assertEq(xmetro.balanceOf(userA), 100 ether);
+    }
+
+    function test_RevokeContributorTransferFailureRollsBackAndCanRetry() public {
+        _stakeContributor(userB, userA, 100 ether);
+        XMetroCore.VestingSchedule memory schedule = xmetro.contributorVesting(userA, 0);
+        vm.warp(uint256(schedule.startTime) + schedule.duration / 2);
+        _depositRewards(7e6);
+        int256 debt = _revocationDebt(xmetro, userA);
+        vm.mockCallRevert(
+            address(metro),
+            abi.encodeWithSelector(metro.transfer.selector, forfeitureRecipient, 50 ether),
+            abi.encodeWithSignature("RecoveryFailed()")
+        );
+        vm.expectRevert(abi.encodeWithSignature("RecoveryFailed()"));
+        xmetro.revokeContributorVesting(userA, 0);
+        assertEq(abi.encode(xmetro.contributorVesting(userA, 0)), abi.encode(schedule));
+        assertEq(xmetro.lockedShares(userA), 100 ether);
+        assertEq(xmetro.totalLockedShares(), 100 ether);
+        assertEq(xmetro.balanceOf(userA), 0);
+        assertEq(xmetro.contributorVestCursor(userA), 0);
+        assertEq(_revocationDebt(xmetro, userA), debt);
+        assertEq(xmetro.claimable(userA), 7e6);
+        assertEq(metro.balanceOf(forfeitureRecipient), 0);
+        assertEq(metro.balanceOf(address(xmetro)), 100 ether);
+        vm.clearMockedCalls();
+        xmetro.revokeContributorVesting(userA, 0);
+        assertEq(xmetro.balanceOf(userA), 50 ether);
+    }
+
+    function testFuzz_RevokeContributorRejectsReentrancyAndReleasesGuard(bool crossFunction) public {
+        MaliciousERC20 token = new MaliciousERC20("Malicious METRO", "MMETRO", 18);
+        XMetroCore guarded = new XMetroCore(address(this), address(token), address(usdc), forfeitureRecipient, 20_000);
+        guarded.setContributor(userB, true);
+        token.mint(userB, 300 ether);
+        vm.startPrank(userB);
+        token.approve(address(guarded), 300 ether);
+        for (uint256 i; i < 3; ++i) {
+            guarded.stakeContributor(100 ether, userA);
+        }
+        vm.stopPrank();
+        XMetroCore.VestingSchedule memory schedule = guarded.contributorVesting(userA, 0);
+        vm.warp(uint256(schedule.startTime) + schedule.duration / 2);
+        guarded.transferOwnership(address(token));
+        vm.prank(address(token));
+        guarded.acceptOwnership();
+        bytes memory nested = crossFunction
+            ? abi.encodeCall(XMetroCore.claimRewards, ())
+            : abi.encodeCall(XMetroCore.revokeContributorVesting, (userA, 2));
+        for (uint256 i; i < 2; ++i) {
+            token.setAttack(address(guarded), nested, true);
+            vm.prank(address(token));
+            guarded.revokeContributorVesting(userA, i);
+            assertTrue(token.attackAttempted());
+            assertFalse(token.attackSucceeded());
+            assertEq(token.attackRevertData(), abi.encodeWithSignature("ReentrancyGuardReentrantCall()"));
+        }
+        assertEq(guarded.balanceOf(userA), 100 ether);
+        assertEq(guarded.lockedShares(userA), 100 ether);
+        assertEq(guarded.contributorVesting(userA, 2).claimed, 0);
+        assertEq(token.balanceOf(forfeitureRecipient), 100 ether);
+    }
+
+    function testFuzz_RevokeContributorKeepsIndicesOtherSchedulesAndCursor(uint8 seed) public {
+        for (uint256 i; i < 4; ++i) {
+            _stakeContributor(userB, userA, (i + 1) * 100 ether);
+        }
+        XMetroCore.VestingSchedule memory schedule = xmetro.contributorVesting(userA, 0);
+        vm.warp(uint256(schedule.startTime) + schedule.duration / 2);
+        vm.prank(userA);
+        xmetro.claimAndStakeUnlockedContributor(1);
+        assertEq(xmetro.contributorVestCursor(userA), 1);
+        bytes32[4] memory beforeHashes;
+        for (uint256 i; i < 4; ++i) {
+            beforeHashes[i] = keccak256(abi.encode(xmetro.contributorVesting(userA, i)));
+        }
+        uint256 id = seed % 3;
+        xmetro.revokeContributorVesting(userA, id);
+        assertEq(xmetro.contributorVestingCount(userA), 4);
+        assertEq(xmetro.contributorVestCursor(userA), 1);
+        for (uint256 i; i < 4; ++i) {
+            if (i != id) assertEq(keccak256(abi.encode(xmetro.contributorVesting(userA, i))), beforeHashes[i]);
+        }
+        _stakeContributor(userB, userA, 500 ether);
+        assertEq(xmetro.contributorVestingCount(userA), 5);
+        assertEq(xmetro.contributorVesting(userA, 4).totalAmount, 500 ether);
+        assertEq(xmetro.contributorVestCursor(userA), 1);
+        XMetroCore.VestingSchedule memory last = xmetro.contributorVesting(userA, 4);
+        vm.warp(uint256(last.startTime) + last.duration);
+        (,, uint256 preview,) = xmetro.previewWithdrawableNow(userA);
+        vm.prank(userA);
+        assertEq(xmetro.claimAndStakeUnlockedContributor(5), preview);
+        assertEq(xmetro.lockedShares(userA), 0);
+        assertEq(metro.balanceOf(address(xmetro)), xmetro.totalSupply());
+    }
+
+    function test_RevokeContributorClosedPrefixUsesExistingExplicitScanRecovery() public {
+        _stakeContributor(userB, userA, 10 ether);
+        _stakeContributor(userB, userA, 20 ether);
+        xmetro.revokeContributorVesting(userA, 0);
+        xmetro.setDefaultMaxVestingSchedules(1);
+        XMetroCore.VestingSchedule memory schedule = xmetro.contributorVesting(userA, 1);
+        vm.warp(uint256(schedule.startTime) + schedule.duration);
+        vm.prank(userA);
+        vm.expectRevert(XMetroCore.NoRewards.selector);
+        xmetro.claimAndStakeUnlockedContributor(0);
+        assertEq(xmetro.contributorVestCursor(userA), 0);
+        vm.prank(userA);
+        assertEq(xmetro.claimAndStakeUnlockedContributor(2), 20 ether);
+        assertEq(xmetro.contributorVestingCount(userA), 2);
+    }
+
+    function test_RevokeContributorPreservesFractionalRewardsAfterAllSharesAreRemoved() public {
+        _stakeContributor(userB, userA, 3);
+        _stake(userB, 1);
+        _depositRewards(1);
+        xmetro.revokeContributorVesting(userA, 0);
+        assertEq(xmetro.totalSharesOf(userA), 0);
+        assertEq(_revocationDebt(xmetro, userA), -int256(75e22));
+        vm.prank(userA);
+        assertEq(xmetro.claimRewards(), 0);
+        _stake(userA, 1);
+        _depositRewards(1);
+        vm.prank(userA);
+        assertEq(xmetro.claimRewards(), 1);
+        assertEq(int256(xmetro.accRewardPerShare()) - _revocationDebt(xmetro, userA), int256(25e22));
+        assertEq(usdc.balanceOf(userA), 1);
+    }
+
+    function test_RevokeContributorZeroGlobalWeightStillAllowsHistoricalRewardClaim() public {
+        _stakeContributor(userB, userA, 100 ether);
+        _depositRewards(5e6);
+        xmetro.revokeContributorVesting(userA, 0);
+        assertEq(xmetro.totalRewardWeight(), 0);
+        vm.prank(userA);
+        assertEq(xmetro.claimRewards(), 5e6);
+        vm.expectRevert(XMetroCore.InvalidConfiguration.selector);
+        xmetro.depositRewards(1);
+        _stake(userB, 10 ether);
+        _depositRewards(2e6);
+        assertEq(xmetro.claimable(userA), 0);
+        assertEq(xmetro.claimable(userB), 2e6);
+    }
+
+    function testFuzz_RevokeContributorPreservesMixedMigrationRewards(bool excluded) public {
+        address beneficiary = excluded ? forfeitureRecipient : userA;
+        _stake(beneficiary, 10 ether);
+        xmetro.creditThorFromMigration(beneficiary, 20 ether);
+        xmetro.creditYThorFromMigration(beneficiary, 30 ether);
+        _stakeContributor(userB, beneficiary, 40 ether);
+        XMetroCore.VestingSchedule memory schedule = xmetro.contributorVesting(beneficiary, 0);
+        vm.warp(uint256(schedule.startTime) + schedule.duration / 2);
+        _depositRewards(13e6);
+        uint256 pending = xmetro.claimable(beneficiary);
+        int256 debt = _revocationDebt(xmetro, beneficiary);
+        uint256 weight = xmetro.rewardWeightOf(beneficiary);
+        uint256 totalWeight = xmetro.totalRewardWeight();
+        uint256 acc = xmetro.accRewardPerShare();
+        xmetro.revokeContributorVesting(beneficiary, 0);
+        assertEq(_revocationDebt(xmetro, beneficiary), debt - int256(20 ether * acc));
+        assertEq(xmetro.claimable(beneficiary), pending);
+        assertEq(xmetro.rewardWeightOf(beneficiary), weight - 20 ether);
+        assertEq(xmetro.totalRewardWeight(), totalWeight - 20 ether);
+        (uint128 thor,,, bool thorExited) = xmetro.thorPositions(beneficiary, 0);
+        (uint128 ythor,,, bool ythorExited) = xmetro.yThorPositions(beneficiary, 0);
+        assertEq(thor, 20 ether);
+        assertEq(ythor, 30 ether);
+        assertFalse(thorExited);
+        assertFalse(ythorExited);
+        assertEq(xmetro.lockedShares(beneficiary), 50 ether);
+    }
+
+    function test_RevokeContributorDoesNotRequireMinterOrAdditionalApproval() public {
+        _stakeContributor(userB, userA, 100 ether);
+        XMetroCore.VestingSchedule memory schedule = xmetro.contributorVesting(userA, 0);
+        vm.warp(uint256(schedule.startTime) + schedule.duration / 2);
+        metro.setMinter(address(xmetro), false);
+        vm.prank(userB);
+        metro.approve(address(xmetro), 0);
+        vm.prank(userA);
+        metro.approve(address(xmetro), 0);
+        uint256 supply = metro.totalSupply();
+        xmetro.revokeContributorVesting(userA, 0);
+        assertEq(metro.totalSupply(), supply);
+        assertEq(xmetro.balanceOf(userA), 50 ether);
+        assertEq(metro.balanceOf(forfeitureRecipient), 50 ether);
+    }
+
+    function testFuzz_RevokeContributorUsesCurrentRecipientIncludingAddressOverlap(uint8 seed) public {
+        _stakeContributor(userB, userA, 100 ether);
+        XMetroCore.VestingSchedule memory schedule = xmetro.contributorVesting(userA, 0);
+        vm.warp(uint256(schedule.startTime) + schedule.duration / 2);
+        address recipient = seed % 3 == 0 ? outsider : seed % 3 == 1 ? userA : address(xmetro);
+        xmetro.setForfeitureRecipient(recipient);
+        vm.expectEmit(true, true, true, true, address(xmetro));
+        emit XMetroCore.ContributorVestingRevoked(userA, 0, 50 ether, 50 ether, recipient);
+        xmetro.revokeContributorVesting(userA, 0);
+        assertEq(xmetro.migrationRewardExcludedAddress(), forfeitureRecipient);
+        assertEq(metro.balanceOf(forfeitureRecipient), 0);
+        assertEq(metro.balanceOf(address(xmetro)), recipient == address(xmetro) ? 100 ether : 50 ether);
+        if (recipient != address(xmetro)) assertEq(metro.balanceOf(recipient), 50 ether);
+        assertEq(xmetro.balanceOf(userA), 50 ether);
+        assertEq(xmetro.totalRewardWeight(), 50 ether);
     }
 
     function test_ContributorSixMonthCliffTwoPointFiveYearLinearAndBothExitModes() public {

@@ -1,6 +1,8 @@
 # xMETRO Integration Guide
 
-Current swap and compound examples require Adapter implementation version 2 and the [new swap envelope](docs/new-features.md#swap-execution-data). Core, Escrow and Distributor now expose two-step ownership interfaces; regenerate clients from the corresponding ABI. MetroToken, Escrow and Distributor business failures use custom errors from their matching ABI. The four Core reward entrypoint signatures are unchanged. Use the ABI and examples matching the actual deployed revision; existing configuration JSON and historical addresses are not updated by this source change.
+Current swap and compound examples require Adapter implementation version 2 and the [new swap envelope](docs/new-features.md#swap-execution-data). METRO, Core, Escrow and Distributor now expose two-step ownership interfaces; regenerate clients from the corresponding ABI. MetroToken, Escrow and Distributor business failures use custom errors from their matching ABI. The four Core reward entrypoint signatures are unchanged. Use the ABI and examples matching the actual deployed revision; existing configuration JSON and historical addresses are not updated by this source change.
+
+Contributor revocation is a Core-owner action: vested principal becomes ordinary xMETRO, unvested METRO goes to the current recipient, and rewards/queues are preserved. Use the new Core and METRO ABIs only with matching deployments; see [revocation API](docs/contract-api.md#contributor-vesting-revocation) and [four-contract ownership handover](docs/contract-api.md#two-address-handover).
 
 ## October 24 source update
 

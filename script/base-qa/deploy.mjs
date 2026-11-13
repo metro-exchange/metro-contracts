@@ -335,7 +335,7 @@ async function ownershipStage() {
   ];
   const pendingOwners = {};
   for (const [id, artifact] of ownedContracts) {
-    if (['Core', 'Escrow', 'Distributor'].includes(id)) {
+    if (['METRO', 'Core', 'Escrow', 'Distributor'].includes(id)) {
       pendingOwners[id] = await (await contract(artifact, c(id))).pendingOwner();
       if (pendingOwners[id] !== ethers.constants.AddressZero) throw new Error('Unexpected pending owner: ' + id);
     }
@@ -349,7 +349,7 @@ async function ownershipStage() {
   if (await core.paused()) throw new Error('Core unexpectedly paused');
   await recordReadbacks('ownership', {
     corePendingOwner: pendingOwners.Core, escrowPendingOwner: pendingOwners.Escrow,
-    distributorPendingOwner: pendingOwners.Distributor,
+    distributorPendingOwner: pendingOwners.Distributor, metroPendingOwner: pendingOwners.METRO,
     pendingProjectHandover: true, coreOwner: await core.owner(), corePaused: await core.paused(),
     metroOwner: await (await contract('MetroToken', c('METRO'))).owner(),
     escrowOwner: await (await contract('ThorMigrationEscrow', c('Escrow'))).owner(),

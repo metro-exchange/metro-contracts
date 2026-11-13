@@ -97,6 +97,22 @@ library XMetroCoreLogic {
         state.contributorVestings[receiver].push(ContributorVesting(uint128(amount), 0, startTime, duration));
     }
 
+    /// @dev Close one schedule without removing its array entry or moving the vesting cursor.
+    function revokeContributorVesting(address user, uint256 scheduleId)
+        internal
+        returns (uint256 released, uint256 reclaimed)
+    {
+        ContributorVesting storage schedule = migrationStorage().contributorVestings[user][scheduleId];
+        uint256 remaining = uint256(schedule.totalAmount) - schedule.claimed;
+        if (remaining == 0) revert InvalidConfiguration();
+        released = _releasable(schedule, uint64(block.timestamp));
+        reclaimed = remaining - released;
+        // claimed + released <= the original uint128 totalAmount.
+        uint128 settled = uint128(uint256(schedule.claimed) + released);
+        schedule.claimed = settled;
+        schedule.totalAmount = settled;
+    }
+
     function consumeContributorVesting(address user, uint256 maxVestingSchedules) internal returns (uint256 unlocked) {
         MigrationStorage storage state = migrationStorage();
         ContributorVesting[] storage schedules = state.contributorVestings[user];

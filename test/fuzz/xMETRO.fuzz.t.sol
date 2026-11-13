@@ -49,6 +49,122 @@ contract xMETROFuzzTest is Test {
         xmetro.depositRewards(amount);
     }
 
+    function _scaledContributorDebt(address user) internal returns (int256) {
+        vm.record();
+        xmetro.rewardDebt(user);
+        (bytes32[] memory reads,) = vm.accesses(address(xmetro));
+        assertEq(reads.length, 1);
+        return int256(uint256(vm.load(address(xmetro), reads[0])));
+    }
+
+    function _vestedModel(uint256 amount, uint256 timestamp, uint256 start, uint256 duration)
+        internal
+        pure
+        returns (uint256)
+    {
+        if (timestamp <= start) return 0;
+        if (timestamp >= start + duration) return amount;
+        return amount * (timestamp - start) / duration;
+    }
+
+    function testFuzz_RevokeContributorPreservesPrincipalRewardsAndOtherSchedules(
+        uint128 amountSeed,
+        uint32 claimTimeSeed,
+        uint32 revokeTimeSeed,
+        uint64 rewardSeed,
+        bool claimAsShares,
+        bool beneficiaryIsRecipient
+    ) public {
+        uint256 amount = bound(uint256(amountSeed), 1, metro.MAX_SUPPLY() / 4);
+        xmetro.setContributor(address(this), true);
+        metro.mint(address(this), amount + 37);
+        metro.approve(address(xmetro), amount + 37);
+        xmetro.stakeContributor(amount, userA);
+        _stake(userB, 1 ether);
+        _deposit(bound(uint256(rewardSeed), 1 + xmetro.totalRewardWeight() / 1e24, 1_000_000e6));
+        XMetroCore.VestingSchedule memory original = xmetro.contributorVesting(userA, 0);
+        uint256 firstTime = uint256(original.startTime) + bound(uint256(claimTimeSeed), 0, original.duration - 1);
+        vm.warp(firstTime);
+        uint256 oldClaimed = _vestedModel(amount, firstTime, original.startTime, original.duration);
+        if (oldClaimed != 0) {
+            vm.prank(userA);
+            if (claimAsShares) assertEq(xmetro.claimAndStakeUnlockedContributor(1), oldClaimed);
+            else assertEq(xmetro.requestWithdrawUnlockedContributor(1), oldClaimed);
+        }
+        xmetro.stakeContributor(37, userA);
+        bytes32 otherSchedule = keccak256(abi.encode(xmetro.contributorVesting(userA, 1)));
+        uint256 cursor = xmetro.contributorVestCursor(userA);
+        uint256 queueCount = xmetro.unstakeRequestCountContributor(userA);
+        bytes32 oldQueue;
+        if (queueCount != 0) oldQueue = keccak256(abi.encode(xmetro.unstakeRequestContributor(userA, 0)));
+        uint256 revokeTime =
+            bound(uint256(revokeTimeSeed), firstTime, uint256(original.startTime) + original.duration * 2);
+        vm.warp(revokeTime);
+        uint256 vested = _vestedModel(amount, revokeTime, original.startTime, original.duration);
+        uint256 released = vested - oldClaimed;
+        uint256 reclaimed = amount - vested;
+        address recipient = beneficiaryIsRecipient ? userA : forfeiture;
+        xmetro.setForfeitureRecipient(recipient);
+        int256 entitlement =
+            int256(xmetro.totalSharesOf(userA) * xmetro.accRewardPerShare()) - _scaledContributorDebt(userA);
+        uint256 supply = metro.totalSupply();
+        uint256 backing = metro.balanceOf(address(xmetro));
+        uint256 weight = xmetro.totalRewardWeight();
+        uint256 recipientBalance = metro.balanceOf(recipient);
+        xmetro.revokeContributorVesting(userA, 0);
+        XMetroCore.VestingSchedule memory closed = xmetro.contributorVesting(userA, 0);
+        assertEq(closed.totalAmount, vested);
+        assertEq(closed.claimed, vested);
+        assertEq(closed.startTime, original.startTime);
+        assertEq(closed.duration, original.duration);
+        assertEq(xmetro.contributorVestingCount(userA), 2);
+        assertEq(xmetro.contributorVestCursor(userA), cursor);
+        assertEq(keccak256(abi.encode(xmetro.contributorVesting(userA, 1))), otherSchedule);
+        assertEq(xmetro.lockedShares(userA), 37);
+        assertEq(xmetro.balanceOf(userA), (claimAsShares ? oldClaimed : 0) + released);
+        assertEq(xmetro.totalRewardWeight(), weight - reclaimed);
+        assertEq(metro.totalSupply(), supply);
+        assertEq(metro.balanceOf(address(xmetro)), backing - reclaimed);
+        assertEq(metro.balanceOf(recipient), recipientBalance + reclaimed);
+        assertEq(xmetro.unstakeRequestCountContributor(userA), queueCount);
+        if (queueCount != 0) assertEq(keccak256(abi.encode(xmetro.unstakeRequestContributor(userA, 0))), oldQueue);
+        assertEq(
+            int256(xmetro.totalSharesOf(userA) * xmetro.accRewardPerShare()) - _scaledContributorDebt(userA),
+            entitlement
+        );
+        vm.prank(userA);
+        assertEq(xmetro.claimRewards(), uint256(entitlement) / 1e24);
+        assertEq(usdc.balanceOf(userA), uint256(entitlement) / 1e24);
+        assertEq(
+            int256(xmetro.totalSharesOf(userA) * xmetro.accRewardPerShare()) - _scaledContributorDebt(userA),
+            entitlement % int256(1e24)
+        );
+        vm.expectRevert(XMetroCore.InvalidConfiguration.selector);
+        xmetro.revokeContributorVesting(userA, 0);
+    }
+
+    function testFuzz_RevokeImmediatelyAfterClaimOnlyRecoversUnvested(uint128 amountSeed, uint32 elapsedSeed) public {
+        uint256 amount = bound(uint256(amountSeed), xmetro.CONTRIBUTOR_DURATION(), metro.MAX_SUPPLY());
+        xmetro.setContributor(address(this), true);
+        metro.mint(address(this), amount);
+        metro.approve(address(xmetro), amount);
+        xmetro.stakeContributor(amount, userA);
+        XMetroCore.VestingSchedule memory schedule = xmetro.contributorVesting(userA, 0);
+        uint256 elapsed = bound(uint256(elapsedSeed), 1, schedule.duration - 1);
+        vm.warp(uint256(schedule.startTime) + elapsed);
+        uint256 vested = amount * elapsed / schedule.duration;
+        vm.prank(userA);
+        assertEq(xmetro.claimAndStakeUnlockedContributor(0), vested);
+        xmetro.revokeContributorVesting(userA, 0);
+        assertEq(xmetro.balanceOf(userA), vested);
+        assertEq(xmetro.lockedShares(userA), 0);
+        assertEq(metro.balanceOf(forfeiture), amount - vested);
+        assertEq(metro.balanceOf(address(xmetro)), vested);
+        vm.warp(uint256(schedule.startTime) + schedule.duration + 1);
+        (,, uint256 unlockable,) = xmetro.previewWithdrawableNow(userA);
+        assertEq(unlockable, 0);
+    }
+
     function testFuzz_YThorPrincipalCreatesConfiguredRewardWeight(uint128 principalSeed) public {
         uint256 principal = bound(uint256(principalSeed), 1, metro.MAX_SUPPLY());
         uint256 supplyBefore = metro.totalSupply();

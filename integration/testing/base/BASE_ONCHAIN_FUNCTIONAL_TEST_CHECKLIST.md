@@ -1,5 +1,16 @@
 # Base On-Chain Functional Test Checklist
 
+## November 13: new-source ownership and Contributor acceptance
+
+These items require a newly deployed matching METRO/Core revision. Historical QA addresses and prior checkmarks do not demonstrate these changes; no deployment is performed by this source update.
+
+- [ ] METRO nomination, replacement/cancellation and acceptance: only the nominee accepts; old owner remains active until then, and mint roles/Permit remain independent.
+- [ ] Read all four owner/pendingOwner pairs (METRO, Core, Escrow, Distributor); each owner must be the intended owner and each pendingOwner zero.
+- [ ] Only the current Core owner can revoke; pending/former owner, creator, beneficiary, Contributor and backend roles are rejected. Paused calls fail.
+- [ ] Revoke before cliff, partially vested, after prior stake/liquid claims and after full vesting: only unvested METRO is recovered, vested-but-unclaimed principal becomes free xMETRO.
+- [ ] Rotate `forfeitureRecipient` before revoking an existing plan; verify the event, balances, historical USDC rewards, old queues and stable schedule/cursor/other plans.
+- [ ] Released ordinary shares can transfer and use the Free queue with the QA 30-minute cooldown. Repeated revocation fails; closed scan prefixes can be traversed with an explicit larger `maxSchedules`.
+
 ## November 9: Sherlock Issue #23 recipient follow-up
 
 These are future on-chain checks for the matching deployed Core revision. This source update does not deploy contracts or change existing addresses, permissions or receipts.

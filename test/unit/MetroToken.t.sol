@@ -14,6 +14,9 @@ import {ERC20Capped} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20C
 contract MetroTokenTest is Test {
     MetroToken internal metro;
 
+    event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
     // Test addresses.
     address internal owner = address(this);
     address internal newOwner = makeAddr("newOwner");
@@ -137,39 +140,88 @@ contract MetroTokenTest is Test {
         assertTrue(!metro.isMinter(minter));
     }
 
-    function test_TransferOwnership_ChangesOnlyOwnerPermissions() public {
+    function test_TransferOwnership_ChangesOnlyOwnerPermissionsAfterAcceptance() public {
+        assertEq(metro.pendingOwner(), address(0));
+        vm.expectEmit(true, true, false, true, address(metro));
+        emit OwnershipTransferStarted(owner, newOwner);
         metro.transferOwnership(newOwner);
-        assertEq(metro.owner(), newOwner);
-
-        vm.expectRevert();
-        metro.setMinter(minter, true);
-
+        assertEq(metro.owner(), owner);
+        assertEq(metro.pendingOwner(), newOwner);
         vm.prank(newOwner);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", newOwner));
         metro.setMinter(minter, true);
+        metro.setMinter(minter, true);
+
+        vm.expectEmit(true, true, false, true, address(metro));
+        emit OwnershipTransferred(owner, newOwner);
+        vm.prank(newOwner);
+        metro.acceptOwnership();
+        assertEq(metro.owner(), newOwner);
+        assertEq(metro.pendingOwner(), address(0));
         assertTrue(metro.isMinter(minter));
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", owner));
+        metro.setMinter(minter, false);
+        vm.prank(newOwner);
+        metro.setMinter(minter, false);
+        assertFalse(metro.isMinter(minter));
     }
 
-    function test_TransferOwnership_DoesNotAutoGrantMinterToNewOwner() public {
+    function test_TransferOwnership_DoesNotChangeMinterRoles() public {
+        metro.setMinter(owner, true);
         metro.transferOwnership(newOwner);
+        vm.prank(newOwner);
+        metro.acceptOwnership();
         assertEq(metro.owner(), newOwner);
-
-        assertTrue(!metro.isMinter(newOwner));
-
+        assertFalse(metro.isMinter(newOwner));
+        assertTrue(metro.isMinter(owner));
+        metro.mint(user, 1 ether);
+        vm.prank(newOwner);
+        vm.expectRevert(MetroToken.UnauthorizedMinter.selector);
+        metro.mint(user, 1 ether);
         vm.prank(newOwner);
         metro.setMinter(newOwner, true);
-        assertTrue(metro.isMinter(newOwner));
-
         vm.prank(newOwner);
         metro.mint(user, 1 ether);
-        assertEq(metro.balanceOf(user), 1 ether);
+        assertEq(metro.balanceOf(user), 2 ether);
+    }
+
+    function test_ReplaceAndCancelOwnershipNomination() public {
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", user));
+        metro.acceptOwnership();
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", user));
+        metro.transferOwnership(user);
+        metro.transferOwnership(newOwner);
+        metro.transferOwnership(user);
+        vm.prank(newOwner);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", newOwner));
+        metro.acceptOwnership();
+        vm.expectEmit(true, true, false, true, address(metro));
+        emit OwnershipTransferStarted(owner, address(0));
+        metro.transferOwnership(address(0));
+        assertEq(metro.owner(), owner);
+        assertEq(metro.pendingOwner(), address(0));
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", user));
+        metro.acceptOwnership();
+        metro.transferOwnership(newOwner);
+        vm.prank(newOwner);
+        metro.acceptOwnership();
+        assertEq(metro.owner(), newOwner);
     }
 
     function test_RenounceOwnership_DisablesOnlyOwner_ButDoesNotRevokeMinter() public {
         metro.setMinter(owner, true);
         assertTrue(metro.isMinter(owner));
 
+        metro.transferOwnership(newOwner);
         metro.renounceOwnership();
         assertEq(metro.owner(), address(0));
+        assertEq(metro.pendingOwner(), address(0));
+        vm.prank(newOwner);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", newOwner));
+        metro.acceptOwnership();
 
         vm.expectRevert();
         metro.setMinter(minter, true);
@@ -194,6 +246,20 @@ contract MetroTokenTest is Test {
         bytes32 structHash = keccak256(abi.encode(typehash, alice, spender, value, nonce, deadline));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", metro.DOMAIN_SEPARATOR(), structHash));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePk, digest);
+
+        // A permit signed before handover must retain its domain and validity.
+        bytes32 domain = metro.DOMAIN_SEPARATOR();
+        vm.prank(alice);
+        metro.approve(user, 2 ether);
+        metro.transferOwnership(newOwner);
+        vm.prank(newOwner);
+        metro.acceptOwnership();
+        assertEq(metro.DOMAIN_SEPARATOR(), domain);
+        assertEq(metro.nonces(alice), nonce);
+        assertEq(metro.balanceOf(alice), 10 ether);
+        assertEq(metro.totalSupply(), 10 ether);
+        assertEq(metro.cap(), CAP);
+        assertEq(metro.allowance(alice, user), 2 ether);
 
         vm.prank(user);
         metro.permit(alice, spender, value, deadline, v, r, s);

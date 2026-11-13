@@ -1,5 +1,9 @@
 # THOR/yTHOR Migration to METRO
 
+## November 13: METRO ownership and Contributor revocation
+
+METRO now requires the nominated owner to accept ownership. Only the current Core owner may revoke a Contributor schedule: vested-but-unclaimed principal becomes ordinary xMETRO and unvested METRO goes to the current `forfeitureRecipient`. Existing rewards, queues and schedule indices are preserved. See [the API](integration/docs/contract-api.md#contributor-vesting-revocation) and [validation results](integration/testing/ethereum-fork/RESULTS.md). These source changes do not update previously deployed instances.
+
 ## November 9: configurable exit forfeiture recipient
 
 The production Core owner can now change the recipient of future THOR/yTHOR exit forfeitures, matching the existing QA interface. The fixed treasury migration exclusion and user payout rules remain unchanged. See [the recipient API](integration/docs/contract-api.md#exit-forfeiture-recipient) and [validation results](integration/testing/ethereum-fork/RESULTS.md).
@@ -10,7 +14,7 @@ THOR exits now use two fixed payout levels. Production pays 50% of converted MET
 
 ## October 30 audit remediation
 
-The local source includes capped swap inputs (Adapter implementation version 2), two-step ownership for Core/Escrow/Distributor, transient reentrancy guards, custom business errors, and initial configuration events. Existing deployed instances and historical configuration files retain their original behavior.
+The local source includes capped swap inputs (Adapter implementation version 2), two-step ownership for METRO/Core/Escrow/Distributor, transient reentrancy guards, custom business errors, and initial configuration events. Existing deployed instances and historical configuration files retain their original behavior.
 
 Build with the pinned Solidity **0.8.38** compiler and **Osaka** EVM target in `foundry.toml`. Core, Escrow and Distributor use OpenZeppelin `ReentrancyGuardTransient`; their target chain must support EIP-1153 and the other instructions emitted for Osaka. Adapter keeps its existing proxy-local guard. Rebuild Core, Adapter and deployment artifacts together and recompute approved initcode hashes; old artifacts must not be mixed with this source. See [validation results](integration/testing/ethereum-fork/RESULTS.md) for executed checks and remaining RPC coverage.
 
@@ -22,7 +26,7 @@ Only THOR/yTHOR migration positions owned by `migrationRewardExcludedAddress()` 
 
 The constructor initializes `forfeitureRecipient` and permanently fixes `migrationRewardExcludedAddress` from the same `forfeitureRecipient_` argument. For production, keep `FORFEITURE_RECIPIENT=0x7D8911eB1C72F0Ba29302bE30301B75Cec81F622` at construction. To use another forfeiture destination, the current Core owner calls `setForfeitureRecipient(newRecipient)` afterward; passing the new destination to the constructor instead would also change the fixed exclusion address.
 
-Both production and Base QA allow a nonzero forfeiture recipient to be set, including while paused. The change applies to future THOR/yTHOR exits by all users, including already-created open positions. It does not change the fixed excluded treasury, reward weights, accrued rewards, prior transfers or queued payouts. The treasury retains normal exit and ordinary-staking rights; its own forfeitures return to it only while it is the configured recipient. This does not enforce a 90-day treasury lock.
+Both production and Base QA allow a nonzero forfeiture recipient to be set, including while paused. The change applies to future THOR/yTHOR exits by all users, including already-created open positions, and to future Contributor revocations of existing or new schedules. It does not change the fixed excluded treasury, reward weights, accrued rewards, prior transfers or queued payouts. The treasury retains normal exit and ordinary-staking rights; its own forfeitures return to it only while it is the configured recipient. This does not enforce a 90-day treasury lock.
 
 For a future Base QA deployment, explicitly set `BASE_QA_FORFEITURE_RECIPIENT` to the initial excluded treasury before creating the deployment plan. The script rejects missing addresses or a conflicting saved plan. Read `forfeitureRecipient()` and `migrationRewardExcludedAddress()` independently after any owner update. Source changes do not modify existing deployments; use the ABI matching the deployed revision.
 
@@ -58,7 +62,7 @@ User / frontend / Keeper
           +--> Maple SyrupRouter
 ```
 
-xMETRO, ThorMigrationEscrow and RewardDistributor use two-step ownership. `transferOwnership(target)` nominates a pending owner; only that address can call `acceptOwnership()` to receive authority. A zero target cancels the nomination. Core and Escrow reject `renounceOwnership()` while paused, but still permit ownership handover and subsequent unpause. Renouncing while unpaused remains irreversible; Distributor retains its existing renounce behavior. MetroToken remains one-step and the Core starts unpaused.
+MetroToken, xMETRO, ThorMigrationEscrow and RewardDistributor use two-step ownership. `transferOwnership(target)` nominates a pending owner; only that address can call `acceptOwnership()` to receive authority. A zero target cancels the nomination. Core and Escrow reject `renounceOwnership()` while paused, but still permit ownership handover and subsequent unpause. Renouncing while unpaused remains irreversible; Distributor retains its existing renounce behavior. METRO ownership and minter permissions remain independent; the Core starts unpaused.
 
 Aave V4 users authorize the configured official GiverPositionManager on the Spoke. The Adapter supplies USDC through that Giver; the Adapter proxy itself does not require separate Spoke activation. A replacement Adapter proxy does not require users to repeat their Giver approval if the Spoke and Giver remain unchanged. Maple authorization, by contrast, is specific to the Adapter proxy and must be obtained again for a new proxy.
 
@@ -86,10 +90,12 @@ Maple configuration stores a SyrupRouter and `bytes32 depositData`; syrupUSDC is
 - Each address may migrate THOR and yTHOR repeatedly within the migration window and cumulative caps. Each call creates an independently timed position.
 - THOR cannot exit before 1 hour. The payout is fixed at 50% of converted METRO principal from 1 hour until just before 3 hours, and is 100% at 3 hours and later. Production uses the same two levels at days 30 and 90.
 - yTHOR principal uses the configured `ratioYThor`. Reward weight starts at the constructor's `YTHOR_REWARD_WEIGHT_BPS` (`10,000 = 1x`) and may be changed by the xMETRO owner without pausing. The current weight applies to future reward deposits for eligible active yTHOR positions, excluding those owned by `migrationRewardExcludedAddress()`; accrued rewards are not repriced. This QA build opens yTHOR exit at 4 hours and increases payout from 20% to 100% of the converted METRO principal over the next 12 hours. Production uses day 120 and a four-year ramp (4 * 365 days after the initial 120 days).
-- Forfeited principal goes to the current `forfeitureRecipient`. The Core owner can redirect future THOR/yTHOR exit forfeitures with `setForfeitureRecipient(address)` in both builds.
+- Forfeited principal goes to the current `forfeitureRecipient`. The Core owner can redirect future THOR/yTHOR exit forfeitures and unvested Contributor recoveries with `setForfeitureRecipient(address)` in both builds.
 - Liquid exits for free stake, THOR, yTHOR, and Contributor positions have separate 30-minute QA withdrawal queues (72 hours in production). Exit-to-stake produces transferable xMETRO immediately.
 - Contributor vesting has a 6-hour QA cliff followed by 6 hours of linear release (180 days and 2.5 years in production).
 - Transferring METRO to a dead address does not restore mint capacity; the global cap is permanently fixed at 100,000,000 METRO.
+
+Only the current Core owner can call `revokeContributorVesting(user,scheduleId)`. Vested-but-unclaimed principal becomes ordinary xMETRO; unvested METRO goes to the current `forfeitureRecipient`. Prior rewards, queues and other plans remain intact. The schedule closes in place without changing its index. Contributor creation still requires the existing whitelist. See [revocation rules and integration](integration/docs/contract-api.md#contributor-vesting-revocation).
 
 ## Commission routing
 
@@ -123,7 +129,7 @@ Copy `.env.example` to an untracked local `.env`. Fill in the signing EOA, inten
 
 The recorded Base QA system is already deployed at the addresses in [`integration/config/base-qa.json`](integration/config/base-qa.json). Its TestTokens, mocks, liquidity, and project contracts were prepared with `script/base-qa/`; that deployment helper uses local signer material and the public QA role-address file. The Forge commands below describe a separate generic deployment, not the recorded 87-transaction QA setup.
 
-`script/Deploy.s.sol` nominates the target owner for Core, Escrow and Distributor after configuration, skipping nomination when the target is the deployer. Its JSON `owner` is the target; per-contract Owner/pendingOwner fields record actual deployment-time state. The target must accept each contract separately. `script/VerifyDeployment.s.sol` requires all three live owners to equal the target and all pending owners to be zero, even if the original deployment snapshot still records pending acceptance. Core starts unpaused; MetroToken ownership still transfers in one step.
+`script/Deploy.s.sol` nominates the target owner for METRO, Core, Escrow and Distributor after configuration, skipping nomination when the target is the deployer. Its JSON `owner` is the target; per-contract Owner/pendingOwner fields record actual deployment-time state. The target must accept each contract separately. `script/VerifyDeployment.s.sol` requires all four live owners to equal the target and all pending owners to be zero, even if the original deployment snapshot still records pending acceptance. The JSON includes `metroOwner` and `metroPendingOwner`; nomination does not transfer mint roles. Core starts unpaused.
 
 ```bash
 # Ethereum

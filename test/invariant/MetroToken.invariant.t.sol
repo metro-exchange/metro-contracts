@@ -19,10 +19,22 @@ contract MetroTokenInvariantTest is StdInvariant, Test {
         }
         handler = new MetroTokenHandler(metro, actors);
         metro.transferOwnership(address(handler));
+        vm.prank(address(handler));
+        metro.acceptOwnership();
+        assertEq(metro.owner(), address(handler));
+        assertEq(metro.pendingOwner(), address(0));
+        handler.setMinter(0, true);
+        handler.mint(0, 0, 100 ether);
+        handler.transferTokens(0, 1, 1 ether);
+        assertGt(metro.balanceOf(handler.actorAt(0)), 0);
+        assertGt(metro.balanceOf(handler.actorAt(1)), 0);
         targetContract(address(handler));
     }
 
     function invariant_TotalSupplyNeverExceedsImmutableCap() public view {
+        assertEq(metro.owner(), address(handler));
+        assertEq(metro.pendingOwner(), address(0));
+        assertGt(metro.totalSupply(), 0);
         assertLe(metro.totalSupply(), metro.cap());
         assertEq(metro.cap(), CAP);
     }

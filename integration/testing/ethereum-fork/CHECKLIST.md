@@ -1,5 +1,16 @@
 # Ethereum Mainnet Fork Functional Test Checklist
 
+## November 13: METRO ownership and Contributor revocation
+
+| Coverage | Tests / evidence |
+| --- | --- |
+| E-01/E-02/E-09: METRO nomination/acceptance, unchanged minter roles and Permit, all four ownership readbacks | `MetroToken.t.sol`, `MetroToken.invariant.t.sol`, `DeployScript.t.sol`, `DeploymentGovernance.t.sol` |
+| E-06: owner-only single-schedule revocation, vested free shares, unvested METRO to current recipient, preserved rewards and previous queue | `xMETRO.unit.t.sol`, `xMETRO.fuzz.t.sol`, `ContributorVesting.t.sol::test_E06_OwnerRevokePreservesVestedPrincipalRewardsAndQueue` |
+| E-06: stable records/cursor, repeat/invalid/pause failures, fractional rewards, rollback and reentrancy | Contributor unit tests and schedule-level funding invariants in `xMETRO.invariant.t.sol` |
+| X-07: current artifacts, ABI, storage, Core size and equivalent shared settlement/transfer helpers | Builds, size/deployment tests and the current [results](RESULTS.md) |
+
+Only the recorded execution in RESULTS certifies these checks. QA compiles production-time fork tests and runs its own accelerated local suites. The dated records below describe older revisions.
+
 ## November 9: Sherlock Issue #23 recipient follow-up acceptance
 
 | Coverage | Tests / evidence |
@@ -78,7 +89,7 @@ The recorded fork uses chain ID `1`, block `26,077,998` (`0xb75cb3bedaa74adf7919
 | E-06 | [x] | Contributor allowlist, multiple schedules, 180-day cliff, 2.5-year linear vesting, claim-to-stake/liquid, queue and cursor semantics. | `ContributorVesting.t.sol` |
 | E-07 | [ ] | Legacy single-user Auto-Compound through real V2, manual independence from auto opt-in, min-out, deadline, backing, and allowance cleanup. E-07.02 fails in the continuous-compound F-01 sequence. | `AutoCompound.t.sol` |
 | E-08 | [x] | Keeper-only batch compound, one V2 swap, proportional minting, filtering, rounding, and atomic failure. | `AutoCompound.t.sol` |
-| E-09 | [x] | Core/Escrow pause and rescue, Distributor/Adapter rescue boundaries, and permission checks. Historical two-step-Owner assertions are excluded from the current one-step-Owner result. | `DeploymentGovernance.t.sol` |
+| E-09 | [x] | Core/Escrow pause and rescue, Distributor/Adapter rescue boundaries, and permission checks. In this historical result, two-step-Owner assertions were excluded from the then-current one-step-Owner run. | `DeploymentGovernance.t.sol` |
 
 ## New and replaced functions
 

@@ -31,7 +31,7 @@ contract DeployScriptTest is Test {
 
     uint256 internal constant DEPLOYER_KEY = 0xD3F10;
     uint256 internal constant ADAPTER_RUNTIME = 20_755;
-    uint256 internal constant CORE_RUNTIME = 23_391;
+    uint256 internal constant CORE_RUNTIME = 23_396;
     bytes32 internal constant P_DEPOSIT = bytes32("P:deposit");
     bytes32 internal constant IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
     bytes32 internal constant ADMIN_SLOT = 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103;
@@ -109,6 +109,8 @@ contract DeployScriptTest is Test {
         deployScript.run();
         string memory record = vm.readFile(_deploymentPath());
         assertEq(record.readAddress(".owner"), deployer);
+        assertEq(record.readAddress(".metroOwner"), deployer);
+        assertEq(record.readAddress(".metroPendingOwner"), address(0));
         assertEq(record.readAddress(".coreOwner"), deployer);
         assertEq(record.readAddress(".corePendingOwner"), address(0));
         assertEq(record.readAddress(".escrowOwner"), deployer);
@@ -121,11 +123,16 @@ contract DeployScriptTest is Test {
 
     function _acceptPendingOwnershipAndVerify() private {
         string memory record = vm.readFile(_deploymentPath());
+        MetroToken metro = MetroToken(record.readAddress(".metro"));
         XMetroCore core = XMetroCore(record.readAddress(".xMETRO"));
         ThorMigrationEscrow escrow = ThorMigrationEscrow(record.readAddress(".escrow"));
         RewardDistributor distributor = RewardDistributor(record.readAddress(".rewardDistributor"));
         address deployer = vm.addr(DEPLOYER_KEY);
         assertEq(record.readAddress(".owner"), finalOwner);
+        assertEq(record.readAddress(".metroOwner"), deployer);
+        assertEq(record.readAddress(".metroPendingOwner"), finalOwner);
+        assertEq(metro.owner(), deployer);
+        assertEq(metro.pendingOwner(), finalOwner);
         assertEq(record.readAddress(".coreOwner"), deployer);
         assertEq(record.readAddress(".escrowOwner"), deployer);
         assertEq(record.readAddress(".distributorOwner"), deployer);
@@ -143,6 +150,10 @@ contract DeployScriptTest is Test {
         vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", finalOwner));
         core.setForfeitureRecipient(updatedRecipient);
         VerifyDeployment verifier = new VerifyDeployment();
+        vm.expectRevert("VerifyDeploy: METRO");
+        verifier.run();
+        vm.prank(finalOwner);
+        metro.acceptOwnership();
         vm.expectRevert("VerifyDeploy: Core ownership");
         verifier.run();
         vm.prank(finalOwner);
@@ -156,6 +167,8 @@ contract DeployScriptTest is Test {
         vm.prank(finalOwner);
         escrow.acceptOwnership();
         verifier.run();
+        assertEq(metro.owner(), finalOwner);
+        assertEq(metro.pendingOwner(), address(0));
         assertEq(core.pendingOwner(), address(0));
         assertEq(escrow.pendingOwner(), address(0));
         assertEq(distributor.pendingOwner(), address(0));
@@ -173,6 +186,23 @@ contract DeployScriptTest is Test {
         vm.prank(finalOwner);
         core.setForfeitureRecipient(initialRecipient);
         verifier.run();
+        // All other owners are accepted; METRO alone must still block verification.
+        vm.prank(finalOwner);
+        metro.transferOwnership(deployer);
+        assertEq(metro.owner(), finalOwner);
+        vm.expectRevert("VerifyDeploy: METRO");
+        verifier.run();
+        vm.prank(deployer);
+        metro.acceptOwnership();
+        vm.prank(deployer);
+        metro.transferOwnership(finalOwner);
+        vm.expectRevert("VerifyDeploy: METRO");
+        verifier.run();
+        vm.prank(finalOwner);
+        metro.acceptOwnership();
+        verifier.run();
+        assertEq(metro.pendingOwner(), address(0));
+        assertEq(vm.readFile(_deploymentPath()).readAddress(".metroPendingOwner"), finalOwner);
         // Pending snapshots remain historical; final verification reads live contract state.
         assertEq(vm.readFile(_deploymentPath()).readAddress(".corePendingOwner"), finalOwner);
         vm.prank(finalOwner);

@@ -168,6 +168,9 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuardTransient, Ownable2Step {
     event EmergencyRewardDistributed(address indexed user, uint256 amount);
     event EmergencyBatchExecuted(address indexed operator, uint256 processedUsers, uint256 totalDistributed);
     event DefaultMaxVestingSchedulesUpdated(uint256 maxVestingSchedules);
+    event ContributorVestingRevoked(
+        address indexed user, uint256 indexed scheduleId, uint256 released, uint256 reclaimed, address indexed recipient
+    );
 
     event MigrationEscrowUpdated(address indexed oldMigrationEscrow, address indexed newMigrationEscrow);
     event ForfeitureRecipientUpdated(address indexed oldRecipient, address indexed newRecipient);
@@ -249,7 +252,7 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuardTransient, Ownable2Step {
         _;
     }
 
-    /// @notice Set the recipient of future THOR and yTHOR exit forfeitures.
+    /// @notice Set the recipient of future migration forfeitures and unvested Contributor recoveries.
     function setForfeitureRecipient(address newRecipient) external onlyOwner {
         if (newRecipient == address(0)) revert InvalidAddress();
         address oldRecipient = forfeitureRecipient;
@@ -368,7 +371,7 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuardTransient, Ownable2Step {
         else if (source == UnstakeSource.YThor) unstakeCursorYThor[user] = newCursor;
         else unstakeCursorContributor[user] = newCursor;
 
-        IERC20(address(METRO)).safeTransfer(user, totalToSend);
+        _transferMetro(user, totalToSend);
         emit Withdrawn(user, source, totalToSend);
         return totalToSend;
     }
@@ -626,7 +629,7 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuardTransient, Ownable2Step {
         emit ContributorWhitelistUpdated(contributor, allowed);
     }
 
-    /// @notice Stake METRO as a contributor and create a locked vesting position (6m cliff + 2.5y linear release).
+    /// @notice Stake METRO as a contributor and create a locked position with the configured cliff and linear vesting period.
     /// @param receiver Address credited with the contributor vesting position.
     /// @dev Only callable by `contributorWhitelist[msg.sender] == true`. Funds are pulled from `msg.sender`.
     function stakeContributor(uint256 amount, address receiver) external nonReentrant whenNotPaused {
@@ -636,6 +639,18 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuardTransient, Ownable2Step {
 
         _increaseLockedShares(receiver, amount, false);
         emit ContributorStaked(msg.sender, receiver, amount, startTime, duration);
+    }
+
+    /// @notice Revoke one Contributor schedule; only the current Core owner may call.
+    /// @dev Vested principal becomes free xMETRO; only unvested METRO goes to the current recipient.
+    ///      Preserves accrued rewards, existing withdrawals, schedule indices and the vesting cursor.
+    function revokeContributorVesting(address user, uint256 scheduleId) external onlyOwner nonReentrant whenNotPaused {
+        (uint256 released, uint256 reclaimed) = XMetroCoreLogic.revokeContributorVesting(user, scheduleId);
+        _decreaseLockedShares(user, released + reclaimed, false);
+        _deliverExitPayout(user, released, UnstakeSource.Contributor, ExitMode.Stake);
+        address recipient = forfeitureRecipient;
+        _transferMetro(recipient, reclaimed);
+        emit ContributorVestingRevoked(user, scheduleId, released, reclaimed, recipient);
     }
 
     function thorPositionCount(address user) external view returns (uint256) {
@@ -720,9 +735,7 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuardTransient, Ownable2Step {
     {
         uint256 unlocked = XMetroCoreLogic.consumeContributorVesting(msg.sender, maxSchedules);
         _decreaseLockedShares(msg.sender, unlocked, false);
-        uint64 unlockTime = uint64(block.timestamp) + UNSTAKE_DELAY;
-        _unstakeRequestsContributor[msg.sender].push(UnstakeRequest(uint128(unlocked), unlockTime));
-        emit UnstakeRequested(msg.sender, UnstakeSource.Contributor, unlocked, unlockTime);
+        _deliverExitPayout(msg.sender, unlocked, UnstakeSource.Contributor, ExitMode.Liquid);
         return unlocked;
     }
 
@@ -737,8 +750,7 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuardTransient, Ownable2Step {
     {
         uint256 unlocked = XMetroCoreLogic.consumeContributorVesting(msg.sender, maxSchedules);
         _decreaseLockedShares(msg.sender, unlocked, false);
-        _mintFreeShares(msg.sender, unlocked);
-        emit UnlockedClaimedAsShares(msg.sender, UnstakeSource.Contributor, unlocked);
+        _deliverExitPayout(msg.sender, unlocked, UnstakeSource.Contributor, ExitMode.Stake);
         return unlocked;
     }
 
@@ -786,9 +798,7 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuardTransient, Ownable2Step {
         _decreaseLockedShares(user, result.principal, true);
 
         _deliverExitPayout(user, result.payout, UnstakeSource.Thor, mode);
-        if (result.forfeited > 0) {
-            IERC20(address(METRO)).safeTransfer(forfeitureRecipient, result.forfeited);
-        }
+        _transferMetro(forfeitureRecipient, result.forfeited);
         emit ThorExited(
             user,
             positionId,
@@ -811,9 +821,7 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuardTransient, Ownable2Step {
         _decreaseYThorShares(user, result.principal);
 
         _deliverExitPayout(user, result.payout, UnstakeSource.YThor, mode);
-        if (result.forfeited > 0) {
-            IERC20(address(METRO)).safeTransfer(forfeitureRecipient, result.forfeited);
-        }
+        _transferMetro(forfeitureRecipient, result.forfeited);
         emit YThorExited(
             user,
             positionId,
@@ -828,6 +836,10 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuardTransient, Ownable2Step {
         return (result.payout, result.forfeited);
     }
 
+    function _transferMetro(address recipient, uint256 amount) private {
+        if (amount != 0) IERC20(address(METRO)).safeTransfer(recipient, amount);
+    }
+
     function _deliverExitPayout(address user, uint256 amount, UnstakeSource source, ExitMode mode) internal {
         if (amount == 0) return;
 
@@ -838,11 +850,11 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuardTransient, Ownable2Step {
         }
 
         uint64 unlockTime = uint64(block.timestamp) + UNSTAKE_DELAY;
-        if (source == UnstakeSource.Thor) {
-            _unstakeRequestsThor[user].push(UnstakeRequest(uint128(amount), unlockTime));
-        } else {
-            _unstakeRequestsYThor[user].push(UnstakeRequest(uint128(amount), unlockTime));
-        }
+        UnstakeRequest[] storage requests;
+        if (source == UnstakeSource.Thor) requests = _unstakeRequestsThor[user];
+        else if (source == UnstakeSource.YThor) requests = _unstakeRequestsYThor[user];
+        else requests = _unstakeRequestsContributor[user];
+        requests.push(UnstakeRequest(uint128(amount), unlockTime));
         emit UnstakeRequested(user, source, amount, unlockTime);
     }
 

@@ -59,12 +59,14 @@ jobs:
             test/fork-v2/XMetroForkBase.sol \
             test/fork-v2/mainnet/AutoCompound.t.sol \
             test/fork-v2/mainnet/DeploymentGovernance.t.sol \
+            test/fork-v2/mainnet/ContributorVesting.t.sol \
             test/fork-v2/mainnet/MigrationExit.t.sol \
             test/fork-v2/mainnet/TokenStakeRewards.t.sol \
             test/fork-v2/mainnet/YThorRewardWeight.t.sol \
             test/fuzz/ThorMigrationEscrow.fuzz.t.sol \
             test/fuzz/xMETRO.fuzz.t.sol \
             test/invariant/xMETRO.invariant.t.sol \
+            test/invariant/MetroToken.invariant.t.sol \
             test/mock/XChainAndCore.t.sol \
             test/unit/ThorMigrationEscrow.unit.t.sol \
             test/unit/YThorWeight.integration.t.sol \
