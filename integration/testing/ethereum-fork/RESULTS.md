@@ -1,5 +1,51 @@
 # Ethereum Mainnet Fork Results and Evidence
 
+## November 13, 2026: METRO two-step ownership and Contributor revocation
+
+Local implementation based on `xmetro-v2` at `1944cfb0c43b912f92be5c13e67aec6773c5e24b`. METRO now uses OpenZeppelin Ownable2Step. The current Core owner can revoke one Contributor schedule: newly vested principal becomes ordinary xMETRO; only the unvested remainder is recovered to the current `forfeitureRecipient`. Historical rewards (including fractions), prior claims/queues, other plans and stable schedule indices are preserved. No Git commit, GitHub publication, deployment or on-chain transaction was performed for this validation.
+
+| Executed local checks | Passed | Failed | Skipped |
+| --- | ---: | ---: | ---: |
+| Business regression (unit/mock/fuzz/invariant) | 189 | 0 | 0 |
+| Core profile | 60 | 0 | 2 |
+| Adapter profile | 46 | 0 | 2 |
+| Deployment-script profile | 1 | 0 | 0 |
+| Focused production mainnet-fork suites | 82 | 0 | 0 |
+| Total | 378 | 0 | 4 |
+
+The four optional pinned Ethereum/Base deployment checks in Core/Adapter profiles ran with RPC variables explicitly empty and were skipped; they are not counted as passes. Core, Adapter, deploy and fork-test builds succeeded with Solidity 0.8.38, Osaka and the unchanged optimizer settings. GitHub CI and new Base on-chain acceptance were not executed.
+
+The production fork executed 82 tests at Ethereum block **26,077,998**, hash `0xb75cb3bedaa74adf79199d847c94bbca4724d092da355d3e13c354773e2eb2aa`: Contributor vesting (9), deployment/governance (18), token/stake/rewards (23), migration exits (24), and yTHOR reward weights (8). The new Contributor case preserves a prior liquid withdrawal, releases only newly vested free shares, routes unvested METRO to the updated recipient, pays historical real USDC and exercises the subsequent Free withdrawal. These are local fork operations, not transactions broadcast to Ethereum.
+
+Core runtime/initcode are **23,439 / 25,080 bytes** (initcode excludes constructor arguments). The unchanged project runtime budget of **23,552 bytes** leaves **113 bytes**. METRO runtime/initcode are **4,369 / 6,471 bytes**. Adapter remains **20,755 / 20,958 bytes**. Core and METRO bytecode match across Core, deploy, regression and deployment-test profiles.
+
+The minimal implementation exceeded the Core project budget. The final source reuses the existing payout helper for Contributor claims/revocation and a shared nonzero SafeERC20 METRO transfer helper for recovery, exit forfeitures and queue withdrawals. Existing request amounts, source queues, cooldowns, events and transfer-failure behavior remain covered by regression tests. No compiler setting, size limit, interface or guard was removed to fit the budget.
+
+Core retains all 32 top-level storage fields at their previous slots, including reward accumulators at slots 8 and 9, and its Contributor namespace/structure are unchanged. METRO adds `_pendingOwner` at slot 9; `isMinter` moves from slot 9 to slot 10. This describes newly deployed instances, not a storage-compatible proxy upgrade. Existing on-chain contracts and address records are unchanged.
+
+The exported METRO ABI adds `pendingOwner()`, `acceptOwnership()` and `OwnershipTransferStarted`; Core adds only `revokeContributorVesting(address,uint256)` and `ContributorVestingRevoked`. No previous ABI item is removed. All five business ABIs match their compiled artifacts; the other three are unchanged. Metadata hashes match the final local source.
+
+Coverage includes nominee replacement/cancellation, acceptance events, owner/minter independence and existing Permit signatures; Core-only revoke authority before/after handover, pause/unpause and renounce; cliff/end boundaries and integer rounding; prior claims, arbitrary schedule indices and scan-window recovery; full-precision pending reward conservation; treasury and other recipient overlap; failed-transfer rollback and authorized same/cross-function reentrancy attempts. Invariants include independently reconstructed locked principal per plan, original allocation versus recovered principal, at-most-once revocation, nonzero successful revoke seeds, unexpected-failure counters, METRO backing and funded USDC liabilities. An initial fuzz fixture generated reward deposits below the existing minimum accumulator delta; its input bounds were corrected before the passing final run without changing business code.
+
+The exact CI formatting list, all changed Solidity formatting, integration/QA script syntax, ABI/source checks and `git diff --check` passed. All changed repository files are English only. Detailed logs and the change manifest remain outside the repository; historical evidence is retained below.
+
+Reproduce with the matching native compiler and installed dependencies:
+
+```sh
+SOLC_0838=/absolute/path/to/solc-0.8.38
+FOUNDRY_PROFILE=core forge build --offline --use "$SOLC_0838" --sizes
+FOUNDRY_PROFILE=adapter forge build --offline --use "$SOLC_0838" --sizes
+FOUNDRY_PROFILE=deploy forge build --offline --use "$SOLC_0838" --sizes
+FOUNDRY_PROFILE=fork-v2 forge build --offline --use "$SOLC_0838"
+ETH_RPC_URL= BASE_RPC_URL= FOUNDRY_PROFILE=regression forge test --offline --use "$SOLC_0838" --threads 2 -vv
+ETH_RPC_URL= BASE_RPC_URL= FOUNDRY_PROFILE=core forge test --offline --use "$SOLC_0838" --threads 2 -vv
+ETH_RPC_URL= BASE_RPC_URL= FOUNDRY_PROFILE=adapter forge test --offline --use "$SOLC_0838" --threads 2 -vv
+ETH_RPC_URL= BASE_RPC_URL= FOUNDRY_PROFILE=deployment-test forge test --offline --use "$SOLC_0838" --threads 1 -vv
+ETH_RPC_URL=https://eth.drpc.org BASE_RPC_URL= FOUNDRY_PROFILE=fork-v2 \
+  forge test --offline --use "$SOLC_0838" --threads 2 \
+  --match-contract '^(ContributorVestingMainnetTest|DeploymentGovernanceMainnetTest|TokenStakeRewardsMainnetTest|MigrationExitMainnetTest|YThorRewardWeightMainnetTest)$' -vv
+```
+
 ## November 9, 2026: Sherlock Issue #23 recipient follow-up
 
 Local validation based on `xmetro-v2` at `2d8c7bdd003bfe4814a4f16ac98f399a5d92b85d`. Production now allows its current owner to update the nonzero THOR/yTHOR forfeiture recipient, matching the existing QA behavior. Only the recipient changes: the fixed migration-reward exclusion, payout rules, timing and previous transfers/queues remain intact. No Git commit, GitHub publication, deployment, token transfer or permission transaction was performed for this validation.

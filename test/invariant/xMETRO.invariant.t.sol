@@ -55,8 +55,16 @@ contract xMETROInvariantTest is StdInvariant, Test {
         handler.creditThor(0, 10 ether);
         handler.creditYThor(0, 10 ether);
 
+        // Seed a real partial revocation; random runs must not pass with no successful revokes.
+        handler.stakeContributor(2, 100 ether);
+        XMetroCore.VestingSchedule memory seeded = xmetro.contributorVesting(handler.actorAt(2), 0);
+        vm.warp(uint256(seeded.startTime) + seeded.duration / 2);
+        handler.revokeContributor(2, 0);
+        assertEq(xmetro.balanceOf(handler.actorAt(2)), 50 ether);
+        assertEq(handler.contributorReclaimed(handler.actorAt(2), 0), 50 ether);
+
         targetContract(address(handler));
-        bytes4[] memory selectors = new bytes4[](16);
+        bytes4[] memory selectors = new bytes4[](17);
         selectors[0] = handler.stake.selector;
         selectors[1] = handler.creditThor.selector;
         selectors[2] = handler.creditYThor.selector;
@@ -73,6 +81,7 @@ contract xMETROInvariantTest is StdInvariant, Test {
         selectors[13] = handler.claimRewards.selector;
         selectors[14] = handler.setYThorRewardWeight.selector;
         selectors[15] = handler.setForfeitureRecipient.selector;
+        selectors[16] = handler.revokeContributor.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: selectors}));
     }
 
@@ -115,6 +124,32 @@ contract xMETROInvariantTest is StdInvariant, Test {
             xmetro.totalRewardWeight(),
             xmetro.totalShares() - sumActiveYThor - excludedThor + (sumActiveYThor - excludedYThor) * weightBps / 10_000
         );
+    }
+
+    function invariant_ContributorRecordsAndAllLockedPrincipalRemainConsistent() public view {
+        assertGt(handler.totalContributorRevokes(), 0);
+        assertEq(handler.unexpectedRevokeFailures(), 0);
+        for (uint256 i; i < handler.actorsLength(); ++i) {
+            address actor = handler.actorAt(i);
+            uint256 expectedLocked = _activeYThorPrincipal(actor);
+            for (uint256 id; id < xmetro.thorPositionCount(actor); ++id) {
+                (uint128 principal,,, bool exited) = xmetro.thorPositions(actor, id);
+                if (!exited) expectedLocked += principal;
+            }
+            for (uint256 id; id < xmetro.contributorVestingCount(actor); ++id) {
+                XMetroCore.VestingSchedule memory schedule = xmetro.contributorVesting(actor, id);
+                assertLe(schedule.claimed, schedule.totalAmount);
+                expectedLocked += uint256(schedule.totalAmount) - schedule.claimed;
+                assertEq(
+                    uint256(schedule.totalAmount) + handler.contributorReclaimed(actor, id),
+                    handler.contributorOriginal(actor, id)
+                );
+                uint256 revokes = handler.contributorRevokeSuccesses(actor, id);
+                assertLe(revokes, 1);
+                if (revokes != 0) assertEq(schedule.totalAmount, schedule.claimed);
+            }
+            assertEq(xmetro.lockedShares(actor), expectedLocked);
+        }
     }
 
     function invariant_PositionCountsMatchSuccessfulCredits() public view {
@@ -215,6 +250,11 @@ contract xMETROHandlerV2 is Test {
     mapping(address => uint256) public yThorCredits;
     uint256 public unexpectedClaimFailures;
     uint256 public unexpectedExitFailures;
+    uint256 public unexpectedRevokeFailures;
+    uint256 public totalContributorRevokes;
+    mapping(address => mapping(uint256 => uint256)) public contributorOriginal;
+    mapping(address => mapping(uint256 => uint256)) public contributorReclaimed;
+    mapping(address => mapping(uint256 => uint256)) public contributorRevokeSuccesses;
 
     constructor(XMetroCore xmetro_, MetroToken metro_, ERC20Mintable usdc_, address[] memory actors_) {
         xmetro = xmetro_;
@@ -274,8 +314,32 @@ contract xMETROHandlerV2 is Test {
         address receiver = _actor(actorSeed);
         if (xmetro.contributorVestingCount(receiver) >= 20) return;
         uint256 amount = bound(uint256(amountSeed), 1, 1_000 ether);
+        uint256 id = xmetro.contributorVestingCount(receiver);
         metro.mint(address(this), amount);
         xmetro.stakeContributor(amount, receiver);
+        contributorOriginal[receiver][id] = amount;
+    }
+
+    function revokeContributor(uint256 actorSeed, uint256 scheduleSeed) external {
+        address actor = _actor(actorSeed);
+        uint256 count = xmetro.contributorVestingCount(actor);
+        if (count == 0) return;
+        uint256 id = scheduleSeed % count;
+        XMetroCore.VestingSchedule memory schedule = xmetro.contributorVesting(actor, id);
+        if (schedule.totalAmount == schedule.claimed) return;
+        uint256 vested;
+        if (block.timestamp >= uint256(schedule.startTime) + schedule.duration) {
+            vested = schedule.totalAmount;
+        } else if (block.timestamp > schedule.startTime) {
+            vested = uint256(schedule.totalAmount) * (block.timestamp - schedule.startTime) / schedule.duration;
+        }
+        try xmetro.revokeContributorVesting(actor, id) {
+            contributorReclaimed[actor][id] += uint256(schedule.totalAmount) - vested;
+            ++contributorRevokeSuccesses[actor][id];
+            ++totalContributorRevokes;
+        } catch {
+            ++unexpectedRevokeFailures;
+        }
     }
 
     function transferShares(uint256 fromSeed, uint256 toSeed, uint96 amountSeed) external {

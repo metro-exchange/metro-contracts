@@ -51,6 +51,8 @@ contract Deploy is DeFiAdapterScriptBase {
         bytes32 escrowCodehash;
         address autoCompoundOperator;
         address owner;
+        address metroOwner;
+        address metroPendingOwner;
         address coreOwner;
         address corePendingOwner;
         address escrowOwner;
@@ -226,8 +228,8 @@ contract Deploy is DeFiAdapterScriptBase {
         escrow.setDeadlines(input.deadlineThor, input.deadlineYThor);
         core.setMigrationEscrow(address(escrow));
 
-        metro.transferOwnership(input.owner);
         if (input.owner != input.deployer) {
+            metro.transferOwnership(input.owner);
             distributor.transferOwnership(input.owner);
             escrow.transferOwnership(input.owner);
             core.transferOwnership(input.owner);
@@ -422,6 +424,8 @@ contract Deploy is DeFiAdapterScriptBase {
         a.escrowCodehash = address(escrow).codehash;
         a.autoCompoundOperator = i.autoCompoundOperator;
         a.owner = i.owner;
+        a.metroOwner = metro.owner();
+        a.metroPendingOwner = metro.pendingOwner();
         a.coreOwner = core.owner();
         a.corePendingOwner = core.pendingOwner();
         a.escrowOwner = escrow.owner();
@@ -495,13 +499,14 @@ contract Deploy is DeFiAdapterScriptBase {
                 && a.adapterStorageNamespace == ADAPTER_STORAGE_NAMESPACE && a.adapterEpoch == 1,
             "Deploy: proxy metadata"
         );
+        address expectedPending = i.owner == i.deployer ? address(0) : i.owner;
         require(
-            metro.owner() == i.owner && metro.cap() == 100_000_000 ether && metro.MAX_SUPPLY() == 100_000_000 ether,
+            metro.owner() == i.deployer && metro.pendingOwner() == expectedPending && metro.cap() == 100_000_000 ether
+                && metro.MAX_SUPPLY() == 100_000_000 ether,
             "Deploy: METRO readback"
         );
         require(metro.isMinter(address(core)), "Deploy: xMETRO not minter");
         require(!metro.isMinter(i.deployer) && !metro.isMinter(i.owner), "Deploy: unexpected EOA minter");
-        address expectedPending = i.owner == i.deployer ? address(0) : i.owner;
         require(
             core.owner() == i.deployer && core.pendingOwner() == expectedPending && !core.paused(),
             "Deploy: xMETRO ownership/pause"
@@ -742,6 +747,8 @@ contract Deploy is DeFiAdapterScriptBase {
         json = vm.serializeBytes32(obj, "escrowCodehash", a.escrowCodehash);
         json = vm.serializeAddress(obj, "autoCompoundOperator", a.autoCompoundOperator);
         json = vm.serializeAddress(obj, "owner", a.owner);
+        json = vm.serializeAddress(obj, "metroOwner", a.metroOwner);
+        json = vm.serializeAddress(obj, "metroPendingOwner", a.metroPendingOwner);
         json = vm.serializeAddress(obj, "distributorPendingOwner", a.distributorPendingOwner);
         json = vm.serializeAddress(obj, "distributorOwner", a.distributorOwner);
         json = vm.serializeAddress(obj, "escrowPendingOwner", a.escrowPendingOwner);
@@ -816,6 +823,8 @@ contract Deploy is DeFiAdapterScriptBase {
         console2.log("Core adapter epoch:", a.adapterEpoch);
         console2.log("Adapter logic epoch:", a.adapterLogicEpoch);
         console2.log("Target owner:", a.owner);
+        console2.log("METRO owner:", a.metroOwner);
+        console2.log("METRO pending owner:", a.metroPendingOwner);
         console2.log("Core owner:", a.coreOwner);
         console2.log("Core pending owner:", a.corePendingOwner);
         console2.log("Escrow owner:", a.escrowOwner);
@@ -823,7 +832,9 @@ contract Deploy is DeFiAdapterScriptBase {
         console2.log("Distributor owner:", a.distributorOwner);
         console2.log("Distributor pending owner:", a.distributorPendingOwner);
         console2.log(
-            a.corePendingOwner == address(0) && a.escrowPendingOwner == address(0)
+            a.metroOwner == a.owner && a.coreOwner == a.owner && a.escrowOwner == a.owner
+                && a.distributorOwner == a.owner && a.metroPendingOwner == address(0)
+                && a.corePendingOwner == address(0) && a.escrowPendingOwner == address(0)
                 && a.distributorPendingOwner == address(0)
                 ? "Ownership: Accepted"
                 : "Ownership: Pending acceptance"

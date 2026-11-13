@@ -58,8 +58,8 @@ contract VerifyDeployment is DeFiAdapterScriptBase {
         address usdc = record.readAddress(".rewardToken");
 
         require(
-            metro.owner() == owner && metro.cap() == 100_000_000 ether && metro.MAX_SUPPLY() == 100_000_000 ether
-                && metro.cap() == record.readUint(".metroMaxSupply"),
+            metro.owner() == owner && metro.pendingOwner() == address(0) && metro.cap() == 100_000_000 ether
+                && metro.MAX_SUPPLY() == 100_000_000 ether && metro.cap() == record.readUint(".metroMaxSupply"),
             "VerifyDeploy: METRO"
         );
         require(metro.isMinter(coreAddress) && !metro.isMinter(deployer), "VerifyDeploy: minter");

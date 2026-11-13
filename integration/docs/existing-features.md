@@ -54,7 +54,7 @@ For reward UI, read `rewardWeightOf(user)` and `totalRewardWeight()`. `totalShar
 | `setSwapAdapter(address)` | `setDeFiAdapter(proxy)` | Bind the new Adapter **proxy**, not its implementation. |
 | `setDefaultMaxThorLocks(maxLocks)` | Removed | Each exit selects a position ID; no scan limit is needed. |
 
-The current Core, Escrow and Distributor use two-step ownership: nomination preserves the old owner until the pending owner accepts. A zero nomination cancels handover. Core/Escrow forbid renouncing while paused, but allow handover; Distributor has no pause mechanism. Core still starts unpaused. Already-deployed historical QA contracts still follow their own deployed ABI and must not be silently treated as the new version.
+The current METRO, Core, Escrow and Distributor use two-step ownership: nomination preserves the old owner until the pending owner accepts. A zero nomination cancels handover. Core/Escrow forbid renouncing while paused, but allow handover; Distributor has no pause mechanism. METRO minter permissions and Permit signatures are independent of ownership. Core still starts unpaused. Already-deployed historical QA contracts still follow their own deployed ABI and must not be silently treated as the new version.
 
 ## Preserved behavior and notable differences
 
@@ -64,7 +64,7 @@ The current Core, Escrow and Distributor use two-step ownership: nomination pres
 | Free unstake | `requestUnstake` then `withdrawFree` | Production cooldown is now 72 hours rather than the previous seven days. |
 | xMETRO ERC-20 transfers | `transfer`, `transferFrom` | Transfer free shares and future reward weight; sender keeps accrued pending. |
 | USDC claim | `claimable` then `claimRewards` | No user USDC approval; a quote can change before inclusion. |
-| Contributor | Existing allowlist, stake, release, liquid/stake exits | 180-day cliff and subsequent 2.5-year release; `maxSchedules=0` uses the configured default scan size. |
+| Contributor | Existing allowlist, stake, release, liquid/stake exits; new owner-only per-schedule revocation | 180-day cliff and subsequent 2.5-year release; `maxSchedules=0` uses the configured default scan size. |
 | Auto-Compound preference | `enableAutocompound`, `disableAutocompound` | Mutually exclusive with a general auto strategy; disabling remains available while paused. |
 | Manual compound | `autocompound(minMetroOut,deadline,swapData)` | Same user entrypoint, execution now uses the Adapter. No prior auto opt-in is required. |
 | Keeper compound batch | `autocompoundBatch(users,minMetroOut,deadline,swapData)` | One swap; shares allocated in proportion to pending rewards. |
@@ -72,7 +72,12 @@ The current Core, Escrow and Distributor use two-step ownership: nomination pres
 
 All V2/V3/1inch compound and swap data now uses the version-2 [swap envelope](new-features.md#swap-execution-data), including a nonzero quoted USDC input cap. Core function signatures remain unchanged; old encoded data is rejected by the new Adapter. `previewWithdrawableNow(user)` still has four return fields, but its THOR/yTHOR components now mean the sum of payouts from all eligible, unexited positions. It includes unlocked Contributor value and excludes all withdrawal queues, even matured ones. Read each queue through its `unstakeRequestCount*`, `unstakeRequest*`, and `unstakeCursor*` getters.
 
+Contributor creation and revocation are separate permissions. Removing a Contributor from the whitelist does not cancel plans. The current Core owner may revoke one schedule: vested-but-unclaimed principal becomes free xMETRO, unvested METRO goes to the current `forfeitureRecipient`, and accrued USDC (including fractions) and old queues remain intact. Normal claiming and withdrawing are unchanged. The closed record keeps its index and time fields; the cursor is not moved. `totalAmount` becomes final `claimed`, so use events to recover the original allocation. An empty scan window still reverts without moving its cursor; increase `maxSchedules` to reach later active records. See [revocation API](contract-api.md#contributor-vesting-revocation).
+
 ## Events and indexing
+
+`ContributorVestingRevoked(indexed user,indexed scheduleId,released,reclaimed,indexed recipient)` reports free xMETRO released, unvested METRO recovered and the current recipient used. Index by chain/Core/user/scheduleId. A nonzero release also emits `UnlockedClaimedAsShares(user,Contributor,released)`. Closed records are retained; equality of totalAmount and claimed alone does not distinguish normal completion from revocation. `ForfeitureRecipientUpdated` now also determines the recipient for subsequent Contributor recoveries.
+
 
 | Old event/data | New event/data |
 | --- | --- |
@@ -130,6 +135,6 @@ The fixed treasury's migration positions have zero reward weight, while their fu
 
 The constructor initializes `forfeitureRecipient` and permanently fixes `migrationRewardExcludedAddress` from the same `forfeitureRecipient_` argument. For production, keep `FORFEITURE_RECIPIENT=0x7D8911eB1C72F0Ba29302bE30301B75Cec81F622` at construction. To use another forfeiture destination, the current Core owner calls `setForfeitureRecipient(newRecipient)` afterward; passing the new destination to the constructor instead would also change the fixed exclusion address.
 
-Both production and Base QA allow a nonzero forfeiture recipient to be set, including while paused. The change applies to future THOR/yTHOR exits by all users, including already-created open positions. It does not change the fixed excluded treasury, reward weights, accrued rewards, prior transfers or queued payouts. The treasury retains normal exit and ordinary-staking rights; its own forfeitures return to it only while it is the configured recipient. This does not enforce a 90-day treasury lock.
+Both production and Base QA allow a nonzero forfeiture recipient to be set, including while paused. The change applies to future THOR/yTHOR exits by all users, including already-created open positions, and to future Contributor revocations of existing or new schedules. It does not change the fixed excluded treasury, reward weights, accrued rewards, prior transfers or queued payouts. The treasury retains normal exit and ordinary-staking rights; its own forfeitures return to it only while it is the configured recipient. This does not enforce a 90-day treasury lock.
 
 For a future Base QA deployment, explicitly set `BASE_QA_FORFEITURE_RECIPIENT` to the initial excluded treasury before creating the deployment plan. The script rejects missing addresses or a conflicting saved plan. Read `forfeitureRecipient()` and `migrationRewardExcludedAddress()` independently after any owner update. Source changes do not modify existing deployments; use the ABI matching the deployed revision.

@@ -6,7 +6,7 @@ This index follows the current `src/` contracts. See [legacy integration](integr
 
 ## MetroToken
 
-`constructor(string name_,string symbol_,address owner_)` deploys the capped ERC-20. `cap()` and `MAX_SUPPLY()` both expose the immutable `100_000_000 ether` maximum. The owner uses `setMinter(address,bool)`; only an approved minter may call `mint(address,uint256)`, and all minters share the one cap. ERC-20 and ERC-2612 Permit are supported. There is no burn entrypoint.
+`constructor(string name_,string symbol_,address owner_)` deploys the capped ERC-20. `cap()` and `MAX_SUPPLY()` both expose the immutable `100_000_000 ether` maximum. The owner uses `setMinter(address,bool)`; only an approved minter may call `mint(address,uint256)`, and all minters share the one cap. ERC-20 and ERC-2612 Permit are supported. There is no burn entrypoint. Ownership uses `transferOwnership(address)` to nominate, `pendingOwner()` to query and `acceptOwnership()` to accept; a zero nomination cancels it. `OwnershipTransferStarted` and `OwnershipTransferred` record the two steps. Existing minter roles and Permit signatures are unaffected.
 
 ## ThorMigrationEscrow
 
@@ -26,6 +26,12 @@ xMETRO is immutable. `XMetroCoreLogic.sol` is internal code compiled into it, no
 
 The production liquid-withdrawal cooldown is `UNSTAKE_DELAY = 72 hours`. THOR cannot exit before day 30; it pays a fixed 50% of converted principal from day 30 until just before day 90, then 100% at day 90 and later. yTHOR exits at 20% of converted principal on day 120 and rises to 100% over the next four years (4 * 365 days). Each THOR position closes once; forfeited principal cannot be claimed later, and its queued payout stays fixed. `previewWithdrawableNow(address)` aggregates currently exit-eligible THOR/yTHOR payouts and unlocked Contributor value; it excludes every already-requested withdrawal queue. Queue information is available through the corresponding `unstakeRequestCount*`, `unstakeRequest*`, and `unstakeCursor*` getters.
 
+### Contributor revocation
+
+`revokeContributorVesting(address user,uint256 scheduleId)` is restricted to the current Core owner and requires an unpaused Core. The zero-based schedule index is stable. Vested-but-unclaimed principal becomes ordinary xMETRO; unvested METRO goes to the current `forfeitureRecipient`. Previously claimed amounts, queues and full-precision USDC rewards are preserved. It needs no additional approval or mint role. Released shares use the normal Free withdrawal queue if later unstaked.
+
+The plan closes with `totalAmount = claimed` after adding the new release; it is not removed. `ContributorVestingRevoked(indexed user,indexed scheduleId,released,reclaimed,indexed recipient)` identifies the operation; nonzero releases also emit `UnlockedClaimedAsShares`. Invalid indices use bounds panic `0x32`; closed/fully processed schedules use `InvalidConfiguration()`. Unauthorized and paused calls use `OwnableUnauthorizedAccount(caller)` and `EnforcedPause()`. See the [complete API and scan-window behavior](integration/docs/contract-api.md#contributor-vesting-revocation).
+
 ### Reward accounting
 
 - `depositRewards(uint256)` accepts calls only from the bound RewardDistributor.
@@ -40,7 +46,7 @@ Ordinary shares and eligible yTHOR principal have separate reward accumulators, 
 
 The constructor initializes `forfeitureRecipient` and permanently fixes `migrationRewardExcludedAddress` from the same `forfeitureRecipient_` argument. For production, keep `FORFEITURE_RECIPIENT=0x7D8911eB1C72F0Ba29302bE30301B75Cec81F622` at construction. To use another forfeiture destination, the current Core owner calls `setForfeitureRecipient(newRecipient)` afterward; passing the new destination to the constructor instead would also change the fixed exclusion address.
 
-Both production and Base QA allow a nonzero forfeiture recipient to be set, including while paused. The change applies to future THOR/yTHOR exits by all users, including already-created open positions. It does not change the fixed excluded treasury, reward weights, accrued rewards, prior transfers or queued payouts. The treasury retains normal exit and ordinary-staking rights; its own forfeitures return to it only while it is the configured recipient. This does not enforce a 90-day treasury lock.
+Both production and Base QA allow a nonzero forfeiture recipient to be set, including while paused. The change applies to future THOR/yTHOR exits by all users, including already-created open positions, and to future Contributor revocations of existing or new schedules. It does not change the fixed excluded treasury, reward weights, accrued rewards, prior transfers or queued payouts. The treasury retains normal exit and ordinary-staking rights; its own forfeitures return to it only while it is the configured recipient. This does not enforce a 90-day treasury lock.
 
 For a future Base QA deployment, explicitly set `BASE_QA_FORFEITURE_RECIPIENT` to the initial excluded treasury before creating the deployment plan. The script rejects missing addresses or a conflicting saved plan. Read `forfeitureRecipient()` and `migrationRewardExcludedAddress()` independently after any owner update. Source changes do not modify existing deployments; use the ABI matching the deployed revision.
 
@@ -72,10 +78,10 @@ Legacy compound and general auto strategies are mutually exclusive. A batch swap
 
 - `setDeFiAdapter(address proxy)` checks runtime code, core/USDC/METRO binding, Adapter family, valid configuration, and logic version. A full replacement increments `deFiAdapterEpoch`.
 - `setYThorRewardWeightBps(uint256)` changes future rewards for all eligible active yTHOR positions without pausing. `10,000=1x`; zero and sub-1x values are valid up to the technical bound.
-- `setForfeitureRecipient(address)` lets the current owner redirect future THOR/yTHOR exit forfeitures in both builds. Zero reverts with `InvalidAddress`; paused and same-address updates are allowed. `ForfeitureRecipientUpdated(oldRecipient,newRecipient)` records each update. The fixed migration exclusion address and previously settled amounts do not change.
+- `setForfeitureRecipient(address)` lets the current owner redirect future THOR/yTHOR exit forfeitures and unvested Contributor recoveries in both builds. Zero reverts with `InvalidAddress`; paused and same-address updates are allowed. `ForfeitureRecipientUpdated(oldRecipient,newRecipient)` records each update. The fixed migration exclusion address and previously settled amounts do not change.
 - `setAutoCompoundOperator(address,bool)`; `setMigrationEscrow(address)`; `setRewardDistributor(address)`; `setContributor(address,bool)`; `setDefaultMaxVestingSchedules(uint256)`
 - `pause()`; `unpause()`; `rescueERC20(address,address,uint256)` (principal-backing METRO is protected)
-- Core, Escrow and Distributor expose `pendingOwner()`, `transferOwnership(address)` and `acceptOwnership()`. Nomination preserves the current owner; a zero target cancels it. Acceptance clears pending ownership. `renounceOwnership()` clears both owner fields and is irreversible; Core/Escrow reject it while paused. Paused handovers remain available. MetroToken remains one-step. The Core constructor leaves it unpaused.
+- METRO, Core, Escrow and Distributor expose `pendingOwner()`, `transferOwnership(address)` and `acceptOwnership()`. Nomination preserves the current owner; a zero target cancels it. Acceptance clears pending ownership. `renounceOwnership()` clears both owner fields and is irreversible; Core/Escrow reject it while paused. Paused handovers remain available. The Core constructor leaves it unpaused.
 
 Normal configuration and UUPS implementation upgrades do not require a pause. A full proxy replacement should remain paused throughout its multi-transaction handover. A UUPS implementation upgrade increments `logicEpoch` without changing the proxy address; a proxy replacement increments `deFiAdapterEpoch`. Both make older auto preferences stale.
 

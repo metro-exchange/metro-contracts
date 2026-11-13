@@ -2,11 +2,12 @@
 pragma solidity 0.8.38;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Capped} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 
-contract MetroToken is ERC20Capped, ERC20Permit, Ownable {
+contract MetroToken is ERC20Capped, ERC20Permit, Ownable2Step {
     error MinterStatusUnchanged();
     error UnauthorizedMinter();
     error InvalidRecipient();

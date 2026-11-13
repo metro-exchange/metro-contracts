@@ -10,8 +10,12 @@ contract ContributorVestingMainnetTest is MainnetForkBase {
     address private receiver;
     address private other;
 
-    event ContributorStaked(address indexed contributor, address indexed receiver, uint256 amount, uint64 startTime, uint64 duration);
-    event UnstakeRequested(address indexed user, xMETRO.UnstakeSource indexed source, uint256 amount, uint64 unlockTime);
+    event ContributorStaked(
+        address indexed contributor, address indexed receiver, uint256 amount, uint64 startTime, uint64 duration
+    );
+    event UnstakeRequested(
+        address indexed user, xMETRO.UnstakeSource indexed source, uint256 amount, uint64 unlockTime
+    );
     event Withdrawn(address indexed user, xMETRO.UnstakeSource indexed source, uint256 amount);
     event UnlockedClaimedAsShares(address indexed user, xMETRO.UnstakeSource indexed source, uint256 amount);
 
@@ -43,7 +47,9 @@ contract ContributorVestingMainnetTest is MainnetForkBase {
         vm.stopPrank();
         core.setContributor(contributor, true);
         vm.expectEmit(true, true, false, true, address(core));
-        emit ContributorStaked(contributor, contributor, 40 ether, uint64(block.timestamp + 180 days), uint64((5 * 365 days) / 2));
+        emit ContributorStaked(
+            contributor, contributor, 40 ether, uint64(block.timestamp + 180 days), uint64((5 * 365 days) / 2)
+        );
         vm.startPrank(contributor);
         core.stakeContributor(40 ether, contributor);
         core.stakeContributor(60 ether, receiver);
@@ -55,8 +61,8 @@ contract ContributorVestingMainnetTest is MainnetForkBase {
         assertEq(core.balanceOf(receiver), 0);
     }
 
-    /// E-06.02: Tests revocation does not freeze existing receiver.
-    function test_E06_RevocationDoesNotFreezeExistingReceiver() public {
+    /// E-06.02: Tests whitelist removal does not freeze an existing receiver.
+    function test_E06_WhitelistRemovalDoesNotFreezeExistingReceiver() public {
         core.setContributor(contributor, true);
         _contribute(contributor, receiver, 100 ether);
         _distribute(100e6);
@@ -237,5 +243,52 @@ contract ContributorVestingMainnetTest is MainnetForkBase {
         vm.prank(receiver);
         vm.expectRevert();
         core.claimAndStakeUnlockedContributor(4);
+    }
+
+    /// E-06.09: Revoke one schedule after a partial queue without losing accrued rewards.
+    function test_E06_OwnerRevokePreservesVestedPrincipalRewardsAndQueue() public {
+        core.setContributor(contributor, true);
+        _contribute(contributor, receiver, 100 ether);
+        xMETRO.VestingSchedule memory original = core.contributorVesting(receiver, 0);
+        vm.warp(uint256(original.startTime) + original.duration / 4);
+        vm.prank(receiver);
+        assertEq(core.requestWithdrawUnlockedContributor(1), 25 ether);
+        xMETRO.UnstakeRequest memory oldQueue = core.unstakeRequestContributor(receiver, 0);
+        _distribute(75e6);
+        vm.warp(uint256(original.startTime) + original.duration / 2);
+        address recipient = makeAddr("contributor-recovery-recipient");
+        core.setForfeitureRecipient(recipient);
+        core.setContributor(contributor, false);
+        vm.prank(contributor);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", contributor));
+        core.revokeContributorVesting(receiver, 0);
+        core.revokeContributorVesting(receiver, 0);
+        xMETRO.VestingSchedule memory closed = core.contributorVesting(receiver, 0);
+        assertEq(closed.totalAmount, 50 ether);
+        assertEq(closed.claimed, 50 ether);
+        assertEq(core.contributorVestingCount(receiver), 1);
+        assertEq(core.lockedShares(receiver), 0);
+        assertEq(core.balanceOf(receiver), 25 ether);
+        assertEq(core.totalRewardWeight(), 25 ether);
+        assertEq(metro.balanceOf(recipient), 50 ether);
+        assertEq(metro.balanceOf(address(core)), 50 ether);
+        assertEq(keccak256(abi.encode(core.unstakeRequestContributor(receiver, 0))), keccak256(abi.encode(oldQueue)));
+        assertEq(core.unstakeRequestCountFree(receiver), 0);
+        vm.prank(receiver);
+        assertEq(core.claimRewards(), 75e6);
+        assertEq(IERC20(USDC).balanceOf(receiver), 75e6);
+        vm.prank(receiver);
+        assertEq(core.withdrawContributor(0), 25 ether);
+        vm.prank(receiver);
+        core.requestUnstake(25 ether);
+        vm.warp(core.unstakeRequestFree(receiver, 0).unlockTime);
+        vm.prank(receiver);
+        assertEq(core.withdrawFree(0), 25 ether);
+        assertEq(metro.balanceOf(receiver), 50 ether);
+        vm.warp(uint256(original.startTime) + original.duration + 1);
+        (,, uint256 unlockable,) = core.previewWithdrawableNow(receiver);
+        assertEq(unlockable, 0);
+        vm.expectRevert(xMETRO.InvalidConfiguration.selector);
+        core.revokeContributorVesting(receiver, 0);
     }
 }
