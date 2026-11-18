@@ -8,3 +8,6 @@ broadcast/
 
 # Editor / OS
 .DS_Store
+
+# Dependencies (installed via `forge install`)
+lib/

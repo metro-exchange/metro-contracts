@@ -5,6 +5,9 @@ Smart contracts for Metro Exchange. Each system lives in its own Foundry project
 | Package | Contents | Toolchain |
 |---|---|---|
 | [`packages/xmetro`](packages/xmetro) | METRO token, xMETRO staking core, DeFi adapter, THOR/yTHOR migration escrow, reward distributor | solc 0.8.38, Osaka, OpenZeppelin v5.5.0 |
+| [`packages/commission`](packages/commission) | Affiliate CommissionVault and RateLimitedForwarder | solc 0.8.26, OpenZeppelin v5.6.1 |
+
+`RewardDistributor` (xmetro) sends a capped commission share of each reward distribution to `CommissionVault` (commission). The two packages only meet at that interface; neither compiles the other's sources.
 
 ## Working with a package
 

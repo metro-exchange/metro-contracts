@@ -1,11 +1,11 @@
-# Metro Exchange Contracts
+# Commission Contracts
 
 Solidity contracts for the Metro Exchange affiliate-commission system:
 
 - **CommissionVault** holds affiliate commissions in USDC, settles per-code entitlements on a timelock, and lets affiliates claim what they have earned.
 - **RateLimitedForwarder** holds a single fixed token and sweeps it to a configured recipient (the vault) whenever anyone calls `forward()`, so affiliate fee configs can point permanently at one address. Each call releases only a token-bucket slice (`dripRate` per `dripPeriod`, capped at `maxReserve`), bounding how fast funds can leave if that recipient is ever wrong or compromised.
 
-This repository is published for external security review. It is a self-contained Foundry project with no dependency on the Metro monorepo.
+This package was imported from [metro-exchange/contracts](https://github.com/metro-exchange/contracts) at commit `3b39477`, the revision published for external security review. It is a self-contained Foundry project with no dependency on the other packages in this repository. Production contracts compile to the same bytecode as that revision.
 
 ## Audit scope
 
@@ -19,7 +19,7 @@ In scope (`contracts/`):
 | `interfaces/IErc20Forwarder.sol` | Shared base interface (sweep/admin surface + events) that `IRateLimitedForwarder` extends. |
 | `interfaces/IRateLimitedForwarder.sol` | Adds the drip-limit surface on top of `IErc20Forwarder`. |
 
-Test-only helpers (in scope for context, not deployed to production):
+Test-only helpers (`test/mocks/`, in scope for context, not deployed to production):
 
 | File | Description |
 |---|---|
@@ -28,7 +28,7 @@ Test-only helpers (in scope for context, not deployed to production):
 
 Out of scope:
 
-- OpenZeppelin contracts (`lib/openzeppelin-contracts`, v5.6.1) and forge-std (`lib/forge-std`, v1.16.2), pinned as git submodules.
+- OpenZeppelin contracts (`lib/openzeppelin-contracts`, v5.6.1) and forge-std (`lib/forge-std`, v1.16.2), pinned in `foundry.lock`.
 - The production revenue-distribution contract that `distributor` points at in production. `FakeDistributor` is only a stand-in for it here.
 - The off-chain operator/keeper tooling. Its behavior is described below under [Off-chain operation](#off-chain-operation) so the on-chain trust assumptions are clear, but the code is not part of this repository.
 
@@ -37,10 +37,9 @@ Out of scope:
 Foundry is required (`forge`, `cast`). See https://book.getfoundry.sh/getting-started/installation.
 
 ```bash
-# Clone with submodules (forge-std + OpenZeppelin)
-git clone --recursive git@github.com:metro-exchange/contracts.git
-# or, if already cloned:
-git submodule update --init --recursive
+cd packages/commission
+forge install foundry-rs/forge-std@v1.16.2
+forge install OpenZeppelin/openzeppelin-contracts@v5.6.1
 
 forge build
 forge test

@@ -3,8 +3,8 @@ pragma solidity ^0.8.26;
 
 import {Script, console2} from "forge-std/Script.sol";
 import {CommissionVault} from "../contracts/CommissionVault.sol";
-import {FakeDistributor} from "../contracts/FakeDistributor.sol";
-import {FakeUSDC} from "../contracts/FakeUSDC.sol";
+import {FakeDistributor} from "../test/mocks/FakeDistributor.sol";
+import {FakeUSDC} from "../test/mocks/FakeUSDC.sol";
 
 contract DeployTestbed is Script {
     function run() external {

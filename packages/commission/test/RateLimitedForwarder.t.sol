@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import {RateLimitedForwarder} from "../contracts/RateLimitedForwarder.sol";
 import {IRateLimitedForwarder} from "../contracts/interfaces/IRateLimitedForwarder.sol";
 import {IErc20Forwarder} from "../contracts/interfaces/IErc20Forwarder.sol";
-import {FakeUSDC as MockUSDC} from "../contracts/FakeUSDC.sol";
+import {FakeUSDC as MockUSDC} from "./mocks/FakeUSDC.sol";
 
 contract RevertingRecipient {
     receive() external payable {
