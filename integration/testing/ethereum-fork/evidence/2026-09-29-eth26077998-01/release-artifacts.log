@@ -1,0 +1,4 @@
+release artifacts verified
+xMETRO: runtime=22607 initcode=24279 EIP-170-margin=1969
+Adapter: runtime=20487 initcode=20690 EIP-170-margin=4089
+ERC1967Proxy: runtime=76 initcode=598

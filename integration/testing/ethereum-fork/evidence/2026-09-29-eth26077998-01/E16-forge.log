@@ -1,0 +1,13 @@
+No files changed, compilation skipped
+
+Ran 7 tests for test/fork-v2/mainnet/CommissionRouting.t.sol:CommissionRoutingMainnetTest
+[PASS] test_E16_ConfigAuthorityAndVaultValidation() (gas: 10574445)
+[PASS] test_E16_CoreFailureRollsBackVaultAndOperatorTransfer() (gas: 365331)
+[PASS] test_E16_DisableSplitBeforeUnbindAndBypassFaultyVault() (gas: 557876)
+[PASS] test_E16_DistributeAndFromBalanceSameRouting() (gas: 734936)
+[PASS] test_E16_MinOfCapAndShortfallFourBoundaries() (gas: 2126727)
+[PASS] test_E16_NewSourceVaultBindingAndInitialState() (gas: 51257)
+[PASS] test_E16_ZeroBpsBypassAndFullCommissionNoCoreDeposit() (gas: 21622496)
+Suite result: ok. 7 passed; 0 failed; 0 skipped; finished in 469.60ms (244.03ms CPU time)
+
+Ran 1 test suite in 474.11ms (469.60ms CPU time): 7 tests passed, 0 failed, 0 skipped (7 total tests)

@@ -1,0 +1,54 @@
+Compiling 1 files with Solc 0.8.30
+Solc 0.8.30 finished in 4.12s
+Compiler run successful!
+
+Ran 16 tests for test/fork-v2/mainnet/OneInchSwap.t.sol:OneInchSwapMainnetTest
+[PASS] test_E17_ForcedGhoBatch() (gas: 1487311)
+Logs:
+  1inch forced batch output: 100022933452064784724
+
+[PASS] test_E17_ForcedGhoManual() (gas: 937432)
+Logs:
+  1inch forced manual output: 100022933452064784724
+
+[PASS] test_E17_ForcedRouteRejectsInvalidFieldsAtomically() (gas: 2325284)
+[PASS] test_E17_ForcedUsdtBatch() (gas: 1479968)
+Logs:
+  1inch forced batch output: 99955657
+
+[PASS] test_E17_ForcedUsdtManual() (gas: 920983)
+Logs:
+  1inch forced manual output: 99955657
+
+[PASS] test_E17_ForcedWbtcBatch() (gas: 1457623)
+Logs:
+  1inch forced batch output: 119409
+
+[PASS] test_E17_ForcedWbtcManual() (gas: 906662)
+Logs:
+  1inch forced manual output: 119409
+
+[PASS] test_E17_ForcedXautBatch() (gas: 1482375)
+Logs:
+  1inch forced batch output: 24161
+
+[PASS] test_E17_ForcedXautManual() (gas: 920804)
+Logs:
+  1inch forced manual output: 24161
+
+[PASS] test_E17_SyrupOneInchBatchProRata() (gas: 1522363)
+Logs:
+  1inch syrup batch output: 84360341
+
+[PASS] test_E17_SyrupOneInchManualRealProxy() (gas: 1066357)
+Logs:
+  1inch syrup manual output: 84360341
+
+[PASS] test_OneInchFrontendGhoUnsupportedSelector() (gas: 467280)
+[PASS] test_OneInchFrontendUsdtEoaQuoteProxyReceiverCannotExecute() (gas: 1231020)
+[PASS] test_OneInchFrontendWbtcEoaQuoteProxyReceiverCannotExecute() (gas: 1323752)
+[PASS] test_OneInchFrontendXautUnsupportedSelector() (gas: 473944)
+[PASS] test_X02_OneInchWbtcZeroRoundedUserRollsBackBatch() (gas: 1132124)
+Suite result: ok. 16 passed; 0 failed; 0 skipped; finished in 2.21s (1.99s CPU time)
+
+Ran 1 test suite in 2.24s (2.21s CPU time): 16 tests passed, 0 failed, 0 skipped (16 total tests)

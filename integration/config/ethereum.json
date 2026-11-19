@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "chainId": 1,
+  "environment": "ethereum-production",
+  "status": "not_deployed",
+  "contracts": {
+    "METRO": null,
+    "xMETRO": null,
+    "RewardDistributor": null,
+    "ThorMigrationEscrow": null,
+    "XMetroDeFiAdapterImplementation": null,
+    "XMetroDeFiAdapterProxy": null,
+    "CommissionVault": null
+  },
+  "tokens": {
+    "USDC": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    "THOR": null,
+    "yTHOR": null,
+    "USDT": null,
+    "WBTC": null,
+    "GHO": null,
+    "XAUT": null,
+    "syrupUSDC": null
+  },
+  "note": "No production deployment is represented. Final token, router, protocol and contract addresses require deployment-time confirmation and on-chain readback."
+}

@@ -1,0 +1,13 @@
+{
+  "source": "https://api.maple.finance/v2/graphql getPoolSignature",
+  "lender": "0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9",
+  "poolId": "0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b",
+  "obtainedAtUtc": "2026-09-29T07:29:22.064236+00:00",
+  "forkBlock": 26077998,
+  "blockNumber": 26081632,
+  "bitmap": 16,
+  "deadline": 1790753361,
+  "v": 27,
+  "r": "0x512c9f611bb72e11d0d220db58a3d65db2e994ad24eef8732d44cd5852c72f5e",
+  "s": "0x7cba15024f34210ef79aae9fbb665909e031f09ca76230c53dabb3a709fef754"
+}

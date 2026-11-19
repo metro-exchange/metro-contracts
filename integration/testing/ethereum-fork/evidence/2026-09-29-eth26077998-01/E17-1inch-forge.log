@@ -1,0 +1,18 @@
+No files changed, compilation skipped
+
+Ran 6 tests for test/fork-v2/mainnet/OneInchSwap.t.sol:OneInchSwapMainnetTest
+[PASS] test_E17_SyrupOneInchBatchProRata() (gas: 1521794)
+Logs:
+  1inch syrup batch output: 84360341
+
+[PASS] test_E17_SyrupOneInchManualRealProxy() (gas: 1065966)
+Logs:
+  1inch syrup manual output: 84360341
+
+[PASS] test_OneInchFrontendGhoUnsupportedSelector() (gas: 467213)
+[PASS] test_OneInchFrontendUsdtEoaQuoteProxyReceiverCannotExecute() (gas: 1230623)
+[PASS] test_OneInchFrontendWbtcEoaQuoteProxyReceiverCannotExecute() (gas: 1323355)
+[PASS] test_OneInchFrontendXautUnsupportedSelector() (gas: 473720)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 216.61ms (11.06ms CPU time)
+
+Ran 1 test suite in 222.23ms (216.61ms CPU time): 6 tests passed, 0 failed, 0 skipped (6 total tests)

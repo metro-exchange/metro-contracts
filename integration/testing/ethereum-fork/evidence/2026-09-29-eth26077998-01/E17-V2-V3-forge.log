@@ -1,0 +1,11 @@
+No files changed, compilation skipped
+
+Ran 5 tests for test/fork-v2/mainnet/SwapRoutes.t.sol:SwapRoutesMainnetTest
+[PASS] test_E17_InvalidRouteDeadlineMinimumAndMetroEntry() (gas: 747151)
+[PASS] test_E17_V2MultiHopBatchProRata() (gas: 1029319)
+[PASS] test_E17_V2SingleManualWithoutAutoPreference() (gas: 568268)
+[PASS] test_E17_V3SingleAndMultiHopRealPools() (gas: 852940)
+[PASS] test_E17_WhitelistAddDisableAndResume() (gas: 618053)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 232.53ms (9.73ms CPU time)
+
+Ran 1 test suite in 245.66ms (232.53ms CPU time): 5 tests passed, 0 failed, 0 skipped (5 total tests)

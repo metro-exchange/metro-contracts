@@ -1,0 +1,19 @@
+Compiling 1 files with Solc 0.8.30
+Solc 0.8.30 finished in 2.13s
+Compiler run successful!
+
+Ran 8 tests for test/fork-v2/mainnet/AaveV4GiverDeposit.t.sol:AaveV4GiverDepositMainnetTest
+[PASS] test_E19_BatchThreePerUserSuppliesAndDonationBaseline() (gas: 1124754)
+[PASS] test_E19_LastUserRevokedRollsBackEarlierSupplies() (gas: 1039196)
+[PASS] test_E19_Manual100UsdcThroughGiverAndBothProtocolEvents() (gas: 551509)
+Logs:
+  Aave V4 Giver manual shares: 98133534
+
+[PASS] test_E19_MissingOrRevokedAuthorizationPreservesPending() (gas: 448628)
+[PASS] test_E19_OfficialRegistrationActivationAndUserAuthorization() (gas: 78996)
+[PASS] test_E19_SecondUserRevokedRollsBackFirstSupply() (gas: 877971)
+[PASS] test_E19_UserAndTotalMinimumRollback() (gas: 1879508)
+[PASS] test_X02_FilteredCandidateMinimaKeepOriginalIndexes() (gas: 1800403)
+Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 230.45ms (14.92ms CPU time)
+
+Ran 1 test suite in 244.42ms (230.45ms CPU time): 8 tests passed, 0 failed, 0 skipped (8 total tests)

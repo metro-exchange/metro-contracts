@@ -1,0 +1,135 @@
+No files changed, compilation skipped
+
+Ran 23 tests for test/fork-v2/mainnet/MigrationExit.t.sol:MigrationExitMainnetTest
+[PASS] test_E10_IndependentRepeatedThorYThorMigrations() (gas: 677590)
+[PASS] test_E10_OnlyBoundEscrowCanCredit() (gas: 1685693)
+[PASS] test_E10_RealThorMigrationCustodyMintPosition() (gas: 295051)
+[PASS] test_E10_RealYThorMigrationAndRewardWeight() (gas: 531528)
+[PASS] test_E10_StartDeadlineRatioRoundingAndPrincipalCap() (gas: 1945955)
+[PASS] test_E10_TransferMintAndCapFailuresAreAtomic() (gas: 1214353)
+[PASS] test_E11_CapsOwnerNonzeroAndNoRetroactivity() (gas: 418584)
+[PASS] test_E11_DeadlinesOwnerAndStartRelations() (gas: 39759)
+[PASS] test_E11_RatiosFirstSetLocksImmediately() (gas: 1202684)
+[PASS] test_E11_StartTimeOwnerAndBoundary() (gas: 27055)
+[PASS] test_E12_ForfeitureRecipientAndMetroBacking() (gas: 343013)
+[PASS] test_E12_LiquidAndStakeExitPaths() (gas: 591939)
+[PASS] test_E12_OneTimeCloseAndHistoricalRewards() (gas: 782108)
+[PASS] test_E12_ThorExitCurveIndependentSnapshots() (gas: 571397)
+[PASS] test_E12_ThorQueueBoundaryPositionAndEvents() (gas: 423382)
+[PASS] test_E13_ActivePrincipalWeightForfeitureBacking() (gas: 429987)
+[PASS] test_E13_ClosedPositionOldPendingClaimOrAuto() (gas: 3682328)
+[PASS] test_E13_YThorExitCurveIndependentSnapshots() (gas: 962163)
+[PASS] test_E13_YThorLiquidAndStakePaths() (gas: 700697)
+[PASS] test_E13_YThorQueueEventsAndBoundary() (gas: 491812)
+[PASS] test_E15_AllFourQueuesExcludedEvenAfterMaturity() (gas: 1020231)
+[PASS] test_E15_EmptyPartiallyConsumedAndClosedPreview() (gas: 872992)
+[PASS] test_E15_MixedPositionsPreviewIsSourceSum() (gas: 652663)
+Suite result: ok. 23 passed; 0 failed; 0 skipped; finished in 602.95ms (15.48ms CPU time)
+
+Ran 7 tests for test/fork-v2/mainnet/YThorRewardWeight.t.sol:YThorRewardWeightMainnetTest
+[PASS] test_E14_AboveBelowZeroAndRestoredWeights() (gas: 1087557)
+[PASS] test_E14_AllExistingYThorUsersChangeTogether() (gas: 694024)
+[PASS] test_E14_InitialOwnerAndUpperBound() (gas: 44683)
+[PASS] test_E14_MigrationExitClaimTwoAccumulatorsAndDebt() (gas: 1101498)
+[PASS] test_E14_OnlyZeroWeightYThorRejectsThenMixedSharesEarn() (gas: 1018420)
+[PASS] test_E14_SmallPrincipalFractionalBpsAndDust() (gas: 1088340)
+Logs:
+  E14 tiny reward claim sum raw: 3
+  E14 tiny reward unallocated tail raw: 1
+
+[PASS] test_E14_WeightsDoNotRewriteHistoricalRewards() (gas: 753547)
+Suite result: ok. 7 passed; 0 failed; 0 skipped; finished in 602.93ms (6.59ms CPU time)
+
+Ran 18 tests for test/fork-v2/mainnet/DeploymentGovernance.t.sol:DeploymentGovernanceMainnetTest
+[PASS] test_E01_ArtifactSizesAndProxySlots() (gas: 3255660)
+[PASS] test_E01_ExplicitPauseConfigurationAndSingleStepOwnership() (gas: 142982)
+[PASS] test_E01_FormalCreateAndReadback() (gas: 150413)
+Logs:
+  METRO: 0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f
+  Core: 0x2e234DAe75C793f67A35089C9d99245E1C58470b
+  Adapter implementation: 0xF62849F9A0B5Bf2913b396098F7c7019b51A820a
+  Adapter proxy: 0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9
+  Distributor: 0xc7183455a4C133Ae270771860664b6B7ec320bB1
+  Escrow: 0xa0Cb889707d426A7A386870A03bc70d1b0697598
+  Commission Vault: 0x1d1499e622D69689cdf9004d05Ec547d650Ff211
+
+[PASS] test_E01_InitializerAndBindingGuards() (gas: 81842)
+[PASS] test_E01_RealUsdcAndNewMetroUniswapV2Liquidity() (gas: 2919746)
+Logs:
+  V2 METRO/USDC pair: 0x32Bab2E53d9081a3Cac251CcEb8faF09548528e3
+  THOR funding EOA: 0x02d9E8506ba56d3F9bE6007f712720EEaDAc5FdC
+  yTHOR funding EOA: 0x46e3A8C8135647b48B2e82198E42E0C69EacbAb8
+  V2 quote for 100 USDC: 98715803439706129885
+
+[PASS] test_E09_AdapterRescueRequiresCurrentOwnerAndPause() (gas: 149129)
+[PASS] test_E09_CoreAndEscrowPauseBoundaries() (gas: 132331)
+[PASS] test_E09_DistributorRescueOwnerOnly() (gas: 78002)
+[PASS] test_E09_OwnershipSemanticsAndIsolatedRenounce() (gas: 3035414)
+[PASS] test_E09_PauseAllowsReadsApprovalsAndDisable() (gas: 209586)
+[PASS] test_E09_PauseBlocksNormalUserMoneyPaths() (gas: 380435)
+[PASS] test_E09_ProtectedTokensAndLegitimateRescue() (gas: 236317)
+[PASS] test_E23_EmergencyFilteringAndOverOneHundredUsers() (gas: 12388748)
+Logs:
+  Emergency 101 users business-call gas: 5627745
+
+[PASS] test_E23_EmergencyInsufficientBalanceRollsBackWholeBatch() (gas: 535434)
+[PASS] test_E23_EmergencyOwnerPauseAndRealPending() (gas: 526191)
+[PASS] test_E23_EmergencyPreservesAllPrincipalLedgers() (gas: 977804)
+[PASS] test_E23_ReplaceAutoCompoundOperatorUsesNewKeeper() (gas: 3372445)
+[PASS] test_E23_ReplaceEscrowAndDistributorRevokesOldRoles() (gas: 2969301)
+Suite result: ok. 18 passed; 0 failed; 0 skipped; finished in 607.36ms (23.04ms CPU time)
+
+Ran 10 tests for test/fork-v2/mainnet/AutoCompound.t.sol:AutoCompoundMainnetTest
+[PASS] test_E07_EnableDisableAndMutualPreference() (gas: 174952)
+[PASS] test_E07_ManualFailuresPreservePendingAndFunds() (gas: 620857)
+[PASS] test_E07_ManualIndependentOfAutoPreference() (gas: 1062594)
+[PASS] test_E07_ManualRealV2AndBackingEventAllowance() (gas: 510552)
+[PASS] test_E08_BatchRollbackAndSingleUserEquivalence() (gas: 845575)
+[PASS] test_E08_FilterCandidatesAndVersionExpiry() (gas: 1162781)
+[PASS] test_E08_KeeperGrantAndRevoke() (gas: 927012)
+[PASS] test_E08_OneRealSwapProRataAndLargestRemainder() (gas: 949994)
+[PASS] test_E08_ThreeUserFailureLeavesEveryPendingUntouched() (gas: 840420)
+[PASS] test_E08_ZeroRoundedShareRevertsAtomically() (gas: 24421542)
+Suite result: ok. 10 passed; 0 failed; 0 skipped; finished in 1.17s (575.05ms CPU time)
+
+Ran 8 tests for test/fork-v2/mainnet/ContributorVesting.t.sol:ContributorVestingMainnetTest
+[PASS] test_E06_ClaimAndStakePartialThenFull() (gas: 566186)
+[PASS] test_E06_ClaimedPrefixZeroScanRollbackAndRecovery() (gas: 615424)
+[PASS] test_E06_DefaultExplicitScanAndIndependentCursors() (gas: 581636)
+[PASS] test_E06_MultipleSchedulesAndLockedRewards() (gas: 494888)
+[PASS] test_E06_ProductionCliffLinearMidpointAndEnd() (gas: 254373)
+[PASS] test_E06_RequestAndWithdrawContributorQueue() (gas: 348684)
+[PASS] test_E06_RevocationDoesNotFreezeExistingReceiver() (gas: 513575)
+[PASS] test_E06_WhitelistOwnAndOtherReceiver() (gas: 357674)
+Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 1.17s (6.07ms CPU time)
+
+Ran 23 tests for test/fork-v2/mainnet/TokenStakeRewards.t.sol:TokenStakeRewardsMainnetTest
+[PASS] test_E02_Erc20TransfersAndAllowances() (gas: 158174)
+[PASS] test_E02_IsolatedGlobalCapAndInvalidMint() (gas: 1330621)
+[PASS] test_E02_MetadataAndInitialSupply() (gas: 27015)
+[PASS] test_E02_MinterGrantRevokeAndOwnerNotMinter() (gas: 79236)
+[PASS] test_E02_PermitNonceDomainExpiryReplayAndWrongSigner() (gas: 85819)
+[PASS] test_E03_LockedSharesAreNotTransferableErc20() (gas: 274440)
+[PASS] test_E03_MixedSharesTransferFromConservation() (gas: 593543)
+[PASS] test_E03_SelfZeroAllowanceAndPauseBoundaries() (gas: 234332)
+[PASS] test_E03_TransferPreservesOldPendingAndMovesFutureWeight() (gas: 522108)
+[PASS] test_E04_Exact72HourFreeWithdrawalBoundary() (gas: 345149)
+[PASS] test_E04_InvalidStakeAndUnstakeAmounts() (gas: 195370)
+[PASS] test_E04_QueuePaginationAndEmptySemantics() (gas: 368886)
+[PASS] test_E04_RequestUnstakePreservesOldPending() (gas: 515553)
+[PASS] test_E04_StakeAndEnableAutocompoundAtomicity() (gas: 505118)
+[PASS] test_E04_StakeOneToOneAndOldPending() (gas: 452892)
+[PASS] test_E05_ClaimAllAndRepeatedZero() (gas: 520156)
+[PASS] test_E05_ClaimableManyAndDuplicateQuoteBoundary() (gas: 476544)
+[PASS] test_E05_DistributeFromBalance() (gas: 317703)
+[PASS] test_E05_MixedSharesStakeTransferUnstakeAccounting() (gas: 725505)
+[PASS] test_E05_OperatorAndDistributorAccess() (gas: 375297)
+[PASS] test_E05_OperatorDistributeUsesRealUsdc() (gas: 448095)
+Logs:
+  Core USDC after distribute: 100000000
+
+[PASS] test_E05_TinyRewardsRoundingAndNoOverclaim() (gas: 822383)
+[PASS] test_E05_ZeroWeightAndZeroDeltaRevertWithoutFundsLoss() (gas: 433184)
+Suite result: ok. 23 passed; 0 failed; 0 skipped; finished in 1.17s (11.26ms CPU time)
+
+Ran 6 test suites in 1.17s (5.31s CPU time): 89 tests passed, 0 failed, 0 skipped (89 total tests)

@@ -1,0 +1,17 @@
+Compiling 1 files with Solc 0.8.30
+Solc 0.8.30 finished in 2.30s
+Compiler run successful!
+
+Ran 6 tests for test/fork-v2/mainnet/MapleDeposit.t.sol:MapleDepositMainnetTest
+[PASS] test_E20_BatchOneRealDepositProRataAndDonationIsolation() (gas: 1757982)
+[PASS] test_E20_InvalidAuthorizationAndSlippageRollback() (gas: 1048101)
+[PASS] test_E20_OldProxySignatureCannotAuthorizeReplacement() (gas: 941671)
+[PASS] test_E20_RealApiAuthorizationAndManualDeposit() (gas: 894369)
+Logs:
+  Maple real shares for 100 USDC: 84360341
+
+[PASS] test_E20_SubsequentDepositNeedsNoSignature() (gas: 1229680)
+[PASS] test_E20_ZeroAndNamedDepositDataBothAccepted() (gas: 1367253)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 441.89ms (237.99ms CPU time)
+
+Ran 1 test suite in 457.07ms (441.89ms CPU time): 6 tests passed, 0 failed, 0 skipped (6 total tests)

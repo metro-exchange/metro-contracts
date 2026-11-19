@@ -1,0 +1,26 @@
+No files changed, compilation skipped
+
+Ran 20 tests for test/fork-v2/mainnet/MigrationExit.t.sol:MigrationExitMainnetTest
+[PASS] test_E10_IndependentThorYThorOnceFlags() (gas: 483071)
+[PASS] test_E10_OnlyBoundEscrowCanCredit() (gas: 1791452)
+[PASS] test_E10_RealThorMigrationCustodyMintPosition() (gas: 293818)
+[PASS] test_E10_RealYThorMigrationAndRewardWeight() (gas: 512015)
+[PASS] test_E10_StartDeadlineRatioRoundingAndPrincipalCap() (gas: 2014462)
+[PASS] test_E10_TransferMintAndCapFailuresAreAtomic() (gas: 1235010)
+[PASS] test_E11_CapsOwnerNonzeroAndNoRetroactivity() (gas: 417156)
+[PASS] test_E11_DeadlinesOwnerAndStartRelations() (gas: 39803)
+[PASS] test_E11_RatiosFirstSetLocksImmediately() (gas: 1289479)
+[PASS] test_E11_StartTimeOwnerAndBoundary() (gas: 27055)
+[PASS] test_E12_ForfeitureRecipientAndMetroBacking() (gas: 340929)
+[PASS] test_E12_LiquidAndStakeExitPaths() (gas: 588560)
+[PASS] test_E12_OneTimeCloseAndHistoricalRewards() (gas: 783318)
+[PASS] test_E12_ThorExitCurveIndependentSnapshots() (gas: 571958)
+[PASS] test_E12_ThorQueueBoundaryPositionAndEvents() (gas: 420860)
+[PASS] test_E13_ActivePrincipalWeightForfeitureBacking() (gas: 410574)
+[PASS] test_E13_ClosedPositionOldPendingClaimOrAuto() (gas: 3678655)
+[PASS] test_E13_YThorExitCurveIndependentSnapshots() (gas: 671576)
+[PASS] test_E13_YThorLiquidAndStakePaths() (gas: 661809)
+[PASS] test_E13_YThorQueueEventsAndBoundary() (gas: 471335)
+Suite result: ok. 20 passed; 0 failed; 0 skipped; finished in 251.92ms (56.73ms CPU time)
+
+Ran 1 test suite in 264.93ms (251.92ms CPU time): 20 tests passed, 0 failed, 0 skipped (20 total tests)

@@ -1,0 +1,622 @@
+{
+  "recordedAtUtc": "2026-09-29T11:13:52.871Z",
+  "rpc": "http://127.0.0.1:8546",
+  "fixedForkBlock": 26077998,
+  "fixedForkHash": "0xb75cb3bedaa74adf79199d847c94bbca4724d092da355d3e13c354773e2eb2aa",
+  "sourceRunFile": "G05-100-original-artifact-retry.json",
+  "sourceRunSha256": "29de5a5fe755334f3a0c1dae74c00bcb5f9d6556b36a664ed01c04f58c5f5079",
+  "core": "0x1E2c6e631C5822b0fd8Fa74C10b895F49a7D4879",
+  "coreArtifactSha256": "128fdc390fe8430bde1a64a75adf07bf9ca733256766b997fbb1d59abb4e7b87",
+  "token": "0x68749665FF8D2d112Fa859AA293F07A622782F38",
+  "balanceUnit": "XAUT smallest unit",
+  "blockBeforeFirst": 26079637,
+  "blockBeforeExisting": 26079639,
+  "firstTransactionHash": "0xf71b9e8cc13c0d2a8290470135f5ff9fe68b31f792bd9db54b2ed5d0529babdc",
+  "existingTransactionHash": "0xb7515fc4af63f13420d12bef29b577e6f731315597595bb7408d5ec12e1a48e3",
+  "firstUserRewardDebtBeforeFirst": "500000",
+  "firstUserRewardDebtBeforeExisting": "1500000",
+  "allZeroBeforeFirst": true,
+  "allPositiveBeforeExisting": true,
+  "users": [
+    {
+      "index": 0,
+      "address": "0x9405192F6a0768b46e001ac310521a5c040aB387",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "302"
+    },
+    {
+      "index": 1,
+      "address": "0xDC57e4865CbdC7A65896D12771AF2a4fd2F84e6D",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 2,
+      "address": "0xC254BD49A6E91639c05804D80596fd01AD4cD636",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 3,
+      "address": "0xb59A2916a98DFeFC8dc7fB433B1f5e8Be74009a3",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 4,
+      "address": "0x4c3894a6Ddfd29Bb7f1140e161A16a1d390A0f55",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 5,
+      "address": "0xb1EbB60Fa1e80C59A298dc5877eB415c81019A1A",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 6,
+      "address": "0x2E062C3595e8302D18D50944A8275111C8CbBFaD",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 7,
+      "address": "0x36663DB56747b4351BFd8Da409a24A26FB7849d7",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 8,
+      "address": "0x23735d2Fe5abD833f57fcaCBEcc301F45039DB0a",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 9,
+      "address": "0xA818503dE8Ef99164Eb61eba2DA25D8df620F2fc",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 10,
+      "address": "0x2C5e53BdA7CC2A86A751D6C1900bD3360E5Bf0E9",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 11,
+      "address": "0x077296d5d02efdb0b68867B6217796a255a7FAA6",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 12,
+      "address": "0xB7d75AEcc27FF9eB9e507f7EE3B0c819B7e7499f",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 13,
+      "address": "0xE665E6726ce0df2a72B684f3Dec22c2D20E433e6",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 14,
+      "address": "0x1B682eC19C3F0Ff30034b34A235b6d8e9A5303AD",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 15,
+      "address": "0x4963012BE2d6a36769c302712A042eF84139EBC4",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 16,
+      "address": "0x1b78516311D31AEEfd9B1Ec7a2bCD39C5bc89E16",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 17,
+      "address": "0x38F0811394E026D8eA625f034bC85De28eCBAc78",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 18,
+      "address": "0xe196ce6fbD92ca8f1CAa8fCcAc2F794ACC6D5f52",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 19,
+      "address": "0x33EA884A50545bcaaDAB7E43583032E1F00Efd29",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 20,
+      "address": "0x3Caf8e8bd3510F211214D4c0ec0e828176485103",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 21,
+      "address": "0x7C165509F377c9796B7DAecC797fd62B233B09FC",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 22,
+      "address": "0x6Ccbe317AE0a10BF0a27b7A46d2c729C45E869eD",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 23,
+      "address": "0x37dE261cd79248dFB77aA4fFE5885c879E2682aB",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 24,
+      "address": "0x276ce7b098747FB123a57C4500415F2528265287",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 25,
+      "address": "0xec4C26a0E767627ea58B0aa67b262737b6200A19",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 26,
+      "address": "0x4c392eC7E7114539E53Beb66ad4279e830D44B80",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 27,
+      "address": "0xA15699636B0C97E5C93b2C53469Ad8630DA38a65",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 28,
+      "address": "0x7D0EF73883aE24855A01Fd19b73E904648d1e2BA",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 29,
+      "address": "0xFF52e83f722a972da8e94f9CE695601828f70f6A",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 30,
+      "address": "0xE050a948b9004bc1A182049998C67EB1E6F36f98",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 31,
+      "address": "0x0D80E14F7F3Dc188c98A9125C84a5329B44FaaaA",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 32,
+      "address": "0x8CAf9676D4F9327c9daDdb0bb9f327bAA928DE46",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 33,
+      "address": "0x1f1cbfc34FAaF745132Ac09A8D670a0438C7fdf1",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 34,
+      "address": "0x39132BE8BC0D209D4bff4509CDe45Aad24F5f0dB",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 35,
+      "address": "0x0c290D5906080639Ebc931919a69F88D24861fda",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 36,
+      "address": "0x1366F2Ff604f0CB27AAb6b70C34F97A2bEBBcBCb",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 37,
+      "address": "0xf982B3f32A6bc6525bC85991461DDBE07f82F373",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 38,
+      "address": "0xE85D6F33A99f886809DF6729754a4393EEb30154",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 39,
+      "address": "0x2B3D0b40d0edd3a54F2939450b67077222425C32",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 40,
+      "address": "0xfBE22d8c775c984C39d31dFaA27B0b9b9977D1d2",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 41,
+      "address": "0xAC1f6e63F9513E7d2140a18F1ef9fdf6f3029617",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 42,
+      "address": "0xFe28AB313F9902FF121B27068d6Cbda11A8dDE16",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 43,
+      "address": "0xd55315e820F4Ee5a81419E892e7E20204Cb889C6",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 44,
+      "address": "0xFDd08D3957da889E2e1BfFD4d35807505cB95D57",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 45,
+      "address": "0x00d3D18Bb741d6DD1D8551aD2594b570D166DB58",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 46,
+      "address": "0x1D1c513c77475a13119049e83bd884FA60C36FB3",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 47,
+      "address": "0x942af297B12e147141eEAB62f2F5DBbD0922f22E",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 48,
+      "address": "0xb147a4B24631B21a5F0d8fBAAa2959eDe70F5194",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 49,
+      "address": "0x777FB96b316106B4429f34b8b62FE862e8D559C7",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 50,
+      "address": "0xeC320D4BcAf049eDC6eBB5C05D6AD1957647e674",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 51,
+      "address": "0xFF6bBbF4bb515027f5fba5f190B7a3BbC4Dab884",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 52,
+      "address": "0xfdCf0ac129D746e528b31aF25F6C36f7b971a8eF",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 53,
+      "address": "0x6FfBAeeb5cAEE76c5ba7C23B6122D766444a5Bba",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 54,
+      "address": "0x68Ec9ca7ca81Dd9068aBc9fc4577dB2B34Ee04aB",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 55,
+      "address": "0xD717899cEbA611394eaeF659C8D2e9623632a4f2",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 56,
+      "address": "0x63633A63f9f07541E837d5E4009f0Bfd1FAf2D51",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 57,
+      "address": "0x8166801087D6beAF0E3C96edaDABeF083D1dC505",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 58,
+      "address": "0x320d01c5258457f86C84d3a4835b022F1c5E42e5",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 59,
+      "address": "0x7fd951EAE3B0871A4CBb723a0592E2F7e32d993E",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 60,
+      "address": "0x5c72F1A4Dc89Dff695C79F3fb82139870EeE75e1",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 61,
+      "address": "0x55B01bdb0e465D61ee33Fb9D1239d375307039aB",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 62,
+      "address": "0xfbDa12E4f0E2bBa652E89f55fC04bF0AA123457a",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 63,
+      "address": "0xb68Ff5216CeB8ea4CA31a18867D872A34F02E77F",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 64,
+      "address": "0xc69689687dB7deB86C7ACDAD4101f2Db9C3f60Bf",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 65,
+      "address": "0xd8bC948CbC5040cB7366eFA1d9CA6ec983b6627f",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 66,
+      "address": "0xCBb7Ab9D13Ac102EA2C607e43BeD0cF796890486",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 67,
+      "address": "0x4254D335b2aDf54952aA2c9cB372E4a9DCfd9636",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 68,
+      "address": "0x3cdbF026D6621b90e9f17dEa9Ec1Bc4a46B5F3b1",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 69,
+      "address": "0xE2A77783Cfa58E3375ed8630f4f6cd8343705b49",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 70,
+      "address": "0x9fEDC5da89A4B9CA7717E0b0A314D579AE0EC681",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 71,
+      "address": "0x3D756e9d5614CF4f7f451319EcDA700456c8D798",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 72,
+      "address": "0x41bFdEc368213F51A9530e6642b782B7Be604f8c",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 73,
+      "address": "0x4265f58E7EA48cfC91e12ccde6F108808c388d96",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 74,
+      "address": "0x8B64C04FCeb4EE27EB82E4565578b47225D0E418",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 75,
+      "address": "0xd7Bf9a5D92C103ADFf15b24569cAAfE202C82749",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 76,
+      "address": "0xF6f41e7E5346722ea5c0827033E2a7e0d8c32cAa",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 77,
+      "address": "0xeF87D03a640187eCd5C2Fa23a9EbA5242acCcB1B",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 78,
+      "address": "0xE6a88601cF462C89776e880343e0a0a3C5717c50",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 79,
+      "address": "0x954e67a6aCE87D087aD2F245CCACB7e8D39C1A84",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 80,
+      "address": "0x8c84C0A2F3572f45Da906FC85D80845D5143bbfC",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 81,
+      "address": "0xe55D370A73FEE610cBF3aA888243A1A28fc06173",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 82,
+      "address": "0x9BcC3f0047b6C6CbedEDBE9f86a1601d21892a2F",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 83,
+      "address": "0x5a3A2E4c737Df91Bc4B01E5A99F8ed8e0FB2c633",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 84,
+      "address": "0x6024B136C6C60144aeD7e84b50b7466630c59674",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 85,
+      "address": "0x01061A031c89F2f724e52575a25b7787C150bD77",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 86,
+      "address": "0x252e44FCb2f4149300A7FC8CFbD8054999B426C5",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 87,
+      "address": "0xCEeb584EaC0ee3CE494616e7B082094395661Fd8",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 88,
+      "address": "0x7B11C7091FcD38A8AE16d533f5c239831ea9C31a",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 89,
+      "address": "0x1462D2c3a0926f9b407CfbfCC41cc849F2CD74Cb",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 90,
+      "address": "0x8F9EE7a9A70404F0f13B4c7AC96e13F63467Da9B",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 91,
+      "address": "0x778fCA9096a682F702985704d3931B651e5F9A0f",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 92,
+      "address": "0x9ca26b5123De03D0ED9a1Ef2AE199F4e596D4CaA",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 93,
+      "address": "0x784DDE18e64A56A78327f3b6Ae70e7aCfd48e4E3",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 94,
+      "address": "0x217146DbFf073Ab25c8a50d2b5371649491D037e",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 95,
+      "address": "0x07902036a32Acd40a99554afEC9A3f4bd3062A51",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 96,
+      "address": "0xBd14F0332195a6A65E65e1bbA1009b81b3487C15",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 97,
+      "address": "0xFa5441350B953e3272099a63f25fF5338dd79CE6",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 98,
+      "address": "0x754e4379d2fb44Df8D64231Ba1De589650e528E5",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    },
+    {
+      "index": 99,
+      "address": "0xe40508Da88489739f1A2FEbF273de23716eE5677",
+      "xautBeforeFirst": "0",
+      "xautBeforeExisting": "241"
+    }
+  ]
+}
