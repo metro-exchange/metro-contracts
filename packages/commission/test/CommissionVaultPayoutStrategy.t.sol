@@ -27,9 +27,9 @@ contract CommissionVaultPayoutStrategyTest is Test {
     bytes32 constant AUTO_SWAP = keccak256("autoSwap");
     uint256 constant MIN_CLAIM = 50e6;
 
-    string constant CODE_A = "CODE_A"; // 100e6
-    string constant CODE_B = "CODE_B"; // 60e6
-    string constant CODE_C = "CODE_C"; // 30e6, below MIN_CLAIM
+    string constant CODE_A = "CODE_A";
+    string constant CODE_B = "CODE_B";
+    string constant CODE_C = "CODE_C";
     bytes32 constant CODE_A_HASH = keccak256("CODE_A");
     bytes32 constant CODE_B_HASH = keccak256("CODE_B");
 
@@ -303,11 +303,11 @@ contract CommissionVaultPayoutStrategyTest is Test {
         vault.claimConverted(CODE_A, 1, block.timestamp + 1, "route");
 
         string[] memory codes = new string[](5);
-        codes[0] = CODE_A; // zero owed
-        codes[1] = CODE_B; // other strategy
-        codes[2] = CODE_C; // below minimum
+        codes[0] = CODE_A;
+        codes[1] = CODE_B;
+        codes[2] = CODE_C;
         codes[3] = "UNBOUND";
-        codes[4] = "UNBOUND_PENDING"; // pending payout change
+        codes[4] = "UNBOUND_PENDING";
         _convert(SWAP_METRO, codes);
 
         assertEq(adapter.calls(), 1);

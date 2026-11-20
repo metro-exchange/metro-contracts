@@ -11,6 +11,12 @@ import {IXMetroDeFiAdapterAdmin} from "../../script/DeFiAdapterScriptBase.sol";
 import {CommissionVault} from "../fork-v2/mainnet/vendor/CommissionVault.sol";
 import {ERC20Mintable} from "../mocks/ERC20Mintable.sol";
 
+contract DeployCommissionDeFiAdapterHarness is DeployCommissionDeFiAdapter {
+    function deploy(address vault, address xMetro, address xMetroAdapter) external returns (address) {
+        return _deploy(vault, xMetro, xMetroAdapter);
+    }
+}
+
 contract DeployCommissionDeFiAdapterTest is Test {
     function test_deploy_bindsAdapterToVaultAndEnablesXMetroPayouts() public {
         ERC20Mintable metro = new ERC20Mintable("Metro", "METRO", 18);
@@ -53,7 +59,8 @@ contract DeployCommissionDeFiAdapterTest is Test {
             1 hours
         );
 
-        address proxy = new DeployCommissionDeFiAdapter().deploy(address(vault), address(core), address(xMetroAdapter));
+        address proxy =
+            new DeployCommissionDeFiAdapterHarness().deploy(address(vault), address(core), address(xMetroAdapter));
 
         bytes32 swapMetroId = keccak256(
             abi.encode(

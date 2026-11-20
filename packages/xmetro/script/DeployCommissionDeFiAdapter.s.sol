@@ -20,12 +20,12 @@ interface IXMetroToken {
 contract DeployCommissionDeFiAdapter is DeFiAdapterScriptBase {
     function run() external returns (address) {
         return
-            deploy(
+            _deploy(
                 vm.envAddress("COMMISSION_VAULT"), vm.envAddress("XMETRO"), vm.envAddress("XMETRO_DEFI_ADAPTER_PROXY")
             );
     }
 
-    function deploy(address vaultAddress, address xMetro, address xMetroAdapter) public returns (address proxy) {
+    function _deploy(address vaultAddress, address xMetro, address xMetroAdapter) internal returns (address proxy) {
         ICommissionVaultAdapterAdmin vault = ICommissionVaultAdapterAdmin(vaultAddress);
         address usdc = vault.usdc();
         address metro = IXMetroToken(xMetro).METRO();
