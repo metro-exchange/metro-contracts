@@ -38,10 +38,10 @@ contract MetroDistributorV1 is MetroDistributorBase {
         return (TREASURY_BPS, POL_BUYBACK_BPS + POL_LIQUIDITY_BPS);
     }
 
-    function _routeThirdBucket(uint256 amount) internal override {
+    function _routeThirdBucket(uint256 amount, uint256 remainder) internal override {
         address vault = polVault;
         rewardToken.safeTransfer(vault, amount);
-        uint256 buybackAmount = Math.mulDiv(amount, POL_BUYBACK_BPS, POL_BUYBACK_BPS + POL_LIQUIDITY_BPS);
+        uint256 buybackAmount = Math.mulDiv(remainder, POL_BUYBACK_BPS, BPS_DENOMINATOR);
         emit PolVaultFunded(vault, amount);
         emit PolBuybackAllocated(buybackAmount);
         emit PolLiquidityAllocated(amount - buybackAmount);

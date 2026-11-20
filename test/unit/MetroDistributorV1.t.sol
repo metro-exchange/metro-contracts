@@ -68,7 +68,7 @@ contract MetroDistributorV1Test is Test {
         assertEq(
             distributor.STAKERS_BPS() + distributor.TREASURY_BPS() + distributor.POL_BUYBACK_BPS()
                 + distributor.POL_LIQUIDITY_BPS(),
-            distributor.BPS_DENOMINATOR()
+            10_000
         );
 
         vm.expectRevert(MetroDistributorBase.ZeroXMetro.selector);
@@ -209,6 +209,18 @@ contract MetroDistributorV1Test is Test {
         assertEq(xmetro.claimable(staker), 450e6);
         assertEq(usdc.balanceOf(address(distributor)), 0);
         assertEq(usdc.allowance(address(distributor), address(xmetro)), 0);
+    }
+
+    function test_PolEarmarksAreSharesOfPostCommissionRemainder() public {
+        usdc.mint(address(distributor), 10);
+
+        vm.expectEmit(true, false, false, true, address(distributor));
+        emit MetroDistributorV1.PolVaultFunded(polVault, 2);
+        vm.expectEmit(false, false, false, true, address(distributor));
+        emit MetroDistributorV1.PolBuybackAllocated(1);
+        vm.expectEmit(false, false, false, true, address(distributor));
+        emit MetroDistributorV1.PolLiquidityAllocated(1);
+        _distribute(0);
     }
 
     function test_State_ForwarderUnsetRoutesExistingBalance() public {

@@ -6,9 +6,9 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 contract MockRateLimitedForwarder {
     IERC20 public immutable token;
-    address public recipient;
-    bool public paused;
-    uint256 public releasable = type(uint256).max;
+    address private recipient;
+    bool private paused;
+    uint256 private releasable = type(uint256).max;
 
     constructor(address token_, address recipient_) {
         token = IERC20(token_);

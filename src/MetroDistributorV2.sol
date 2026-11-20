@@ -12,9 +12,9 @@ contract MetroDistributorV2 is MetroDistributorBase {
 
     using SafeERC20 for IERC20;
 
-    address public constant BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
+    address private constant BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
 
-    IERC20 public immutable metro;
+    IERC20 private immutable metro;
 
     uint16 public stakersBps = 5_500;
     uint16 public treasuryBps = 2_500;
@@ -40,7 +40,7 @@ contract MetroDistributorV2 is MetroDistributorBase {
         return (treasuryBps, buybackBps);
     }
 
-    function _routeThirdBucket(uint256 amount) internal override {
+    function _routeThirdBucket(uint256 amount, uint256) internal override {
         uint256 metroOut = _buyMetro(amount);
         emit BuybackExecuted(amount, metroOut);
         metro.safeTransfer(BURN_ADDRESS, metroOut);

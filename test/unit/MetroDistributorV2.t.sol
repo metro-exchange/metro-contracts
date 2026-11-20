@@ -49,8 +49,6 @@ contract MetroDistributorV2Test is Test {
         assertEq(distributor.stakersBps(), 5_500);
         assertEq(distributor.treasuryBps(), 2_500);
         assertEq(distributor.buybackBps(), 2_000);
-        assertEq(address(distributor.metro()), address(metro));
-        assertEq(distributor.BURN_ADDRESS(), DEAD);
         assertEq(distributor.treasury(), treasury);
     }
 

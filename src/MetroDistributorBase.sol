@@ -47,7 +47,7 @@ abstract contract MetroDistributorBase is Ownable2Step, ReentrancyGuardTransient
 
     using SafeERC20 for IERC20;
 
-    uint256 public constant BPS_DENOMINATOR = 10_000;
+    uint256 internal constant BPS_DENOMINATOR = 10_000;
 
     IxMETRO public immutable xMETRO;
     IERC20 public immutable rewardToken;
@@ -161,7 +161,7 @@ abstract contract MetroDistributorBase is Ownable2Step, ReentrancyGuardTransient
             emit TreasuryPaid(recipient, treasuryAmount);
         }
 
-        if (thirdBucketAmount != 0) _routeThirdBucket(thirdBucketAmount);
+        if (thirdBucketAmount != 0) _routeThirdBucket(thirdBucketAmount, remainder);
 
         uint64 timestamp = uint64(block.timestamp);
         if (stakerAmount != 0) {
@@ -178,7 +178,7 @@ abstract contract MetroDistributorBase is Ownable2Step, ReentrancyGuardTransient
 
     function _bucketBps() internal view virtual returns (uint256 treasuryBps, uint256 thirdBucketBps);
 
-    function _routeThirdBucket(uint256 amount) internal virtual;
+    function _routeThirdBucket(uint256 amount, uint256 remainder) internal virtual;
 
     function _topUpCommission(uint256 grossAmount) private returns (uint256 commissionAmount) {
         uint16 splitBps = maxCommissionSplitBps;

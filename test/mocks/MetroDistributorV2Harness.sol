@@ -8,8 +8,8 @@ import {MetroDistributorV2} from "../../src/MetroDistributorV2.sol";
 contract MetroDistributorV2Harness is MetroDistributorV2 {
     using SafeERC20 for IERC20;
 
-    address public immutable swapSink;
-    uint256 public metroOut;
+    address private immutable swapSink;
+    uint256 private metroOut;
 
     constructor(address xMetro_, address treasury_, address owner_, address swapSink_)
         MetroDistributorV2(xMetro_, treasury_, owner_)
