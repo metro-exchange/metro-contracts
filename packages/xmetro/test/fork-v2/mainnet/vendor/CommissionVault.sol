@@ -352,11 +352,8 @@ contract CommissionVault is ICommissionVault, ReentrancyGuard {
     /// @inheritdoc ICommissionVault
     function payoutStrategy(bytes32 codeHash) public view returns (bytes32) {
         bytes32 forced = payoutStrategyOverride[codeHash];
-        if (payoutStrategyAllowed[forced]) {
-            return forced;
-        }
-        bytes32 preferred = payoutStrategyPreference[codeHash];
-        return payoutStrategyAllowed[preferred] ? preferred : bytes32(0);
+        bytes32 selected = forced != bytes32(0) ? forced : payoutStrategyPreference[codeHash];
+        return payoutStrategyAllowed[selected] ? selected : bytes32(0);
     }
 
     /// @inheritdoc ICommissionVault
@@ -675,23 +672,26 @@ contract CommissionVault is ICommissionVault, ReentrancyGuard {
     ) private {
         ICommissionPayoutAdapter.StrategyInfo memory info =
             ICommissionPayoutAdapter(deFiAdapter).strategyInfo(strategyId);
-        if (info.kind == ICommissionPayoutAdapter.StrategyKind.SwapMetro) {
-            IERC20(info.outputToken).forceApprove(xMetro, amountOut);
-            uint256 shares = IXMetroStaking(xMetro).stake(amountOut);
-
-            uint256 largest = 0;
-            for (uint256 i = 1; i < amounts.length; i++) {
-                if (amounts[i] > amounts[largest]) largest = i;
-            }
-            uint256 distributed = 0;
-            for (uint256 i = 0; i < payouts.length; i++) {
-                if (i == largest) continue;
-                uint256 share = Math.mulDiv(shares, amounts[i], totalIn);
-                distributed += share;
-                IERC20(xMetro).safeTransfer(payouts[i], share);
-            }
-            IERC20(xMetro).safeTransfer(payouts[largest], shares - distributed);
+        if (info.kind != ICommissionPayoutAdapter.StrategyKind.SwapMetro) {
+            emit CommissionsConverted(strategyId, info.outputToken, payouts.length, totalIn, amountOut);
+            return;
         }
-        emit CommissionsConverted(strategyId, info.outputToken, payouts.length, totalIn, amountOut);
+
+        IERC20(info.outputToken).forceApprove(xMetro, amountOut);
+        uint256 shares = IXMetroStaking(xMetro).stake(amountOut);
+
+        uint256 largest = 0;
+        for (uint256 i = 1; i < amounts.length; i++) {
+            if (amounts[i] > amounts[largest]) largest = i;
+        }
+        uint256 distributed = 0;
+        for (uint256 i = 0; i < payouts.length; i++) {
+            if (i == largest) continue;
+            uint256 share = Math.mulDiv(shares, amounts[i], totalIn);
+            distributed += share;
+            IERC20(xMetro).safeTransfer(payouts[i], share);
+        }
+        IERC20(xMetro).safeTransfer(payouts[largest], shares - distributed);
+        emit CommissionsConverted(strategyId, xMetro, payouts.length, totalIn, shares);
     }
 }

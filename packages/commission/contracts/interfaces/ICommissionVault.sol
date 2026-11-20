@@ -145,6 +145,6 @@ interface ICommissionVault {
     event PayoutStrategySet(bytes32 indexed codeHash, bytes32 strategyId);
     event PayoutStrategyOverridden(bytes32 indexed codeHash, bytes32 strategyId);
     event CommissionsConverted(
-        bytes32 indexed strategyId, address outputToken, uint256 codeCount, uint256 usdcIn, uint256 amountOut
+        bytes32 indexed strategyId, address deliveredToken, uint256 codeCount, uint256 usdcIn, uint256 amountDelivered
     );
 }

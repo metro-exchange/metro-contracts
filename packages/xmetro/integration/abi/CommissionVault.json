@@ -1157,7 +1157,7 @@
         "internalType": "bytes32"
       },
       {
-        "name": "outputToken",
+        "name": "deliveredToken",
         "type": "address",
         "indexed": false,
         "internalType": "address"
@@ -1175,7 +1175,7 @@
         "internalType": "uint256"
       },
       {
-        "name": "amountOut",
+        "name": "amountDelivered",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"

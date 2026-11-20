@@ -205,12 +205,20 @@ contract CommissionVaultPayoutStrategyTest is Test {
         assertEq(vault.payoutStrategy(CODE_A_HASH), AUTO_SWAP);
     }
 
-    function test_dewhitelist_fallsBackToPreferenceThenUsdc() public {
+    function test_dewhitelist_overrideFallsBackToUsdcNotPreference() public {
         _prefer(affiliate1, CODE_A, AUTO_SWAP);
         vault.ownerSetPayoutStrategy(CODE_A, SWAP_METRO);
 
         vault.setPayoutStrategyAllowed(SWAP_METRO, false);
-        assertEq(vault.payoutStrategy(CODE_A_HASH), AUTO_SWAP);
+        assertEq(vault.payoutStrategy(CODE_A_HASH), bytes32(0));
+
+        vm.prank(affiliate1);
+        vault.claim(CODE_A);
+        assertEq(usdc.balanceOf(affiliate1), 100e6);
+    }
+
+    function test_dewhitelist_preferenceFallsBackToUsdc() public {
+        _prefer(affiliate1, CODE_A, AUTO_SWAP);
 
         vault.setPayoutStrategyAllowed(AUTO_SWAP, false);
         assertEq(vault.payoutStrategy(CODE_A_HASH), bytes32(0));
@@ -265,7 +273,7 @@ contract CommissionVaultPayoutStrategyTest is Test {
         vm.expectEmit(true, true, false, true);
         emit ICommissionVault.CommissionClaimed(CODE_B_HASH, affiliate2, 60e6, 60e6);
         vm.expectEmit(true, false, false, true);
-        emit ICommissionVault.CommissionsConverted(SWAP_METRO, address(metro), 2, 160e6, 160e18);
+        emit ICommissionVault.CommissionsConverted(SWAP_METRO, address(xMetro), 2, 160e6, 160e18);
         _convert(SWAP_METRO, _codes());
 
         assertEq(xMetro.balanceOf(affiliate1), 100e18);
@@ -428,7 +436,7 @@ contract CommissionVaultPayoutStrategyTest is Test {
         vm.expectEmit(true, true, false, true);
         emit ICommissionVault.CommissionClaimed(CODE_A_HASH, affiliate1, 100e6, 100e6);
         vm.expectEmit(true, false, false, true);
-        emit ICommissionVault.CommissionsConverted(SWAP_METRO, address(metro), 1, 100e6, 100e18);
+        emit ICommissionVault.CommissionsConverted(SWAP_METRO, address(xMetro), 1, 100e6, 100e18);
         vm.prank(affiliate1);
         vault.claimConverted(CODE_A, 1, block.timestamp + 1, "route");
 
