@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 interface ICommissionVault {
     struct PendingPayoutChange {
         address newPayout;
@@ -24,6 +26,13 @@ interface ICommissionVault {
     function payoutTimelock() external view returns (uint256);
     function requiredReserve() external view returns (uint256);
     function requiredTopUp() external view returns (uint256);
+    function usdc() external view returns (IERC20);
+    function deFiAdapter() external view returns (address);
+    function xMetro() external view returns (address);
+    function payoutStrategyAllowed(bytes32 strategyId) external view returns (bool);
+    function payoutStrategyPreference(bytes32 codeHash) external view returns (bytes32);
+    function payoutStrategyOverride(bytes32 codeHash) external view returns (bytes32);
+    function payoutStrategy(bytes32 codeHash) external view returns (bytes32);
 
     function getClaimable(string calldata code) external view returns (uint256);
     function getEntitlement(string calldata code)
@@ -38,6 +47,13 @@ interface ICommissionVault {
         uint256[] calldata cumulativeAmounts
     ) external;
     function processIncoming() external;
+    function convertEligible(
+        bytes32 strategyId,
+        string[] calldata codes,
+        uint256 minAmountOut,
+        uint256 deadline,
+        bytes calldata swapData
+    ) external;
 
     // ── Anyone (after timelock) ────────────────────────────────
     function activateSettlement() external;
@@ -50,6 +66,9 @@ interface ICommissionVault {
 
     // ── Affiliate: self-service payout change ──────────────────
     function changePayoutAddress(string calldata code, address newPayout) external;
+    function setPayoutStrategy(string calldata code, bytes32 strategyId) external;
+    function claimConverted(string calldata code, uint256 minAmountOut, uint256 deadline, bytes calldata swapData)
+        external;
 
     // ── Operator / Guardian / Owner ────────────────────────────
     function distributeEligible(string[] calldata codes) external;
@@ -66,6 +85,9 @@ interface ICommissionVault {
     function setOperator(address newOperator) external;
     function setGuardian(address newGuardian) external;
     function setDistributor(address newDistributor) external;
+    function setDeFiAdapter(address adapter, address xMetro_) external;
+    function setPayoutStrategyAllowed(bytes32 strategyId, bool allowed) external;
+    function ownerSetPayoutStrategy(string calldata code, bytes32 strategyId) external;
     function setMinClaimAmount(uint256 newMinClaimAmount) external;
     function setMaxCodeDelta(uint256 newMaxCodeDelta) external;
     function setMaxBatchDelta(uint256 newMaxBatchDelta) external;
@@ -117,4 +139,12 @@ interface ICommissionVault {
     // codes not paid (unbound, pending payout change, zero owed, or below
     // minClaimAmount).
     event EligibleDistribution(address indexed caller, uint256 paidCount, uint256 totalPaid, uint256 skippedCount);
+
+    event DeFiAdapterSet(address adapter, address xMetro);
+    event PayoutStrategyAllowed(bytes32 indexed strategyId, bool allowed);
+    event PayoutStrategySet(bytes32 indexed codeHash, bytes32 strategyId);
+    event PayoutStrategyOverridden(bytes32 indexed codeHash, bytes32 strategyId);
+    event CommissionsConverted(
+        bytes32 indexed strategyId, address deliveredToken, uint256 codeCount, uint256 usdcIn, uint256 amountDelivered
+    );
 }

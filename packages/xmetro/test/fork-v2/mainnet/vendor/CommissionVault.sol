@@ -4,7 +4,9 @@ pragma solidity ^0.8.26;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ICommissionVault} from "./interfaces/ICommissionVault.sol";
+import {ICommissionPayoutAdapter, IXMetroStaking} from "./interfaces/ICommissionPayoutAdapter.sol";
 
 contract CommissionVault is ICommissionVault, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -52,6 +54,12 @@ contract CommissionVault is ICommissionVault, ReentrancyGuard {
 
     // Migration
     bool public migrationFinalized;
+
+    address public deFiAdapter;
+    address public xMetro;
+    mapping(bytes32 => bool) public payoutStrategyAllowed;
+    mapping(bytes32 => bytes32) public payoutStrategyPreference;
+    mapping(bytes32 => bytes32) public payoutStrategyOverride;
 
     // ── Modifiers ─────────────────────────────────────────────
 
@@ -166,6 +174,28 @@ contract CommissionVault is ICommissionVault, ReentrancyGuard {
         emit IncomingProcessed(mustRetain, surplus);
     }
 
+    /// @inheritdoc ICommissionVault
+    function convertEligible(
+        bytes32 strategyId,
+        string[] calldata codes,
+        uint256 minAmountOut,
+        uint256 deadline,
+        bytes calldata swapData
+    ) external onlyOperator nonReentrant whenNotPaused {
+        require(strategyId != bytes32(0), "Zero strategy");
+        (address[] memory payouts, uint256[] memory amounts, uint256 totalIn) =
+            _settleEligible(codes, strategyId, minClaimAmount);
+        if (totalIn == 0) {
+            return;
+        }
+
+        ICommissionPayoutAdapter.BatchExecution memory request = ICommissionPayoutAdapter.BatchExecution(
+            strategyId, payouts, amounts, minAmountOut, new uint256[](0), deadline, swapData
+        );
+        uint256 amountOut = _fundAdapter(totalIn).executeBatch(request).amountOut;
+        _deliver(strategyId, payouts, amounts, totalIn, amountOut);
+    }
+
     // ── Public functions ──────────────────────────────────────
 
     /// @inheritdoc ICommissionVault
@@ -206,25 +236,43 @@ contract CommissionVault is ICommissionVault, ReentrancyGuard {
     /// @inheritdoc ICommissionVault
     function claim(string calldata code) external whenNotPaused nonReentrant {
         bytes32 codeHash = keccak256(bytes(code));
+        require(payoutStrategy(codeHash) == bytes32(0), "Paid in strategy");
+        usdc.safeTransfer(msg.sender, _settleOwnClaim(codeHash));
+    }
 
-        require(msg.sender == payoutAddress[codeHash], "Wrong sender");
+    /// @inheritdoc ICommissionVault
+    function claimConverted(string calldata code, uint256 minAmountOut, uint256 deadline, bytes calldata swapData)
+        external
+        whenNotPaused
+        nonReentrant
+    {
+        bytes32 codeHash = keccak256(bytes(code));
+        bytes32 strategyId = payoutStrategy(codeHash);
+        require(strategyId != bytes32(0), "Paid in USDC");
+        uint256 owed = _settleOwnClaim(codeHash);
 
-        uint256 cumulative = cumulativeAmount[codeHash];
-        uint256 alreadyClaimed = claimed[codeHash];
-        require(cumulative > alreadyClaimed, "Nothing to claim");
+        ICommissionPayoutAdapter.ManualExecution memory request =
+            ICommissionPayoutAdapter.ManualExecution(strategyId, msg.sender, owed, minAmountOut, deadline, swapData);
+        uint256 amountOut = _fundAdapter(owed).execute(request).amountOut;
 
-        uint256 claimable = cumulative - alreadyClaimed;
-        require(claimable >= minClaimAmount, "Below minimum claim");
+        address[] memory payouts = new address[](1);
+        payouts[0] = msg.sender;
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = owed;
+        _deliver(strategyId, payouts, amounts, owed, amountOut);
+    }
 
-        uint256 balance = usdc.balanceOf(address(this));
-        require(claimable <= balance, "Vault underfunded");
+    /// @inheritdoc ICommissionVault
+    function setPayoutStrategy(string calldata code, bytes32 strategyId) external whenNotPaused {
+        bytes32 codeHash = keccak256(bytes(code));
+        address current = payoutAddress[codeHash];
+        require(current != address(0), "Code not on-chain yet");
+        require(msg.sender == current, "Wrong sender");
+        _requireSelectable(strategyId);
 
-        claimed[codeHash] = cumulative;
-        totalClaimed += claimable;
+        payoutStrategyPreference[codeHash] = strategyId;
 
-        usdc.safeTransfer(msg.sender, claimable);
-
-        emit CommissionClaimed(codeHash, msg.sender, claimable, claimed[codeHash]);
+        emit PayoutStrategySet(codeHash, strategyId);
     }
 
     // ── Payout address changes ──
@@ -300,6 +348,13 @@ contract CommissionVault is ICommissionVault, ReentrancyGuard {
     }
 
     // ── View functions ────────────────────────────────────────
+
+    /// @inheritdoc ICommissionVault
+    function payoutStrategy(bytes32 codeHash) public view returns (bytes32) {
+        bytes32 forced = payoutStrategyOverride[codeHash];
+        bytes32 selected = forced != bytes32(0) ? forced : payoutStrategyPreference[codeHash];
+        return payoutStrategyAllowed[selected] ? selected : bytes32(0);
+    }
 
     /// @inheritdoc ICommissionVault
     function entitlements(bytes32 codeHash) external view returns (address, uint256) {
@@ -392,100 +447,15 @@ contract CommissionVault is ICommissionVault, ReentrancyGuard {
 
     /// @inheritdoc ICommissionVault
     function ownerDistribute(string[] calldata codes) external onlyOwner nonReentrant whenNotPaused {
-        // Push each code's owed balance to its ACTIVE payout address — the same
-        // amount an affiliate would `claim`, paid to the same address. Reuses the
-        // CommissionClaimed event so the vault-events indexer records each as a claim.
-        // The contract cannot enumerate codes (mappings aren't iterable), so the owner
-        // supplies the list in batches; for a migration, page over all codes until
-        // totalClaimed == totalOwed, then rescueToken the dust.
-        // Gated by whenNotPaused (a migration is a deliberate, unpaused op — the
-        // guardian's pause must still freeze all outbound USDC). Codes with a pending
-        // payout change are SKIPPED: that address is mid-recovery (likely a
-        // key-compromise), and force-pushing to the old address would override the
-        // timelock's whole purpose. Resolve pending changes, then re-run the sweep.
-        uint256 len = codes.length;
-        require(len > 0, "Empty batch");
-        require(len <= MAX_BATCH_SIZE, "Batch too large");
-
-        uint256 totalPaid = 0;
-        uint256 paidCount = 0;
-
-        for (uint256 i = 0; i < len; i++) {
-            bytes32 codeHash = keccak256(bytes(codes[i]));
-            address payout = payoutAddress[codeHash];
-            if (payout == address(0)) {
-                continue; // never bound on-chain
-            }
-            if (pendingPayoutChange[codeHash].effectiveAt != 0) {
-                continue; // a payout change is in flight — never override its timelock
-            }
-
-            uint256 owed = cumulativeAmount[codeHash] - claimed[codeHash];
-            if (owed == 0) {
-                continue; // already fully paid
-            }
-
-            claimed[codeHash] = cumulativeAmount[codeHash];
-            totalPaid += owed;
-            paidCount++;
-
-            usdc.safeTransfer(payout, owed);
-
-            emit CommissionClaimed(codeHash, payout, owed, claimed[codeHash]);
-        }
-
-        totalClaimed += totalPaid;
-
+        (uint256 paidCount, uint256 totalPaid) = _payEligibleUsdc(codes, 0);
         emit CommissionsDistributed(paidCount, totalPaid);
     }
 
     /// @inheritdoc ICommissionVault
     function distributeEligible(string[] calldata codes) external nonReentrant whenNotPaused {
-        // Backend-triggered threshold payout (ENG-2384): forces an EARLY payout of
-        // exactly what each affiliate could already claim, to the code's own
-        // registered payout address — never a redirection. Auth is deliberately
-        // wider than ownerDistribute (routine op, not a one-shot migration): the
-        // operator runs it, guardian/owner are fallbacks. The extra power this
-        // hands the operator/guardian is bounded to accelerating a payout the
-        // affiliate could take themselves. Unlike ownerDistribute it respects
-        // minClaimAmount, so dust keeps accruing instead of burning gas.
         require(msg.sender == operator || msg.sender == guardian || msg.sender == owner, "Not authorized");
-
-        uint256 len = codes.length;
-        require(len > 0, "Empty batch");
-        require(len <= MAX_BATCH_SIZE, "Batch too large");
-
-        uint256 totalPaid = 0;
-        uint256 paidCount = 0;
-
-        for (uint256 i = 0; i < len; i++) {
-            bytes32 codeHash = keccak256(bytes(codes[i]));
-            address payout = payoutAddress[codeHash];
-            if (payout == address(0)) {
-                continue; // never bound on-chain
-            }
-            if (pendingPayoutChange[codeHash].effectiveAt != 0) {
-                continue; // a payout change is in flight — never override its timelock
-            }
-
-            uint256 owed = cumulativeAmount[codeHash] - claimed[codeHash];
-            // Explicit owed == 0 keeps the skip correct when minClaimAmount is 0.
-            if (owed == 0 || owed < minClaimAmount) {
-                continue; // nothing owed, or below the payout threshold
-            }
-
-            claimed[codeHash] = cumulativeAmount[codeHash];
-            totalPaid += owed;
-            paidCount++;
-
-            usdc.safeTransfer(payout, owed);
-
-            emit CommissionClaimed(codeHash, payout, owed, claimed[codeHash]);
-        }
-
-        totalClaimed += totalPaid;
-
-        emit EligibleDistribution(msg.sender, paidCount, totalPaid, len - paidCount);
+        (uint256 paidCount, uint256 totalPaid) = _payEligibleUsdc(codes, minClaimAmount);
+        emit EligibleDistribution(msg.sender, paidCount, totalPaid, codes.length - paidCount);
     }
 
     /// @inheritdoc ICommissionVault
@@ -507,6 +477,28 @@ contract CommissionVault is ICommissionVault, ReentrancyGuard {
         require(newDistributor != address(0), "Zero distributor");
         emit DistributorUpdated(distributor, newDistributor);
         distributor = newDistributor;
+    }
+
+    /// @inheritdoc ICommissionVault
+    function setDeFiAdapter(address adapter, address xMetro_) external onlyOwner {
+        deFiAdapter = adapter;
+        xMetro = xMetro_;
+        emit DeFiAdapterSet(adapter, xMetro_);
+    }
+
+    /// @inheritdoc ICommissionVault
+    function setPayoutStrategyAllowed(bytes32 strategyId, bool allowed) external onlyOwner {
+        require(strategyId != bytes32(0), "Zero strategy");
+        payoutStrategyAllowed[strategyId] = allowed;
+        emit PayoutStrategyAllowed(strategyId, allowed);
+    }
+
+    /// @inheritdoc ICommissionVault
+    function ownerSetPayoutStrategy(string calldata code, bytes32 strategyId) external onlyOwner {
+        _requireSelectable(strategyId);
+        bytes32 codeHash = keccak256(bytes(code));
+        payoutStrategyOverride[codeHash] = strategyId;
+        emit PayoutStrategyOverridden(codeHash, strategyId);
     }
 
     /// @inheritdoc ICommissionVault
@@ -596,4 +588,110 @@ contract CommissionVault is ICommissionVault, ReentrancyGuard {
         pendingOwner = address(0);
     }
 
+    // ── Internal ──────────────────────────────────────────────
+
+    function _requireSelectable(bytes32 strategyId) private view {
+        require(strategyId == bytes32(0) || payoutStrategyAllowed[strategyId], "Strategy not allowed");
+    }
+
+    function _markClaimed(bytes32 codeHash, address payout, uint256 owed) private {
+        uint256 cumulative = cumulativeAmount[codeHash];
+        claimed[codeHash] = cumulative;
+        totalClaimed += owed;
+        emit CommissionClaimed(codeHash, payout, owed, cumulative);
+    }
+
+    function _settleOwnClaim(bytes32 codeHash) private returns (uint256 owed) {
+        require(msg.sender == payoutAddress[codeHash], "Wrong sender");
+        owed = cumulativeAmount[codeHash] - claimed[codeHash];
+        require(owed > 0, "Nothing to claim");
+        require(owed >= minClaimAmount, "Below minimum claim");
+        require(owed <= usdc.balanceOf(address(this)), "Vault underfunded");
+        _markClaimed(codeHash, msg.sender, owed);
+    }
+
+    function _settleEligible(string[] calldata codes, bytes32 strategyId, uint256 minAmount)
+        private
+        returns (address[] memory payouts, uint256[] memory amounts, uint256 total)
+    {
+        uint256 len = codes.length;
+        require(len > 0, "Empty batch");
+        require(len <= MAX_BATCH_SIZE, "Batch too large");
+
+        payouts = new address[](len);
+        amounts = new uint256[](len);
+        uint256 count = 0;
+        for (uint256 i = 0; i < len; i++) {
+            bytes32 codeHash = keccak256(bytes(codes[i]));
+            address payout = payoutAddress[codeHash];
+            uint256 owed = cumulativeAmount[codeHash] - claimed[codeHash];
+            if (
+                payout == address(0) || pendingPayoutChange[codeHash].effectiveAt != 0
+                    || payoutStrategy(codeHash) != strategyId || owed == 0 || owed < minAmount
+            ) {
+                continue;
+            }
+            _markClaimed(codeHash, payout, owed);
+            payouts[count] = payout;
+            amounts[count] = owed;
+            total += owed;
+            count++;
+        }
+        assembly ("memory-safe") {
+            mstore(payouts, count)
+            mstore(amounts, count)
+        }
+    }
+
+    function _payEligibleUsdc(string[] calldata codes, uint256 minAmount)
+        private
+        returns (uint256 paidCount, uint256 totalPaid)
+    {
+        address[] memory payouts;
+        uint256[] memory amounts;
+        (payouts, amounts, totalPaid) = _settleEligible(codes, bytes32(0), minAmount);
+        paidCount = payouts.length;
+        for (uint256 i = 0; i < paidCount; i++) {
+            usdc.safeTransfer(payouts[i], amounts[i]);
+        }
+    }
+
+    function _fundAdapter(uint256 amount) private returns (ICommissionPayoutAdapter) {
+        require(deFiAdapter != address(0), "No adapter");
+        usdc.safeTransfer(deFiAdapter, amount);
+        return ICommissionPayoutAdapter(deFiAdapter);
+    }
+
+    // SwapMetro sends METRO to the adapter's core (this vault); every other kind pays the accounts directly.
+    function _deliver(
+        bytes32 strategyId,
+        address[] memory payouts,
+        uint256[] memory amounts,
+        uint256 totalIn,
+        uint256 amountOut
+    ) private {
+        ICommissionPayoutAdapter.StrategyInfo memory info =
+            ICommissionPayoutAdapter(deFiAdapter).strategyInfo(strategyId);
+        if (info.kind != ICommissionPayoutAdapter.StrategyKind.SwapMetro) {
+            emit CommissionsConverted(strategyId, info.outputToken, payouts.length, totalIn, amountOut);
+            return;
+        }
+
+        IERC20(info.outputToken).forceApprove(xMetro, amountOut);
+        uint256 shares = IXMetroStaking(xMetro).stake(amountOut);
+
+        uint256 largest = 0;
+        for (uint256 i = 1; i < amounts.length; i++) {
+            if (amounts[i] > amounts[largest]) largest = i;
+        }
+        uint256 distributed = 0;
+        for (uint256 i = 0; i < payouts.length; i++) {
+            if (i == largest) continue;
+            uint256 share = Math.mulDiv(shares, amounts[i], totalIn);
+            distributed += share;
+            IERC20(xMetro).safeTransfer(payouts[i], share);
+        }
+        IERC20(xMetro).safeTransfer(payouts[largest], shares - distributed);
+        emit CommissionsConverted(strategyId, xMetro, payouts.length, totalIn, shares);
+    }
 }
