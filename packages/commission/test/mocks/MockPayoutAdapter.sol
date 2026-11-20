@@ -14,8 +14,8 @@ contract MockToken is ERC20 {
 }
 
 contract FakeXMetro is ERC20 {
-    IERC20 public immutable metro;
-    bool public paused;
+    IERC20 private immutable metro;
+    bool private paused;
 
     constructor(IERC20 metro_) ERC20("xMETRO", "xMETRO") {
         metro = metro_;
@@ -41,17 +41,17 @@ contract FakeXMetro is ERC20 {
 contract MockPayoutAdapter is ICommissionPayoutAdapter {
     address constant SWAP_SINK = address(0xdead);
 
-    IERC20 public immutable usdc;
-    uint256 public rateNum = 1e12;
-    uint256 public rateDen = 1;
+    IERC20 private immutable usdc;
+    uint256 private rateNum = 1e12;
+    uint256 private rateDen = 1;
     mapping(bytes32 => StrategyInfo) internal _strategies;
 
     uint256 public calls;
     address[] internal _lastAccounts;
     uint256[] internal _lastAmounts;
 
-    address public reenterTarget;
-    bytes public reenterData;
+    address private reenterTarget;
+    bytes private reenterData;
 
     constructor(IERC20 usdc_) {
         usdc = usdc_;
