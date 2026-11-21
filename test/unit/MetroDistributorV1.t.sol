@@ -292,26 +292,40 @@ contract MetroDistributorV1Test is Test {
         assertEq(usdc.balanceOf(address(xmetro)), 50e6);
     }
 
-    function test_State_InvalidCommissionVaultRevertsWhileSplitEnabled() public {
+    function test_State_UnusableCommissionVaultIsSkippedAndDistributionContinues() public {
         _enableCommission(1_000, 10e6);
-        usdc.mint(address(distributor), 100e6);
 
         vault.setPaused(true);
-        vm.prank(operator);
-        vm.expectRevert(MetroDistributorBase.CommissionVaultPaused.selector);
-        distributor.distribute(0);
+        _assertCommissionSkipped(MetroDistributorBase.CommissionVaultPaused.selector);
         vault.setPaused(false);
 
         vault.setMigrationFinalized(false);
-        vm.prank(operator);
-        vm.expectRevert(MetroDistributorBase.CommissionVaultMigrationPending.selector);
-        distributor.distribute(0);
+        _assertCommissionSkipped(MetroDistributorBase.CommissionVaultMigrationPending.selector);
         vault.setMigrationFinalized(true);
 
         vault.setDistributor(outsider);
-        vm.prank(operator);
-        vm.expectRevert(MetroDistributorBase.CommissionDistributorMismatch.selector);
-        distributor.distribute(0);
+        _assertCommissionSkipped(MetroDistributorBase.CommissionDistributorMismatch.selector);
+        vault.setDistributor(address(distributor));
+
+        assertEq(usdc.balanceOf(address(vault)), 0);
+        assertEq(usdc.balanceOf(treasury), 75e6);
+        assertEq(usdc.balanceOf(polVault), 75e6);
+
+        usdc.mint(address(distributor), 100e6);
+        vm.expectEmit(true, false, false, true, address(distributor));
+        emit MetroDistributorBase.CommissionToppedUp(address(vault), 10e6);
+        _distribute(0);
+        assertEq(usdc.balanceOf(address(vault)), 10e6);
+    }
+
+    function _assertCommissionSkipped(bytes4 reason) internal {
+        usdc.mint(address(distributor), 100e6);
+        vm.expectEmit(true, false, false, true, address(distributor));
+        emit MetroDistributorBase.CommissionSkipped(address(vault), reason);
+        vm.expectEmit(true, false, false, true, address(distributor));
+        emit MetroDistributorBase.Distributed(operator, 100e6, 0, 50e6, 25e6, 25e6, uint64(block.timestamp));
+        _distribute(0);
+        assertEq(usdc.balanceOf(address(distributor)), 0);
     }
 
     function test_State_CommissionConsumesEverythingSkipsLegs() public {

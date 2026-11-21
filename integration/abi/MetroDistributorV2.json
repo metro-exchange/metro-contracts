@@ -384,6 +384,25 @@
   },
   {
     "type": "event",
+    "name": "CommissionSkipped",
+    "inputs": [
+      {
+        "name": "vault",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "reason",
+        "type": "bytes4",
+        "indexed": false,
+        "internalType": "bytes4"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "CommissionToppedUp",
     "inputs": [
       {

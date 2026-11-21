@@ -67,6 +67,7 @@ abstract contract MetroDistributorBase is Ownable2Step, ReentrancyGuardTransient
     event TokensRescued(address indexed token, address indexed to, uint256 amount);
     event ForwarderPulled(address indexed forwarder, uint256 amount);
     event CommissionToppedUp(address indexed vault, uint256 amount);
+    event CommissionSkipped(address indexed vault, bytes4 reason);
     event TreasuryPaid(address indexed treasury, uint256 amount);
     event RewardsDistributed(address indexed caller, uint256 amount, uint64 timestamp);
     event Distributed(
@@ -101,7 +102,7 @@ abstract contract MetroDistributorBase is Ownable2Step, ReentrancyGuardTransient
         if (vault == address(0)) {
             require(maxCommissionSplitBps == 0, CommissionSplitEnabled());
         } else {
-            _validateCommissionVault(vault);
+            _requireUsableCommissionVault(vault);
         }
 
         emit CommissionVaultUpdated(commissionVault, vault);
@@ -111,7 +112,7 @@ abstract contract MetroDistributorBase is Ownable2Step, ReentrancyGuardTransient
     function setMaxCommissionSplitBps(uint16 bps) external onlyOwner {
         require(bps <= BPS_DENOMINATOR, InvalidCommissionSplitBps());
         if (bps != 0) {
-            _validateCommissionVault(commissionVault);
+            _requireUsableCommissionVault(commissionVault);
         }
 
         emit MaxCommissionSplitBpsUpdated(maxCommissionSplitBps, bps);
@@ -185,7 +186,12 @@ abstract contract MetroDistributorBase is Ownable2Step, ReentrancyGuardTransient
         if (splitBps == 0) return 0;
 
         address vault = commissionVault;
-        _validateCommissionVault(vault);
+        bytes4 vaultError = _commissionVaultError(vault);
+        if (vaultError != bytes4(0)) {
+            emit CommissionSkipped(vault, vaultError);
+            return 0;
+        }
+
         uint256 cap = Math.mulDiv(grossAmount, splitBps, BPS_DENOMINATOR);
         commissionAmount = Math.min(cap, ICommissionVault(vault).requiredTopUp());
         if (commissionAmount != 0) {
@@ -200,12 +206,23 @@ abstract contract MetroDistributorBase is Ownable2Step, ReentrancyGuardTransient
         treasury = newTreasury;
     }
 
-    function _validateCommissionVault(address vault) private view {
-        require(vault != address(0), ZeroCommissionVault());
-        require(vault.code.length != 0, CommissionVaultNotContract());
-        require(ICommissionVault(vault).usdc() == address(rewardToken), CommissionTokenMismatch());
-        require(ICommissionVault(vault).distributor() == address(this), CommissionDistributorMismatch());
-        require(ICommissionVault(vault).migrationFinalized(), CommissionVaultMigrationPending());
-        require(!ICommissionVault(vault).paused(), CommissionVaultPaused());
+    function _requireUsableCommissionVault(address vault) private view {
+        bytes4 vaultError = _commissionVaultError(vault);
+        if (vaultError != bytes4(0)) {
+            assembly ("memory-safe") {
+                mstore(0, vaultError)
+                revert(0, 4)
+            }
+        }
+    }
+
+    function _commissionVaultError(address vault) private view returns (bytes4) {
+        if (vault == address(0)) return ZeroCommissionVault.selector;
+        if (vault.code.length == 0) return CommissionVaultNotContract.selector;
+        if (ICommissionVault(vault).usdc() != address(rewardToken)) return CommissionTokenMismatch.selector;
+        if (ICommissionVault(vault).distributor() != address(this)) return CommissionDistributorMismatch.selector;
+        if (!ICommissionVault(vault).migrationFinalized()) return CommissionVaultMigrationPending.selector;
+        if (ICommissionVault(vault).paused()) return CommissionVaultPaused.selector;
+        return bytes4(0);
     }
 }
