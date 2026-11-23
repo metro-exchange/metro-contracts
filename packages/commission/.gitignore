@@ -1,0 +1,13 @@
+# Foundry build artifacts
+out/
+cache/
+broadcast/
+
+# Environment
+.env
+
+# Editor / OS
+.DS_Store
+
+# Dependencies (installed via `forge install`)
+lib/
