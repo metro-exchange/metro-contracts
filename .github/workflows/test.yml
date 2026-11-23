@@ -110,3 +110,30 @@ jobs:
           node --check integration/examples/user-actions.mjs
           node --check integration/examples/backend-actions.mjs
           node --check script/run-mainnet-fork-gas.mjs
+
+  commission:
+    name: Commission contracts
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/commission
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1.9.1
+        with:
+          version: v1.7.1
+
+      - name: Install dependencies
+        run: |
+          forge install foundry-rs/forge-std@v1.16.2
+          forge install OpenZeppelin/openzeppelin-contracts@v5.6.1
+
+      - name: Build
+        run: forge build --sizes
+
+      - name: Run tests
+        run: forge test -vv
