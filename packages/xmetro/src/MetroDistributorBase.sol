@@ -76,7 +76,7 @@ abstract contract MetroDistributorBase is Ownable2Step, ReentrancyGuardTransient
         uint256 commissionAmount,
         uint256 stakerAmount,
         uint256 treasuryAmount,
-        uint256 thirdBucketAmount,
+        uint256 marketSupportAmount,
         uint64 timestamp
     );
 
@@ -140,21 +140,24 @@ abstract contract MetroDistributorBase is Ownable2Step, ReentrancyGuardTransient
 
     function distribute(uint256 maxAmount) external onlyOperator nonReentrant {
         IRateLimitedForwarder source = forwarder;
-        if (address(source) != address(0)) {
-            uint256 pulled = source.tryForward();
-            if (pulled != 0) emit ForwarderPulled(address(source), pulled);
-        }
-
         uint256 grossAmount = rewardToken.balanceOf(address(this));
+        if (address(source) != address(0)) {
+            source.tryForward();
+            uint256 balanceAfterPull = rewardToken.balanceOf(address(this));
+            if (balanceAfterPull != grossAmount) {
+                emit ForwarderPulled(address(source), balanceAfterPull - grossAmount);
+                grossAmount = balanceAfterPull;
+            }
+        }
         if (maxAmount != 0) grossAmount = Math.min(grossAmount, maxAmount);
         require(grossAmount != 0, ZeroAmount());
 
         uint256 commissionAmount = _topUpCommission(grossAmount);
         uint256 remainder = grossAmount - commissionAmount;
-        (uint256 treasuryBps, uint256 thirdBucketBps) = _bucketBps();
+        (uint256 treasuryBps, uint256 marketSupportBps) = _bucketBps();
         uint256 treasuryAmount = Math.mulDiv(remainder, treasuryBps, BPS_DENOMINATOR);
-        uint256 thirdBucketAmount = Math.mulDiv(remainder, thirdBucketBps, BPS_DENOMINATOR);
-        uint256 stakerAmount = remainder - treasuryAmount - thirdBucketAmount;
+        uint256 marketSupportAmount = Math.mulDiv(remainder, marketSupportBps, BPS_DENOMINATOR);
+        uint256 stakerAmount = remainder - treasuryAmount - marketSupportAmount;
 
         if (treasuryAmount != 0) {
             address recipient = treasury;
@@ -162,7 +165,7 @@ abstract contract MetroDistributorBase is Ownable2Step, ReentrancyGuardTransient
             emit TreasuryPaid(recipient, treasuryAmount);
         }
 
-        if (thirdBucketAmount != 0) _routeThirdBucket(thirdBucketAmount, remainder);
+        if (marketSupportAmount != 0) _routeMarketSupport(marketSupportAmount, remainder);
 
         uint64 timestamp = uint64(block.timestamp);
         if (stakerAmount != 0) {
@@ -173,13 +176,13 @@ abstract contract MetroDistributorBase is Ownable2Step, ReentrancyGuardTransient
         }
 
         emit Distributed(
-            msg.sender, grossAmount, commissionAmount, stakerAmount, treasuryAmount, thirdBucketAmount, timestamp
+            msg.sender, grossAmount, commissionAmount, stakerAmount, treasuryAmount, marketSupportAmount, timestamp
         );
     }
 
-    function _bucketBps() internal view virtual returns (uint256 treasuryBps, uint256 thirdBucketBps);
+    function _bucketBps() internal view virtual returns (uint256 treasuryBps, uint256 marketSupportBps);
 
-    function _routeThirdBucket(uint256 amount, uint256 remainder) internal virtual;
+    function _routeMarketSupport(uint256 amount, uint256 remainder) internal virtual;
 
     function _topUpCommission(uint256 grossAmount) private returns (uint256 commissionAmount) {
         uint16 splitBps = maxCommissionSplitBps;

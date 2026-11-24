@@ -6,17 +6,14 @@ import "forge-std/Test.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {MetroDistributorV1} from "../../src/MetroDistributorV1.sol";
 import {xMETRO} from "../../src/xMETRO.sol";
-import {MetroToken} from "../../src/metro.sol";
-import {ERC20Mintable} from "../mocks/ERC20Mintable.sol";
+import {MetroDistributorFixture} from "../mocks/MetroDistributorFixture.sol";
 import {MockCommissionVault} from "../mocks/MockCommissionVault.sol";
 import {MockRateLimitedForwarder} from "../mocks/MockRateLimitedForwarder.sol";
 import {MetroDistributorV2Harness} from "../mocks/MetroDistributorV2Harness.sol";
 
-contract MetroDistributorFuzzTest is Test {
+contract MetroDistributorFuzzTest is MetroDistributorFixture {
     address internal constant DEAD = 0x000000000000000000000000000000000000dEaD;
 
-    ERC20Mintable internal usdc;
-    MetroToken internal metro;
     xMETRO internal xmetro;
     address internal operator = makeAddr("operator");
     address internal treasury = makeAddr("treasury");
@@ -24,17 +21,8 @@ contract MetroDistributorFuzzTest is Test {
     address internal swapSink = makeAddr("swapSink");
 
     function setUp() public {
-        usdc = new ERC20Mintable("USDC", "USDC", 6);
-        metro = new MetroToken("METRO", "METRO", address(this));
-        metro.setMinter(address(this), true);
-        xmetro = new xMETRO(address(this), address(metro), address(usdc), makeAddr("forfeiture"), 20_000);
-
-        address staker = makeAddr("staker");
-        metro.mint(staker, 100 ether);
-        vm.startPrank(staker);
-        metro.approve(address(xmetro), 100 ether);
-        xmetro.stake(100 ether);
-        vm.stopPrank();
+        _deployTokens();
+        xmetro = _deployCoreWithStaker(100 ether);
     }
 
     function _routed(uint256 balance, uint256 maxAmount) internal pure returns (uint256) {

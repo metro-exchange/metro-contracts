@@ -1,20 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.38;
 
-import {Test} from "forge-std/Test.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 
 import {DeployMetroDistributor} from "../../script/DeployMetroDistributor.s.sol";
 import {MetroDistributorBase} from "../../src/MetroDistributorBase.sol";
 import {MetroDistributorV1} from "../../src/MetroDistributorV1.sol";
 import {MetroDistributorV2} from "../../src/MetroDistributorV2.sol";
-import {MetroToken} from "../../src/metro.sol";
 import {xMETRO as XMetroCore} from "../../src/xMETRO.sol";
 import {ERC20Mintable} from "../mocks/ERC20Mintable.sol";
 import {MockCommissionVault} from "../mocks/MockCommissionVault.sol";
+import {MetroDistributorFixture} from "../mocks/MetroDistributorFixture.sol";
 import {MockRateLimitedForwarder} from "../mocks/MockRateLimitedForwarder.sol";
 
-contract DeployMetroDistributorTest is Test {
+contract DeployMetroDistributorTest is MetroDistributorFixture {
     using stdJson for string;
 
     uint256 internal constant DEPLOYER_KEY = 0xD3F10;
@@ -24,25 +23,15 @@ contract DeployMetroDistributorTest is Test {
     address internal polVault = makeAddr("pol-vault");
     address internal operatorA = makeAddr("operator-a");
     address internal operatorB = makeAddr("operator-b");
-    ERC20Mintable internal usdc;
     XMetroCore internal core;
     MockCommissionVault internal vault;
     MockRateLimitedForwarder internal forwarder;
 
     function setUp() public {
-        usdc = new ERC20Mintable("USDC", "USDC", 6);
-        MetroToken metro = new MetroToken("METRO", "METRO", address(this));
-        metro.setMinter(address(this), true);
-        core = new XMetroCore(address(this), address(metro), address(usdc), makeAddr("forfeiture"), 20_000);
+        _deployTokens();
+        core = _deployCoreWithStaker(100 ether);
         vault = new MockCommissionVault(address(usdc), 50e6, makeAddr("old-distributor"));
         forwarder = new MockRateLimitedForwarder(address(usdc), makeAddr("old-distributor"));
-
-        address staker = makeAddr("staker");
-        metro.mint(staker, 100 ether);
-        vm.startPrank(staker);
-        metro.approve(address(core), 100 ether);
-        core.stake(100 ether);
-        vm.stopPrank();
 
         vm.setEnv("EXPECTED_CHAIN_ID", vm.toString(block.chainid));
         vm.setEnv("DEPLOYER_PRIVATE_KEY", vm.toString(DEPLOYER_KEY));
@@ -103,11 +92,11 @@ contract DeployMetroDistributorTest is Test {
         assertEq(json.readUint(".version"), version);
         assertEq(json.readAddress(".distributor"), address(distributor));
         assertEq(json.readAddress(".xMETRO"), address(core));
-        assertEq(json.readAddress(".commissionVault"), address(vault));
+        assertEq(json.readAddress(".plannedCommissionVault"), address(vault));
         assertEq(json.readAddress(".forwarder"), address(forwarder));
         assertEq(json.readAddress(".treasury"), treasury);
         assertEq(json.readAddress(".pendingOwner"), finalOwner);
-        assertEq(json.readUint(".maxCommissionSplitBps"), 1_000);
+        assertEq(json.readUint(".plannedMaxCommissionSplitBps"), 1_000);
     }
 
     function _executeOwnerBatch(MetroDistributorBase distributor) internal {

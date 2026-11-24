@@ -6,6 +6,7 @@ const { ethers } = ethersPackage;
 const coreAbi = JSON.parse(await readFile(new URL('../abi/xMETRO.json', import.meta.url)));
 const adapterAbi = JSON.parse(await readFile(new URL('../abi/XMetroDeFiAdapter.json', import.meta.url)));
 const distributorAbi = JSON.parse(await readFile(new URL('../abi/RewardDistributor.json', import.meta.url)));
+const metroDistributorAbi = JSON.parse(await readFile(new URL('../abi/MetroDistributorV1.json', import.meta.url)));
 const tokenAbi = [
   'function allowance(address owner,address spender) view returns (uint256)',
   'function approve(address spender,uint256 amount) returns (bool)'
@@ -32,6 +33,22 @@ export async function distributeExistingBalance(signer, config, amountUsdcBaseUn
   await assertChain(signer, config);
   const distributor = new ethers.Contract(address(config.contracts.RewardDistributor, 'RewardDistributor'), distributorAbi, signer);
   return (await distributor.distributeFromBalance(amountUsdcBaseUnits)).wait();
+}
+
+// MetroDistributor V1/V2 replace RewardDistributor once xMETRO and the CommissionVault are rebound to them.
+// No approval: distribute pulls from the forwarder and routes USDC the distributor already holds; 0 means no cap.
+export async function distributeRevenue(signer, config, maxAmountUsdcBaseUnits = 0) {
+  await assertChain(signer, config);
+  const distributorAddress = address(config.contracts.MetroDistributor, 'MetroDistributor');
+  const distributor = new ethers.Contract(distributorAddress, metroDistributorAbi, signer);
+  return (await distributor.distribute(maxAmountUsdcBaseUnits)).wait();
+}
+
+export async function readRevenueDistributions(provider, config, fromBlock, toBlock) {
+  if (fromBlock > toBlock) throw new Error('fromBlock exceeds toBlock');
+  const distributorAddress = address(config.contracts.MetroDistributor, 'MetroDistributor');
+  const distributor = new ethers.Contract(distributorAddress, metroDistributorAbi, provider);
+  return distributor.queryFilter(distributor.filters.Distributed(), fromBlock, toBlock);
 }
 
 export async function eligibleAutoUsers(provider, config, strategyId, candidates) {

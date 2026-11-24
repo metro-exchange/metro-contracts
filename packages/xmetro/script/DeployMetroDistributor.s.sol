@@ -81,8 +81,8 @@ contract DeployMetroDistributor is Script {
         vm.serializeAddress(obj, "owner", distributor.owner());
         vm.serializeAddress(obj, "pendingOwner", distributor.pendingOwner());
         vm.serializeAddress(obj, "xMETRO", i.xMetro);
-        vm.serializeAddress(obj, "commissionVault", i.commissionVault);
-        vm.serializeUint(obj, "maxCommissionSplitBps", i.maxCommissionSplitBps);
+        vm.serializeAddress(obj, "plannedCommissionVault", i.commissionVault);
+        vm.serializeUint(obj, "plannedMaxCommissionSplitBps", i.maxCommissionSplitBps);
         vm.serializeAddress(obj, "forwarder", i.forwarder);
         vm.serializeAddress(obj, "treasury", i.treasury);
         vm.serializeAddress(obj, "operators", i.operators);
@@ -93,6 +93,10 @@ contract DeployMetroDistributor is Script {
     function _logOwnerBatch(Input memory i, MetroDistributorBase distributor) internal pure {
         console2.log("MetroDistributor version", i.version);
         console2.log("MetroDistributor", address(distributor));
+        if (i.version == 2) {
+            console2.log("V2 distribute reverts with BuybackNotImplemented while buybackBps is above 0.");
+            console2.log("Until the swap is implemented, add distributor.setBucketBps(7500, 2500, 0) to the batch.");
+        }
         console2.log("Owner batch, in order:");
         if (i.owner != i.deployer) console2.log("- distributor.acceptOwnership()");
         console2.log("- CommissionVault(%s).setDistributor(%s)", i.commissionVault, address(distributor));

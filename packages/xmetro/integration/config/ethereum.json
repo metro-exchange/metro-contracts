@@ -7,6 +7,7 @@
     "METRO": null,
     "xMETRO": null,
     "RewardDistributor": null,
+    "MetroDistributor": null,
     "ThorMigrationEscrow": null,
     "XMetroDeFiAdapterImplementation": null,
     "XMetroDeFiAdapterProxy": null,

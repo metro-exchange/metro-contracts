@@ -6,15 +6,13 @@ import "forge-std/Test.sol";
 import {MetroDistributorBase} from "../../src/MetroDistributorBase.sol";
 import {MetroDistributorV1} from "../../src/MetroDistributorV1.sol";
 import {xMETRO} from "../../src/xMETRO.sol";
-import {MetroToken} from "../../src/metro.sol";
 import {ERC20Mintable} from "../mocks/ERC20Mintable.sol";
 import {MaliciousERC20} from "../mocks/MaliciousERC20.sol";
 import {MockCommissionVault} from "../mocks/MockCommissionVault.sol";
+import {MetroDistributorFixture} from "../mocks/MetroDistributorFixture.sol";
 import {MockRateLimitedForwarder} from "../mocks/MockRateLimitedForwarder.sol";
 
-contract MetroDistributorV1Test is Test {
-    ERC20Mintable internal usdc;
-    MetroToken internal metro;
+contract MetroDistributorV1Test is MetroDistributorFixture {
     xMETRO internal xmetro;
     MetroDistributorV1 internal distributor;
     MockCommissionVault internal vault;
@@ -27,19 +25,11 @@ contract MetroDistributorV1Test is Test {
     address internal polVault = makeAddr("polVault");
 
     function setUp() public {
-        usdc = new ERC20Mintable("USDC", "USDC", 6);
-        metro = new MetroToken("METRO", "METRO", address(this));
-        metro.setMinter(address(this), true);
-        xmetro = new xMETRO(address(this), address(metro), address(usdc), makeAddr("forfeiture"), 20_000);
+        _deployTokens();
+        xmetro = _deployCoreWithStaker(100 ether);
         distributor = new MetroDistributorV1(address(xmetro), treasury, polVault, address(this));
         xmetro.setRewardDistributor(address(distributor));
         distributor.setOperator(operator, true);
-
-        metro.mint(staker, 100 ether);
-        vm.startPrank(staker);
-        metro.approve(address(xmetro), 100 ether);
-        xmetro.stake(100 ether);
-        vm.stopPrank();
 
         vault = new MockCommissionVault(address(usdc), 0, address(distributor));
         forwarder = new MockRateLimitedForwarder(address(usdc), address(distributor));
@@ -132,12 +122,31 @@ contract MetroDistributorV1Test is Test {
         MockCommissionVault wrongDistributor = new MockCommissionVault(address(usdc), 0, outsider);
         vm.expectRevert(MetroDistributorBase.CommissionDistributorMismatch.selector);
         distributor.setCommissionVault(address(wrongDistributor));
+        vault.setMigrationFinalized(false);
+        vm.expectRevert(MetroDistributorBase.CommissionVaultMigrationPending.selector);
+        distributor.setCommissionVault(address(vault));
+        vault.setMigrationFinalized(true);
+        vault.setPaused(true);
+        vm.expectRevert(MetroDistributorBase.CommissionVaultPaused.selector);
+        distributor.setCommissionVault(address(vault));
+        vault.setPaused(false);
 
         vm.expectEmit(true, true, false, true, address(distributor));
         emit MetroDistributorBase.CommissionVaultUpdated(address(0), address(vault));
         distributor.setCommissionVault(address(vault));
         vm.expectEmit(false, false, false, true, address(distributor));
         emit MetroDistributorBase.MaxCommissionSplitBpsUpdated(0, 2_000);
+        distributor.setMaxCommissionSplitBps(2_000);
+
+        distributor.setMaxCommissionSplitBps(0);
+        vault.setPaused(true);
+        vm.expectRevert(MetroDistributorBase.CommissionVaultPaused.selector);
+        distributor.setMaxCommissionSplitBps(2_000);
+        vault.setPaused(false);
+        vault.setMigrationFinalized(false);
+        vm.expectRevert(MetroDistributorBase.CommissionVaultMigrationPending.selector);
+        distributor.setMaxCommissionSplitBps(2_000);
+        vault.setMigrationFinalized(true);
         distributor.setMaxCommissionSplitBps(2_000);
 
         vm.expectRevert(MetroDistributorBase.CommissionSplitEnabled.selector);
@@ -247,6 +256,31 @@ contract MetroDistributorV1Test is Test {
         _distribute(0);
         assertEq(usdc.balanceOf(address(forwarder)), 40e6);
         assertEq(usdc.balanceOf(address(xmetro)), 50e6);
+    }
+
+    function test_State_ForwarderPulledReportsOnlyUsdcReceivedByDistributor() public {
+        distributor.setForwarder(address(forwarder));
+        forwarder.setRecipient(outsider);
+        usdc.mint(address(forwarder), 40e6);
+        usdc.mint(address(distributor), 100e6);
+
+        vm.recordLogs();
+        _distribute(0);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        for (uint256 i; i < logs.length; ++i) {
+            assertTrue(logs[i].topics[0] != MetroDistributorBase.ForwarderPulled.selector);
+        }
+        assertEq(usdc.balanceOf(outsider), 40e6);
+        assertEq(usdc.balanceOf(address(xmetro)), 50e6);
+
+        forwarder.setRecipient(address(distributor));
+        usdc.mint(address(forwarder), 60e6);
+        usdc.mint(address(distributor), 40e6);
+        vm.expectEmit(true, false, false, true, address(distributor));
+        emit MetroDistributorBase.ForwarderPulled(address(forwarder), 60e6);
+        vm.expectEmit(true, false, false, true, address(distributor));
+        emit MetroDistributorBase.Distributed(operator, 100e6, 0, 50e6, 25e6, 25e6, uint64(block.timestamp));
+        _distribute(0);
     }
 
     function test_State_ForwarderReleasesOnlyItsSlice() public {

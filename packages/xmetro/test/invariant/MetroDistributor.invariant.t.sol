@@ -10,14 +10,13 @@ import {MetroDistributorBase} from "../../src/MetroDistributorBase.sol";
 import {MetroDistributorV1} from "../../src/MetroDistributorV1.sol";
 import {ERC20Mintable} from "../mocks/ERC20Mintable.sol";
 import {MockCommissionVault} from "../mocks/MockCommissionVault.sol";
+import {MetroDistributorFixture} from "../mocks/MetroDistributorFixture.sol";
 import {MockRateLimitedForwarder} from "../mocks/MockRateLimitedForwarder.sol";
 import {MetroDistributorV2Harness} from "../mocks/MetroDistributorV2Harness.sol";
 
-contract MetroDistributorInvariantTest is StdInvariant, Test {
+contract MetroDistributorInvariantTest is StdInvariant, MetroDistributorFixture {
     address internal constant DEAD = 0x000000000000000000000000000000000000dEaD;
 
-    ERC20Mintable internal usdc;
-    MetroToken internal metro;
     xMETRO internal coreV1;
     xMETRO internal coreV2;
     MetroDistributorV1 internal v1;
@@ -33,11 +32,9 @@ contract MetroDistributorInvariantTest is StdInvariant, Test {
     address internal swapSink = makeAddr("swapSink");
 
     function setUp() public {
-        usdc = new ERC20Mintable("USDC", "USDC", 6);
-        metro = new MetroToken("METRO", "METRO", address(this));
-        metro.setMinter(address(this), true);
-        coreV1 = _core();
-        coreV2 = _core();
+        _deployTokens();
+        coreV1 = _deployCoreWithStaker(1 ether);
+        coreV2 = _deployCoreWithStaker(1 ether);
 
         v1 = new MetroDistributorV1(address(coreV1), treasuryV1, polVault, address(this));
         v2 = new MetroDistributorV2Harness(address(coreV2), treasuryV2, address(this), swapSink);
@@ -65,16 +62,6 @@ contract MetroDistributorInvariantTest is StdInvariant, Test {
         selectors[4] = handler.distributeV1.selector;
         selectors[5] = handler.distributeV2.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: selectors}));
-    }
-
-    function _core() internal returns (xMETRO core) {
-        core = new xMETRO(address(this), address(metro), address(usdc), makeAddr("forfeiture"), 20_000);
-        address staker = makeAddr("staker");
-        metro.mint(staker, 1 ether);
-        vm.startPrank(staker);
-        metro.approve(address(core), 1 ether);
-        core.stake(1 ether);
-        vm.stopPrank();
     }
 
     function _handOver(MetroDistributorBase distributor) internal {

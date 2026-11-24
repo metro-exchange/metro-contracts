@@ -61,30 +61,40 @@ The Distributor transfers commission USDC directly to the Vault; it neither appr
 
 `MetroDistributorV1` and `MetroDistributorV2` replace RewardDistributor as xMETRO's `rewardDistributor` and CommissionVault's `distributor`. RewardDistributor stays in the repo unchanged.
 
-Single operator entry point: `distribute(maxAmount)`. It calls `forwarder.tryForward()` when a forwarder is set, then routes the contract's USDC balance, capped at `maxAmount` (`0` = no cap). Any unrouted balance stays for the next call. It reverts with `ZeroAmount` when nothing can be routed. The commission top-up runs first with the RewardDistributor formula above; the buckets split the remainder. Unlike RewardDistributor, an unusable Vault never blocks a run: if the Vault is paused, not finalized, bound to another distributor or on a different token, `distribute` skips the top-up, emits `CommissionSkipped(vault,reason)` (`reason` is the 4-byte selector of the matching error, for example `CommissionVaultPaused`) and splits the full amount across the buckets. The Vault's `requiredTopUp()` shortfall is picked up by a later run. `setCommissionVault` and `setMaxCommissionSplitBps` still revert on an unusable Vault.
+Single operator entry point: `distribute(maxAmount)`. It calls `forwarder.tryForward()` when a forwarder is set, then routes the contract's USDC balance, capped at `maxAmount` (`0` = no cap). Any unrouted balance stays for the next call. It reverts with `ZeroAmount` when nothing can be routed. The commission top-up runs first with the RewardDistributor formula above; the buckets split the remainder. Unlike RewardDistributor, a misconfigured Vault does not block a run: if the Vault is paused, not finalized, bound to another distributor or on a different token, `distribute` skips the top-up, emits `CommissionSkipped(vault,reason)` (`reason` is the 4-byte selector of the matching error, for example `CommissionVaultPaused`) and splits the full amount across the buckets. The Vault's `requiredTopUp()` shortfall is picked up by a later run. `setCommissionVault` and `setMaxCommissionSplitBps` still revert on such a Vault. A Vault whose view functions themselves revert still reverts `distribute`; the owner clears that with `setMaxCommissionSplitBps(0)`.
 
 | Bucket | V1 (fixed constants) | V2 default (`setBucketBps`) |
 | --- | --- | --- |
 | Stakers (`xMETRO.depositRewards`) | `STAKERS_BPS = 5,000` | `stakersBps = 5,500` |
 | Treasury | `TREASURY_BPS = 2,500` | `treasuryBps = 2,500` |
-| Third bucket | POL vault: `POL_BUYBACK_BPS = 1,000` + `POL_LIQUIDITY_BPS = 1,500`, one transfer | Buyback + burn: `buybackBps = 2,000` |
+| Market support | POL vault: `POL_BUYBACK_BPS = 1,000` + `POL_LIQUIDITY_BPS = 1,500`, one transfer | Buyback + burn: `buybackBps = 2,000` |
 
-Treasury and third-bucket amounts round down; stakers receive the rest, so no USDC is stranded. A zero-amount leg skips its transfer and its event.
+Treasury and market-support amounts round down; stakers receive the rest, so no USDC is stranded. A zero-amount leg skips its transfer and its event.
 
 V1 sends the POL total to `polVault` in one transfer. `PolBuybackAllocated` and `PolLiquidityAllocated` are earmarks for the off-chain POL manager, not executed swaps.
 
-V2 swaps the buyback share USDC to METRO and sends the METRO to `0x000000000000000000000000000000000000dEaD` in the same transaction. The swap is not implemented yet: with `buybackBps > 0`, `distribute` reverts with `BuybackNotImplemented`. Set `setBucketBps(7_500, 2_500, 0)` (or another split with zero buyback) to run V2 without the swap.
+V2 swaps the buyback share USDC to METRO and sends the METRO to `0x000000000000000000000000000000000000dEaD` in the same transaction; a swap that returns zero METRO skips the burn transfer and `MetroBurned`. `stakersBps()` is derived as `10,000 - treasuryBps - buybackBps`, and the constructor emits `BucketBpsUpdated` with the defaults. The swap is not implemented yet: with `buybackBps > 0`, `distribute` reverts with `BuybackNotImplemented`. Set `setBucketBps(7_500, 2_500, 0)` (or another split with zero buyback) to run V2 without the swap.
 
-Events per run, in order: `ForwarderPulled(forwarder,amount)`, `CommissionToppedUp(vault,amount)` or `CommissionSkipped(vault,reason)`, `TreasuryPaid(treasury,amount)`, then V1 `PolVaultFunded(polVault,amount)`, `PolBuybackAllocated(amount)`, `PolLiquidityAllocated(amount)` or V2 `BuybackExecuted(usdcIn,metroOut)`, `MetroBurned(amount)`, then `RewardsDistributed(caller,amount,timestamp)` and always `Distributed(caller,grossAmount,commissionAmount,stakerAmount,treasuryAmount,thirdBucketAmount,timestamp)`.
+Events per run, in order: `ForwarderPulled(forwarder,amount)`, `CommissionToppedUp(vault,amount)` or `CommissionSkipped(vault,reason)`, `TreasuryPaid(treasury,amount)`, then V1 `PolVaultFunded(polVault,amount)`, `PolBuybackAllocated(amount)`, `PolLiquidityAllocated(amount)` or V2 `BuybackExecuted(usdcIn,metroOut)`, `MetroBurned(amount)`, then `RewardsDistributed(caller,amount,timestamp)` and always `Distributed(caller,grossAmount,commissionAmount,stakerAmount,treasuryAmount,marketSupportAmount,timestamp)`. `marketSupportAmount` is the POL total in V1 and the buyback USDC in V2.
 
-Deployment: `script/DeployMetroDistributor.s.sol` (env block `DeployMetroDistributor` in `.env.example`) deploys V1 or V2, sets the forwarder and operators, nominates the owner and writes `deployments/<chainId>/metro-distributor-v<N>.json`. The owner Safe then sends, in order:
+`ForwarderPulled.amount` is the USDC the distributor received during its own `tryForward()` call. `tryForward()` is permissionless on the forwarder, so USDC forwarded by another caller arrives without this event; indexers should take run totals from `Distributed.grossAmount`. If the forwarder's `recipient` is not the distributor, nothing is received and no `ForwarderPulled` is emitted.
+
+Deployment: `script/DeployMetroDistributor.s.sol` (env block `DeployMetroDistributor` in `.env.example`) deploys V1 or V2, sets the forwarder and operators, nominates the owner and writes `deployments/<chainId>/metro-distributor-v<N>.json`. `plannedCommissionVault` and `plannedMaxCommissionSplitBps` in that file are the script inputs; they take effect only when the owner batch below runs.
+
+```bash
+FOUNDRY_PROFILE=deploy forge script script/DeployMetroDistributor.s.sol:DeployMetroDistributor --rpc-url "$ETH_RPC_URL" --broadcast
+```
+
+The owner Safe then sends, in order:
 
 1. `distributor.acceptOwnership()`
 2. `CommissionVault.setDistributor(distributor)`
 3. `distributor.setCommissionVault(vault)`
 4. `distributor.setMaxCommissionSplitBps(bps)`
 5. `xMETRO.setRewardDistributor(distributor)`
-6. `forwarder.setRecipient(distributor)`
+6. `forwarder.setRecipient(distributor)` (sent by the forwarder's owner)
+
+For V2, also send `distributor.setBucketBps(7_500, 2_500, 0)` until the buyback swap is implemented; otherwise every `distribute` reverts with `BuybackNotImplemented`.
 
 ## Exit forfeiture recipient
 

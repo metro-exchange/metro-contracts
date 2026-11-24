@@ -6,16 +6,13 @@ import "forge-std/Test.sol";
 import {MetroDistributorBase} from "../../src/MetroDistributorBase.sol";
 import {MetroDistributorV2} from "../../src/MetroDistributorV2.sol";
 import {xMETRO} from "../../src/xMETRO.sol";
-import {MetroToken} from "../../src/metro.sol";
-import {ERC20Mintable} from "../mocks/ERC20Mintable.sol";
+import {MetroDistributorFixture} from "../mocks/MetroDistributorFixture.sol";
 import {MockCommissionVault} from "../mocks/MockCommissionVault.sol";
 import {MetroDistributorV2Harness} from "../mocks/MetroDistributorV2Harness.sol";
 
-contract MetroDistributorV2Test is Test {
+contract MetroDistributorV2Test is MetroDistributorFixture {
     address internal constant DEAD = 0x000000000000000000000000000000000000dEaD;
 
-    ERC20Mintable internal usdc;
-    MetroToken internal metro;
     xMETRO internal xmetro;
     MetroDistributorV2 internal distributor;
 
@@ -25,19 +22,10 @@ contract MetroDistributorV2Test is Test {
     address internal swapSink = makeAddr("swapSink");
 
     function setUp() public {
-        usdc = new ERC20Mintable("USDC", "USDC", 6);
-        metro = new MetroToken("METRO", "METRO", address(this));
-        metro.setMinter(address(this), true);
-        xmetro = new xMETRO(address(this), address(metro), address(usdc), makeAddr("forfeiture"), 20_000);
+        _deployTokens();
+        xmetro = _deployCoreWithStaker(100 ether);
         distributor = new MetroDistributorV2(address(xmetro), treasury, address(this));
         _bind(distributor);
-
-        address staker = makeAddr("staker");
-        metro.mint(staker, 100 ether);
-        vm.startPrank(staker);
-        metro.approve(address(xmetro), 100 ether);
-        xmetro.stake(100 ether);
-        vm.stopPrank();
     }
 
     function _bind(MetroDistributorV2 target) internal {
@@ -45,7 +33,11 @@ contract MetroDistributorV2Test is Test {
         target.setOperator(operator, true);
     }
 
-    function test_DefaultsAndMetroBinding() public view {
+    function test_DefaultsAndMetroBinding() public {
+        assertEq(address(distributor.metro()), address(metro));
+        vm.expectEmit(false, false, false, true);
+        emit MetroDistributorV2.BucketBpsUpdated(5_500, 2_500, 2_000);
+        new MetroDistributorV2(address(xmetro), treasury, address(this));
         assertEq(distributor.stakersBps(), 5_500);
         assertEq(distributor.treasuryBps(), 2_500);
         assertEq(distributor.buybackBps(), 2_000);
@@ -117,5 +109,25 @@ contract MetroDistributorV2Test is Test {
         assertEq(usdc.balanceOf(swapSink), 180e6);
         assertEq(usdc.balanceOf(address(xmetro)), 495e6);
         assertEq(usdc.balanceOf(address(harness)), 0);
+    }
+
+    function test_HarnessZeroMetroOutSkipsBurnLeg() public {
+        MetroDistributorV2Harness harness =
+            new MetroDistributorV2Harness(address(xmetro), treasury, address(this), swapSink);
+        _bind(harness);
+        usdc.mint(address(harness), 100e6);
+
+        vm.recordLogs();
+        vm.prank(operator);
+        harness.distribute(0);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bool buybackLogged;
+        for (uint256 i; i < logs.length; ++i) {
+            assertTrue(logs[i].topics[0] != MetroDistributorV2.MetroBurned.selector);
+            if (logs[i].topics[0] == MetroDistributorV2.BuybackExecuted.selector) buybackLogged = true;
+        }
+        assertTrue(buybackLogged);
+        assertEq(usdc.balanceOf(swapSink), 20e6);
+        assertEq(metro.balanceOf(DEAD), 0);
     }
 }

@@ -89,6 +89,7 @@ jobs:
             script/DeployMetroDistributor.s.sol \
             test/mocks/MockRateLimitedForwarder.sol \
             test/mocks/MetroDistributorV2Harness.sol \
+            test/mocks/MetroDistributorFixture.sol \
             test/unit/MetroDistributorV1.t.sol \
             test/unit/MetroDistributorV2.t.sol \
             test/fuzz/MetroDistributor.fuzz.t.sol \
@@ -115,6 +116,13 @@ jobs:
 
       - name: Run deployment-script tests
         run: FOUNDRY_PROFILE=deployment-test forge test -vv
+
+      - name: Check MetroDistributor ABI exports
+        run: |
+          for contract in MetroDistributorV1 MetroDistributorV2; do
+            diff <(FOUNDRY_PROFILE=regression forge inspect "$contract" abi --json | jq -S .) \
+              <(jq -S . "integration/abi/$contract.json")
+          done
 
       - name: Check integration example syntax
         run: |
