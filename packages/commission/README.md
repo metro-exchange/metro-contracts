@@ -23,13 +23,12 @@ Test-only helpers (`test/mocks/`, in scope for context, not deployed to producti
 
 | File | Description |
 |---|---|
-| `FakeUSDC.sol` | Mintable 6-decimal ERC20 used by tests and the Base testbed. |
-| `FakeDistributor.sol` | Placeholder for the production revenue-distribution contract; receives surplus USDC from the vault in the testbed. |
+| `FakeUSDC.sol` | Mintable 6-decimal ERC20 used by tests. |
 
 Out of scope:
 
 - OpenZeppelin contracts (`lib/openzeppelin-contracts`, v5.6.1) and forge-std (`lib/forge-std`, v1.16.2), pinned in `foundry.lock`.
-- The production revenue-distribution contract that `distributor` points at in production. `FakeDistributor` is only a stand-in for it here.
+- The revenue-distribution contract that `distributor` points at (`MetroDistributorV1` in `packages/xmetro`).
 - The off-chain operator/keeper tooling. Its behavior is described below under [Off-chain operation](#off-chain-operation) so the on-chain trust assumptions are clear, but the code is not part of this repository.
 
 ## Build and test
@@ -113,9 +112,10 @@ All deploy scripts live in `script/`. Run them from the repo root after `source 
 |---|---|
 | `Deploy.s.sol` | CommissionVault (production). Reads addresses, limits, and timelocks from env. |
 | `DeployRateLimitedForwarder.s.sol` | RateLimitedForwarder. Asserts chain id, and that owner + recipient have code, before broadcasting, and reads the drip parameters. |
-| `DeployTestbed.s.sol` | FakeUSDC + FakeDistributor + CommissionVault, for live testing on Base. |
 
 See `.env.example` for the full set of parameters.
+
+The testbed (xMETRO stack, MetroDistributorV1, RateLimitedForwarder and CommissionVault with short timers) is deployed from `packages/xmetro` with `node script/base-qa/testbed.mjs`; see the xMETRO README.
 
 ```bash
 # Dry run (no broadcast): drop --broadcast

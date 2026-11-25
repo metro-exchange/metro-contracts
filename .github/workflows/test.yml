@@ -124,6 +124,9 @@ jobs:
       - name: Run deployment-script tests
         run: FOUNDRY_PROFILE=deployment-test forge test -vv
 
+      - name: Build short-timer testbed artifacts
+        run: node script/base-qa/build-qa-core.mjs
+
       - name: Check MetroDistributor ABI exports
         run: |
           for contract in MetroDistributorV1 MetroDistributorV2; do
@@ -136,6 +139,7 @@ jobs:
           node --check integration/examples/user-actions.mjs
           node --check integration/examples/backend-actions.mjs
           node --check script/run-mainnet-fork-gas.mjs
+          for script in script/base-qa/*.mjs; do node --check "$script"; done
 
   commission:
     name: Commission contracts

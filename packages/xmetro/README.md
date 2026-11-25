@@ -106,11 +106,25 @@ netReward  = gross - commission
 
 The Distributor transfers the commission directly to the Vault and deposits the remaining USDC into xMETRO. It does not approve the Vault, invoke a Vault deposit callback, or carry a commission shortfall across batches. A nonzero split requires a compatible, finalized, unpaused Vault; setting the split to zero bypasses Vault calls.
 
-## Production and Base QA versions
+## Production and testbed builds
 
-The production branch retains the full time constants and is the audit/mainnet baseline. The project-facing Base QA branch shortens seven waiting periods: 30-minute unstake delay; THOR pays a fixed 50% from 1 hour until just before 3 hours, then 100% at 3 hours and later; yTHOR exit starting at 4 hours with a 12-hour ramp; and a 6-hour Contributor cliff plus 6-hour vesting period. Both builds allow the Core owner to update the forfeiture recipient. QA also accepts a zero Escrow constructor start time as the deployment-block timestamp; production requires an explicit start time. Other business ratios, two-step business-contract ownership, and default unpaused state remain aligned; their time constants and bytecode differ. QA uses freshly deployed owner-mintable TestTokens, Aave/Maple protocol mocks, and real Base Uniswap V2 liquidity. Mock integration does not prove the production protocols are available on Base.
+Repository sources keep the full production time constants. The testbed build applies `script/base-qa/qa-timers.patch` to a temporary copy of the sources and shortens seven waiting periods: 30-minute unstake delay; THOR pays a fixed 50% from 1 hour until just before 3 hours, then 100% at 3 hours and later; yTHOR exit starting at 4 hours with a 12-hour ramp; and a 6-hour Contributor cliff plus 6-hour vesting period. Both builds allow the Core owner to update the forfeiture recipient. The testbed passes an Escrow start time 5 minutes after deployment. Other business ratios, two-step business-contract ownership, and default unpaused state remain aligned; their time constants and bytecode differ. QA uses freshly deployed owner-mintable TestTokens, Aave/Maple protocol mocks, and real Base Uniswap V2 liquidity. Mock integration does not prove the production protocols are available on Base.
 
-Historical rapid-QA addresses and receipts are test evidence only. The fresh project-facing deployment and its transaction hashes are recorded in the Base QA branch's integration config and checklist. The production branch keeps a Base config template; it must not be mistaken for a second deployment or mixed with historical addresses.
+Historical rapid-QA addresses and receipts are test evidence only. `integration/config/base-qa.json` is a template for the next testbed; fill it only from a verified run.
+
+### Deploy the testbed
+
+One command builds commission, core, adapter and the short-timer artifacts (`out-testbed/`), runs preflight, deploys tokens, mocks, the xMETRO stack, MetroDistributorV1, RateLimitedForwarder and CommissionVault, configures and seeds them (50,000 TestUSDC in the forwarder, unpaused, 1,000 TestUSDC per 60 s, 10,000 cap), and creates the Uniswap V2 pools. Rerunning it resumes from `integration/testing/base/evidence/<run>/state.json`. The core stage fails if the deployed timers differ from `timeConstantsSeconds` in `integration/config/base-qa.json`.
+
+Prerequisites: `npm ci` in `integration/examples` (ethers), a local `integration/testing/base/wallets.json` with public role addresses, and a private signer file.
+
+```bash
+BASE_QA_BROADCAST=YES BASE_RPC_URL=<rpc> BASE_QA_SIGNERS_FILE=<signers.json> \
+BASE_QA_FORFEITURE_RECIPIENT=<treasury> BASE_QA_POL_VAULT=<pol-vault> \
+node script/base-qa/testbed.mjs
+```
+
+Optional: `BASE_QA_RUN_ID` (new evidence directory), `BASE_QA_DISTRIBUTOR_TREASURY` (defaults to the forfeiture recipient), `BASE_QA_FORWARDER_DRIP_RATE`, `BASE_QA_FORWARDER_DRIP_PERIOD`, `BASE_QA_FORWARDER_MAX_RESERVE`. For a rehearsal against an anvil fork set `BASE_QA_LOCAL_REHEARSAL=1` and a loopback `BASE_RPC_URL` instead of `BASE_QA_BROADCAST`.
 
 ## Repository guide
 
@@ -118,7 +132,7 @@ Historical rapid-QA addresses and receipts are test evidence only. The fresh pro
 - [Frontend/backend integration](integration/README.md)
 - `src/`: business contracts
 - `script/`: production deployment, verification, and Adapter lifecycle scripts
-- `script/base-qa/`: Base QA deployment tools on the QA branch
+- `script/base-qa/`: testbed deployment (`testbed.mjs`) and the short-timer patch
 - `.env.example`: production deployment parameters; use chain-specific values
 - `deployments/<chainId>/addresses.json`: verified deployment addresses and settings
 
@@ -126,7 +140,7 @@ Historical rapid-QA addresses and receipts are test evidence only. The fresh pro
 
 Copy `.env.example` to an untracked local `.env`. Fill in the signing EOA, intended owner, chain-specific tokens and routers, migration ratios/windows, and integrations that are ready to enable. Never commit a private key. Build and inspect the intended release artifacts before broadcasting; a dry run is not evidence that any transaction was sent. Deployment and configuration consist of multiple transactions, so verify every receipt and on-chain binding.
 
-`script/Deploy.s.sol` nominates the target owner for METRO, Core, Escrow and Distributor after configuration, skipping nomination when the target is the deployer. Its JSON `owner` is the target; per-contract Owner/pendingOwner fields record actual deployment-time state. The target must accept each contract separately. `script/VerifyDeployment.s.sol` requires all four live owners to equal the target and all pending owners to be zero, even if the original deployment snapshot still records pending acceptance. The JSON includes `metroOwner` and `metroPendingOwner`; nomination does not transfer mint roles. Core starts unpaused.
+`script/Deploy.s.sol` deploys MetroDistributorV1 and a RateLimitedForwarder bound to it in the same run; the forwarder starts paused and the owner unpauses it. Run `forge build` in `packages/commission` first so `FORWARDER_ARTIFACT` exists. The script nominates the target owner for METRO, Core, Escrow, Distributor and Forwarder after configuration, skipping nomination when the target is the deployer. Its JSON `owner` is the target; per-contract Owner/pendingOwner fields record actual deployment-time state. The target must accept each contract separately. `script/VerifyDeployment.s.sol` requires all five live owners to equal the target and all pending owners to be zero, even if the original deployment snapshot still records pending acceptance. The JSON includes `metroOwner` and `metroPendingOwner`; nomination does not transfer mint roles. Core starts unpaused.
 
 ```bash
 # Ethereum

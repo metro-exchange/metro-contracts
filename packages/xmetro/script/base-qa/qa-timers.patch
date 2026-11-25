@@ -1,0 +1,40 @@
+diff --git a/src/XMetroCoreLogic.sol b/src/XMetroCoreLogic.sol
+--- a/src/XMetroCoreLogic.sol
++++ b/src/XMetroCoreLogic.sol
+@@ -16,6 +16,6 @@ library XMetroCoreLogic {
+     uint256 private constant DEFAULT_MAX_VESTING_SCHEDULES = 50;
+-    uint64 private constant THOR_EXIT_DELAY = 30 days;
+-    uint64 private constant THOR_EXIT_FULL_TIME = 90 days;
+-    uint64 private constant YTHOR_EXIT_DELAY = 120 days;
+-    uint64 private constant YTHOR_EXIT_RAMP = 4 * 365 days;
++    uint64 private constant THOR_EXIT_DELAY = 3600 seconds;
++    uint64 private constant THOR_EXIT_FULL_TIME = 10800 seconds;
++    uint64 private constant YTHOR_EXIT_DELAY = 14400 seconds;
++    uint64 private constant YTHOR_EXIT_RAMP = 43200 seconds;
+     uint256 private constant BPS_DENOMINATOR = 10_000;
+@@ -24,4 +24,4 @@ library XMetroCoreLogic {
+     uint256 private constant YTHOR_EXIT_MAX_BPS = 10_000;
+-    uint64 private constant CONTRIBUTOR_CLIFF = 180 days;
+-    uint64 private constant CONTRIBUTOR_DURATION = (5 * 365 days) / 2;
++    uint64 private constant CONTRIBUTOR_CLIFF = 21600 seconds;
++    uint64 private constant CONTRIBUTOR_DURATION = 21600 seconds;
+ 
+diff --git a/src/xMETRO.sol b/src/xMETRO.sol
+--- a/src/xMETRO.sol
++++ b/src/xMETRO.sol
+@@ -43,5 +43,5 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuardTransient, Ownable2Step {
+ 
+-    uint64 public constant UNSTAKE_DELAY = 72 hours;
++    uint64 public constant UNSTAKE_DELAY = 1800 seconds;
+ 
+-    uint64 public constant YTHOR_EXIT_RAMP = 4 * 365 days;
++    uint64 public constant YTHOR_EXIT_RAMP = 43200 seconds;
+ 
+@@ -52,5 +52,5 @@ contract xMETRO is ERC20, Pausable, ReentrancyGuardTransient, Ownable2Step {
+ 
+-    uint64 public constant CONTRIBUTOR_CLIFF = 180 days;
++    uint64 public constant CONTRIBUTOR_CLIFF = 21600 seconds;
+ 
+-    uint64 public constant CONTRIBUTOR_DURATION = (5 * 365 days) / 2;
++    uint64 public constant CONTRIBUTOR_DURATION = 21600 seconds;
+ 
