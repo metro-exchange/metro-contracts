@@ -54,7 +54,7 @@ contract ReplaceDeFiAdapter is DeFiAdapterScriptBase {
         address oldImplementation = _proxyImplementation(oldProxy);
         uint64 oldVersion = _requireImplementation(oldImplementation, 1);
         string memory artifactPath = vm.envString("REPLACEMENT_ADAPTER_ARTIFACT");
-        bytes memory implementationCreationCode = _adapterCreationCode(artifactPath);
+        bytes memory implementationCreationCode = _artifactCreationCode(artifactPath);
         bytes32 expectedInitcodeHash = vm.envBytes32("EXPECTED_REPLACEMENT_IMPLEMENTATION_INITCODE_HASH");
         require(expectedInitcodeHash != bytes32(0), "Replace: missing approved initcode hash");
         require(keccak256(implementationCreationCode) == expectedInitcodeHash, "Replace: artifact initcode hash");

@@ -36,6 +36,7 @@ cbor_metadata = false
 optimizer_details = { yul = true, yulDetails = { stackAllocation = true, optimizerSteps = "dhfoDgvulfnTUtnIfxa[r]EscLMVcul [j]Trpeulxa[r]cLgvifMCTUca[r]LSsTFOtfDnca[r]IulcscCTUtgvifMx[scCTUt] TOntnfDIulgvifMjmul[jul] VcTOcul jmuldhfoDgvulfnTUtnIfxa[r]EscLMVcul [j]Trpeulxa[r]cLgvifMCTUca[r]LSsTFOtfDnca[r]IulcscCTUtgvifMx[scCTUt] TOntnfDIulgvifMjmul[jul] VcTOcul jmul:fDnTOcmuO" } }
 fs_permissions = [
     { access = "read", path = "./out-adapter" },
+    { access = "read", path = "../commission/out" },
     { access = "read-write", path = "./deployments" },
     { access = "read-write", path = "./broadcast" },
 ]
@@ -58,6 +59,7 @@ cbor_metadata = false
 optimizer_details = { yul = true, yulDetails = { stackAllocation = true, optimizerSteps = "dhfoDgvulfnTUtnIfxa[r]EscLMVcul [j]Trpeulxa[r]cLgvifMCTUca[r]LSsTFOtfDnca[r]IulcscCTUtgvifMx[scCTUt] TOntnfDIulgvifMjmul[jul] VcTOcul jmuldhfoDgvulfnTUtnIfxa[r]EscLMVcul [j]Trpeulxa[r]cLgvifMCTUca[r]LSsTFOtfDnca[r]IulcscCTUtgvifMx[scCTUt] TOntnfDIulgvifMjmul[jul] VcTOcul jmul:fDnTOcmuO" } }
 fs_permissions = [
     { access = "read", path = "./out-adapter" },
+    { access = "read", path = "../commission/out" },
     { access = "read-write", path = "./deployments" },
     { access = "read-write", path = "./broadcast" },
 ]

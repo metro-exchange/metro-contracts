@@ -60,7 +60,7 @@ contract UpgradeDeFiAdapter is DeFiAdapterScriptBase {
         require(beforeState.implementationVersion == oldVersion, "Upgrade: old version mismatch");
 
         string memory artifactPath = vm.envString("NEW_ADAPTER_ARTIFACT");
-        bytes memory creationCode = _adapterCreationCode(artifactPath);
+        bytes memory creationCode = _artifactCreationCode(artifactPath);
         bytes32 expectedInitcodeHash = vm.envBytes32("EXPECTED_NEW_IMPLEMENTATION_INITCODE_HASH");
         require(expectedInitcodeHash != bytes32(0), "Upgrade: missing approved initcode hash");
         require(keccak256(creationCode) == expectedInitcodeHash, "Upgrade: artifact initcode hash");

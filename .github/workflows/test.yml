@@ -114,6 +114,13 @@ jobs:
       - name: Run Adapter tests
         run: FOUNDRY_PROFILE=adapter forge test -vv
 
+      - name: Build commission artifacts for the stack deploy
+        working-directory: packages/commission
+        run: |
+          forge install foundry-rs/forge-std@v1.16.2
+          forge install OpenZeppelin/openzeppelin-contracts@v5.6.1
+          forge build
+
       - name: Run deployment-script tests
         run: FOUNDRY_PROFILE=deployment-test forge test -vv
 

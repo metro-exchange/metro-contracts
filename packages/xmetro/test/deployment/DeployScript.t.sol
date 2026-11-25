@@ -6,13 +6,13 @@ import {MockAaveV4Giver} from "../mocks/MockAaveV4Giver.sol";
 
 import {stdJson} from "forge-std/StdJson.sol";
 
-import {Deploy} from "../../script/Deploy.s.sol";
 import {UpgradeDeFiAdapter} from "../../script/UpgradeDeFiAdapter.s.sol";
 import {ReplaceDeFiAdapter} from "../../script/ReplaceDeFiAdapter.s.sol";
 import {VerifyDeployment} from "../../script/VerifyDeployment.s.sol";
 import {IXMetroDeFiAdapterAdmin} from "../../script/DeFiAdapterScriptBase.sol";
 import {ThorMigrationEscrow} from "../../src/ThorMigrationEscrow.sol";
-import {RewardDistributor} from "../../src/RewardDistributor.sol";
+import {MetroDistributorV1} from "../../src/MetroDistributorV1.sol";
+import {Deploy, IRateLimitedForwarderAdmin} from "../../script/Deploy.s.sol";
 import {MetroToken} from "../../src/metro.sol";
 import {xMETRO as XMetroCore} from "../../src/xMETRO.sol";
 import {IXMetroDeFiAdapter} from "../../src/interfaces/IXMetroDeFiAdapter.sol";
@@ -98,6 +98,8 @@ contract DeployScriptTest is Test {
         _restore(initialState);
         _wrongChainIdFailsBeforeAnyDeployment();
         _restore(initialState);
+        _forwarderDripWithoutPeriodFailsBeforeAnyDeployment();
+        _restore(initialState);
         _targetOwnerIsDeployer();
         _restore(initialState);
         _fullDryRunUsesReleaseArtifactsAndReadsEveryBinding();
@@ -117,6 +119,8 @@ contract DeployScriptTest is Test {
         assertEq(record.readAddress(".escrowPendingOwner"), address(0));
         assertEq(record.readAddress(".distributorOwner"), deployer);
         assertEq(record.readAddress(".distributorPendingOwner"), address(0));
+        assertEq(record.readAddress(".forwarderOwner"), deployer);
+        assertEq(record.readAddress(".forwarderPendingOwner"), address(0));
         vm.setEnv("DEPLOYMENT_JSON", _deploymentPath());
         new VerifyDeployment().run();
     }
@@ -126,7 +130,8 @@ contract DeployScriptTest is Test {
         MetroToken metro = MetroToken(record.readAddress(".metro"));
         XMetroCore core = XMetroCore(record.readAddress(".xMETRO"));
         ThorMigrationEscrow escrow = ThorMigrationEscrow(record.readAddress(".escrow"));
-        RewardDistributor distributor = RewardDistributor(record.readAddress(".rewardDistributor"));
+        MetroDistributorV1 distributor = MetroDistributorV1(record.readAddress(".metroDistributor"));
+        IRateLimitedForwarderAdmin forwarder = IRateLimitedForwarderAdmin(record.readAddress(".rateLimitedForwarder"));
         address deployer = vm.addr(DEPLOYER_KEY);
         assertEq(record.readAddress(".owner"), finalOwner);
         assertEq(record.readAddress(".metroOwner"), deployer);
@@ -139,6 +144,8 @@ contract DeployScriptTest is Test {
         assertEq(record.readAddress(".corePendingOwner"), finalOwner);
         assertEq(record.readAddress(".escrowPendingOwner"), finalOwner);
         assertEq(record.readAddress(".distributorPendingOwner"), finalOwner);
+        assertEq(record.readAddress(".forwarderOwner"), deployer);
+        assertEq(record.readAddress(".forwarderPendingOwner"), finalOwner);
         assertEq(core.owner(), deployer);
         assertEq(escrow.owner(), deployer);
         assertEq(distributor.owner(), deployer);
@@ -162,6 +169,10 @@ contract DeployScriptTest is Test {
         verifier.run();
         vm.prank(finalOwner);
         distributor.acceptOwnership();
+        vm.expectRevert("VerifyDeploy: Forwarder owner");
+        verifier.run();
+        vm.prank(finalOwner);
+        forwarder.acceptOwnership();
         vm.expectRevert();
         verifier.run();
         vm.prank(finalOwner);
@@ -172,6 +183,8 @@ contract DeployScriptTest is Test {
         assertEq(core.pendingOwner(), address(0));
         assertEq(escrow.pendingOwner(), address(0));
         assertEq(distributor.pendingOwner(), address(0));
+        assertEq(forwarder.owner(), finalOwner);
+        assertEq(forwarder.pendingOwner(), address(0));
         vm.prank(deployer);
         vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", deployer));
         core.setForfeitureRecipient(updatedRecipient);
@@ -238,7 +251,8 @@ contract DeployScriptTest is Test {
         address implementation = json.readAddress(".deFiAdapterImplementation");
         address proxy = json.readAddress(".deFiAdapterProxy");
         IXMetroDeFiAdapterAdmin adapter = IXMetroDeFiAdapterAdmin(proxy);
-        RewardDistributor distributor = RewardDistributor(json.readAddress(".rewardDistributor"));
+        MetroDistributorV1 distributor = MetroDistributorV1(json.readAddress(".metroDistributor"));
+        IRateLimitedForwarderAdmin forwarder = IRateLimitedForwarderAdmin(json.readAddress(".rateLimitedForwarder"));
 
         assertEq(json.readUint(".chainId"), block.chainid);
         assertEq(json.readUint(".deploymentNonce"), startingNonce);
@@ -252,6 +266,9 @@ contract DeployScriptTest is Test {
         assertEq(address(core), vm.computeCreateAddress(deployer, startingNonce + 1));
         assertEq(implementation, vm.computeCreateAddress(deployer, startingNonce + 2));
         assertEq(proxy, vm.computeCreateAddress(deployer, startingNonce + 3));
+        assertEq(address(distributor), vm.computeCreateAddress(deployer, startingNonce + 4));
+        assertEq(address(forwarder), vm.computeCreateAddress(deployer, startingNonce + 5));
+        assertEq(json.readAddress(".escrow"), vm.computeCreateAddress(deployer, startingNonce + 6));
         assertEq(implementation.code.length, ADAPTER_RUNTIME);
         assertEq(address(core).code.length, CORE_RUNTIME);
         assertEq(json.readBytes32(".deFiAdapterImplementationCodehash"), implementation.codehash);
@@ -278,7 +295,20 @@ contract DeployScriptTest is Test {
         assertFalse(metro.isMinter(deployer));
         assertFalse(metro.isMinter(finalOwner));
         assertEq(distributor.owner(), finalOwner);
-        assertEq(json.readBytes32(".rewardDistributorCodehash"), address(distributor).codehash);
+        assertEq(json.readBytes32(".metroDistributorCodehash"), address(distributor).codehash);
+        assertEq(json.readBytes32(".rateLimitedForwarderCodehash"), address(forwarder).codehash);
+        assertEq(distributor.treasury(), vm.envAddress("REWARD_DISTRIBUTOR_TREASURY"));
+        assertEq(distributor.polVault(), vm.envAddress("REWARD_DISTRIBUTOR_POL_VAULT"));
+        assertEq(address(distributor.forwarder()), address(forwarder));
+        assertEq(address(forwarder.token()), address(usdc));
+        assertEq(forwarder.recipient(), address(distributor));
+        assertEq(forwarder.dripRate(), 1_000e6);
+        assertEq(forwarder.dripPeriod(), 60);
+        assertEq(forwarder.maxReserve(), 10_000e6);
+        assertTrue(forwarder.paused());
+        assertEq(json.readUint(".forwarderDripRate"), 1_000e6);
+        assertEq(json.readAddress(".distributorTreasury"), distributor.treasury());
+        assertEq(json.readAddress(".polVault"), distributor.polVault());
         assertEq(json.readBytes32(".escrowCodehash"), json.readAddress(".escrow").codehash);
         assertEq(distributor.commissionVault(), address(configuredVault));
         assertEq(distributor.maxCommissionSplitBps(), 1_000);
@@ -463,6 +493,15 @@ contract DeployScriptTest is Test {
         _setRequiredEnvironment();
     }
 
+    function _forwarderDripWithoutPeriodFailsBeforeAnyDeployment() private {
+        address deployer = vm.addr(DEPLOYER_KEY);
+        uint256 nonceBefore = vm.getNonce(deployer);
+        _set("FORWARDER_DRIP_PERIOD", 0);
+        vm.expectRevert("Deploy: forwarder drip period");
+        deployScript.run();
+        assertEq(vm.getNonce(deployer), nonceBefore);
+    }
+
     function _wrongChainIdFailsBeforeAnyDeployment() private {
         address deployer = vm.addr(DEPLOYER_KEY);
         uint256 nonceBefore = vm.getNonce(deployer);
@@ -586,6 +625,11 @@ contract DeployScriptTest is Test {
         _set("REWARD_DISTRIBUTOR_OPERATOR", address(0));
         _set("AUTO_COMPOUND_OPERATOR", makeAddr("keeper"));
         _set("COMMISSION_VAULT", address(0));
+        _set("REWARD_DISTRIBUTOR_TREASURY", makeAddr("distributor-treasury"));
+        _set("REWARD_DISTRIBUTOR_POL_VAULT", makeAddr("pol-vault"));
+        _set("FORWARDER_DRIP_RATE", 1_000e6);
+        _set("FORWARDER_DRIP_PERIOD", 60);
+        _set("FORWARDER_MAX_RESERVE", 10_000e6);
         _set("MAX_COMMISSION_SPLIT_BPS", 0);
         vm.setEnv("CONTRIBUTORS", "");
 

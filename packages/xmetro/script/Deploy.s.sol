@@ -4,8 +4,10 @@ pragma solidity 0.8.38;
 /**
  * @title Deploy
  * @notice Deploys the immutable xMETRO Core and the fixed-address UUPS DeFi Adapter Proxy.
- * @dev Build the Adapter artifact with FOUNDRY_PROFILE=adapter before running this script with
- *      FOUNDRY_PROFILE=deploy. xMETRO deploys unpaused; business-contract ownership requires acceptance by the target owner.
+ * @dev Build the Adapter artifact with FOUNDRY_PROFILE=adapter and the RateLimitedForwarder artifact with
+ *      `forge build` in packages/commission before running this script with FOUNDRY_PROFILE=deploy.
+ *      xMETRO deploys unpaused and the RateLimitedForwarder deploys paused; business-contract ownership
+ *      requires acceptance by the target owner.
  */
 
 import {stdJson} from "forge-std/StdJson.sol";
@@ -16,13 +18,30 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 
 import {MetroToken} from "../src/metro.sol";
 import {xMETRO} from "../src/xMETRO.sol";
-import {RewardDistributor, ICommissionVault} from "../src/RewardDistributor.sol";
+import {ICommissionVault} from "../src/MetroDistributorBase.sol";
+import {MetroDistributorV1} from "../src/MetroDistributorV1.sol";
 import {ThorMigrationEscrow} from "../src/ThorMigrationEscrow.sol";
 import {IXMetroDeFiAdapter} from "../src/interfaces/IXMetroDeFiAdapter.sol";
 import {DeFiAdapterScriptBase, IXMetroDeFiAdapterAdmin} from "./DeFiAdapterScriptBase.sol";
 
+interface IRateLimitedForwarderAdmin {
+    function token() external view returns (address);
+    function recipient() external view returns (address);
+    function owner() external view returns (address);
+    function pendingOwner() external view returns (address);
+    function paused() external view returns (bool);
+    function dripRate() external view returns (uint256);
+    function dripPeriod() external view returns (uint256);
+    function maxReserve() external view returns (uint256);
+    function transferOwnership(address newOwner) external;
+    function acceptOwnership() external;
+}
+
 contract Deploy is DeFiAdapterScriptBase {
     using stdJson for string;
+
+    string internal constant DEFAULT_FORWARDER_ARTIFACT =
+        "../commission/out/RateLimitedForwarder.sol/RateLimitedForwarder.json";
 
     struct Addresses {
         uint256 chainId;
@@ -44,9 +63,16 @@ contract Deploy is DeFiAdapterScriptBase {
         bytes32 adapterFamilyId;
         bytes32 adapterStorageNamespace;
         uint256 adapterEpoch;
-        address rewardDistributor;
-        bytes32 rewardDistributorCodehash;
+        address metroDistributor;
+        bytes32 metroDistributorCodehash;
         address distributorOperator;
+        address distributorTreasury;
+        address polVault;
+        address rateLimitedForwarder;
+        bytes32 rateLimitedForwarderCodehash;
+        uint256 forwarderDripRate;
+        uint256 forwarderDripPeriod;
+        uint256 forwarderMaxReserve;
         address escrow;
         bytes32 escrowCodehash;
         address autoCompoundOperator;
@@ -59,6 +85,8 @@ contract Deploy is DeFiAdapterScriptBase {
         address escrowPendingOwner;
         address distributorOwner;
         address distributorPendingOwner;
+        address forwarderOwner;
+        address forwarderPendingOwner;
         address forfeitureRecipient;
         address migrationRewardExcludedAddress;
         address commissionVault;
@@ -142,6 +170,12 @@ contract Deploy is DeFiAdapterScriptBase {
         address expectedMapleSyrupUsdc;
         bytes32 mapleDepositData;
         address distributorOperator;
+        address distributorTreasury;
+        address polVault;
+        uint256 forwarderDripRate;
+        uint256 forwarderDripPeriod;
+        uint256 forwarderMaxReserve;
+        string forwarderArtifact;
         address autoCompoundOperator;
         address commissionVault;
         uint16 maxCommissionSplitBps;
@@ -162,7 +196,7 @@ contract Deploy is DeFiAdapterScriptBase {
 
     function run() external {
         Input memory input = _loadAndValidateInput();
-        bytes memory implementationInitCode = _adapterCreationCode(input.adapterArtifact);
+        bytes memory implementationInitCode = _artifactCreationCode(input.adapterArtifact);
         require(input.adapterInitcodeHash != bytes32(0), "Deploy: missing approved Adapter initcode hash");
         require(keccak256(implementationInitCode) == input.adapterInitcodeHash, "Deploy: Adapter artifact mismatch");
         uint256 startingNonce = vm.getNonce(input.deployer);
@@ -172,14 +206,27 @@ contract Deploy is DeFiAdapterScriptBase {
         address predictedImplementation = vm.computeCreateAddress(input.deployer, startingNonce + 2);
         address predictedProxy = vm.computeCreateAddress(input.deployer, startingNonce + 3);
         address predictedDistributor = vm.computeCreateAddress(input.deployer, startingNonce + 4);
-        address predictedEscrow = vm.computeCreateAddress(input.deployer, startingNonce + 5);
+        address predictedForwarder = vm.computeCreateAddress(input.deployer, startingNonce + 5);
+        address predictedEscrow = vm.computeCreateAddress(input.deployer, startingNonce + 6);
         require(
             predictedMetro.code.length == 0 && predictedCore.code.length == 0
                 && predictedImplementation.code.length == 0 && predictedProxy.code.length == 0
-                && predictedDistributor.code.length == 0 && predictedEscrow.code.length == 0,
+                && predictedDistributor.code.length == 0 && predictedForwarder.code.length == 0
+                && predictedEscrow.code.length == 0,
             "Deploy: predicted address occupied"
         );
         _requireCommissionVault(input, predictedDistributor);
+        bytes memory forwarderInitCode = abi.encodePacked(
+            _artifactCreationCode(input.forwarderArtifact),
+            abi.encode(
+                input.usdc,
+                predictedDistributor,
+                input.deployer,
+                input.forwarderDripRate,
+                input.forwarderDripPeriod,
+                input.forwarderMaxReserve
+            )
+        );
 
         if (input.deployerPk != 0) vm.startBroadcast(input.deployerPk);
         else vm.startBroadcast(input.deployer);
@@ -192,14 +239,17 @@ contract Deploy is DeFiAdapterScriptBase {
         bytes memory initData =
             abi.encodeCall(IXMetroDeFiAdapterAdmin.initialize, (address(core), input.usdc, address(metro)));
         address proxy = address(new ERC1967Proxy(implementation, initData));
-        RewardDistributor distributor = new RewardDistributor(address(core), input.deployer);
+        MetroDistributorV1 distributor =
+            new MetroDistributorV1(address(core), input.distributorTreasury, input.polVault, input.deployer);
+        IRateLimitedForwarderAdmin forwarder = IRateLimitedForwarderAdmin(_deployCreationCode(forwarderInitCode));
         ThorMigrationEscrow escrow =
             new ThorMigrationEscrow(input.deployer, address(core), input.thor, input.yThor, input.migrationStartTime);
 
         require(
             address(metro) == predictedMetro && address(core) == predictedCore
                 && implementation == predictedImplementation && proxy == predictedProxy
-                && address(distributor) == predictedDistributor && address(escrow) == predictedEscrow,
+                && address(distributor) == predictedDistributor && address(forwarder) == predictedForwarder
+                && address(escrow) == predictedEscrow,
             "Deploy: CREATE address mismatch"
         );
         _requireImplementation(implementation, 2);
@@ -211,6 +261,7 @@ contract Deploy is DeFiAdapterScriptBase {
         Addresses memory output;
         _configureAdapter(adapter, core, input, output);
 
+        distributor.setForwarder(address(forwarder));
         if (input.distributorOperator != address(0)) distributor.setOperator(input.distributorOperator, true);
         if (input.commissionVault != address(0)) distributor.setCommissionVault(input.commissionVault);
         if (input.maxCommissionSplitBps != 0) distributor.setMaxCommissionSplitBps(input.maxCommissionSplitBps);
@@ -231,13 +282,14 @@ contract Deploy is DeFiAdapterScriptBase {
         if (input.owner != input.deployer) {
             metro.transferOwnership(input.owner);
             distributor.transferOwnership(input.owner);
+            forwarder.transferOwnership(input.owner);
             escrow.transferOwnership(input.owner);
             core.transferOwnership(input.owner);
         }
         vm.stopBroadcast();
 
-        _fillOutput(output, input, startingNonce, metro, core, implementation, proxy, distributor, escrow);
-        _verifyDeployment(output, input, metro, core, adapter, distributor, escrow);
+        _fillOutput(output, input, startingNonce, metro, core, implementation, proxy, distributor, forwarder, escrow);
+        _verifyDeployment(output, input, metro, core, adapter, distributor, forwarder, escrow);
         _writeAddresses(_addressesPath(), output);
         _logDeployment(output);
     }
@@ -316,6 +368,14 @@ contract Deploy is DeFiAdapterScriptBase {
         i.mapleDepositData = vm.envOr("MAPLE_DEPOSIT_DATA", bytes32(0));
 
         i.distributorOperator = vm.envOr("REWARD_DISTRIBUTOR_OPERATOR", address(0));
+        i.distributorTreasury = vm.envAddress("REWARD_DISTRIBUTOR_TREASURY");
+        i.polVault = vm.envAddress("REWARD_DISTRIBUTOR_POL_VAULT");
+        require(i.distributorTreasury != address(0) && i.polVault != address(0), "Deploy: zero distributor sink");
+        i.forwarderDripRate = vm.envUint("FORWARDER_DRIP_RATE");
+        i.forwarderDripPeriod = vm.envUint("FORWARDER_DRIP_PERIOD");
+        i.forwarderMaxReserve = vm.envUint("FORWARDER_MAX_RESERVE");
+        require(i.forwarderDripRate == 0 || i.forwarderDripPeriod > 0, "Deploy: forwarder drip period");
+        i.forwarderArtifact = vm.envOr("FORWARDER_ARTIFACT", DEFAULT_FORWARDER_ARTIFACT);
         i.autoCompoundOperator = vm.envOr("AUTO_COMPOUND_OPERATOR", address(0));
         i.commissionVault = vm.envOr("COMMISSION_VAULT", address(0));
         uint256 commissionBps = vm.envOr("MAX_COMMISSION_SPLIT_BPS", uint256(0));
@@ -394,7 +454,8 @@ contract Deploy is DeFiAdapterScriptBase {
         xMETRO core,
         address implementation,
         address proxy,
-        RewardDistributor distributor,
+        MetroDistributorV1 distributor,
+        IRateLimitedForwarderAdmin forwarder,
         ThorMigrationEscrow escrow
     ) internal view {
         AdapterConfiguration memory config = _requireProxyBindings(proxy, address(core), i.usdc, address(metro));
@@ -417,9 +478,16 @@ contract Deploy is DeFiAdapterScriptBase {
         a.adapterFamilyId = config.family;
         a.adapterStorageNamespace = ADAPTER_STORAGE_NAMESPACE;
         a.adapterEpoch = core.deFiAdapterEpoch();
-        a.rewardDistributor = address(distributor);
-        a.rewardDistributorCodehash = address(distributor).codehash;
+        a.metroDistributor = address(distributor);
+        a.metroDistributorCodehash = address(distributor).codehash;
         a.distributorOperator = i.distributorOperator;
+        a.distributorTreasury = i.distributorTreasury;
+        a.polVault = i.polVault;
+        a.rateLimitedForwarder = address(forwarder);
+        a.rateLimitedForwarderCodehash = address(forwarder).codehash;
+        a.forwarderDripRate = i.forwarderDripRate;
+        a.forwarderDripPeriod = i.forwarderDripPeriod;
+        a.forwarderMaxReserve = i.forwarderMaxReserve;
         a.escrow = address(escrow);
         a.escrowCodehash = address(escrow).codehash;
         a.autoCompoundOperator = i.autoCompoundOperator;
@@ -432,6 +500,8 @@ contract Deploy is DeFiAdapterScriptBase {
         a.escrowPendingOwner = escrow.pendingOwner();
         a.distributorOwner = distributor.owner();
         a.distributorPendingOwner = distributor.pendingOwner();
+        a.forwarderOwner = forwarder.owner();
+        a.forwarderPendingOwner = forwarder.pendingOwner();
         a.forfeitureRecipient = i.forfeitureRecipient;
         a.migrationRewardExcludedAddress = core.migrationRewardExcludedAddress();
         a.commissionVault = i.commissionVault;
@@ -486,7 +556,8 @@ contract Deploy is DeFiAdapterScriptBase {
         MetroToken metro,
         xMETRO core,
         IXMetroDeFiAdapterAdmin adapter,
-        RewardDistributor distributor,
+        MetroDistributorV1 distributor,
+        IRateLimitedForwarderAdmin forwarder,
         ThorMigrationEscrow escrow
     ) internal view {
         require(
@@ -580,9 +651,18 @@ contract Deploy is DeFiAdapterScriptBase {
         );
         require(
             address(distributor.xMETRO()) == address(core) && address(distributor.rewardToken()) == i.usdc
+                && distributor.treasury() == i.distributorTreasury && distributor.polVault() == i.polVault
+                && address(distributor.forwarder()) == address(forwarder)
                 && distributor.commissionVault() == i.commissionVault
                 && distributor.maxCommissionSplitBps() == i.maxCommissionSplitBps,
             "Deploy: distributor readback"
+        );
+        require(
+            forwarder.owner() == i.deployer && forwarder.pendingOwner() == expectedPending && forwarder.paused()
+                && forwarder.token() == i.usdc && forwarder.recipient() == address(distributor)
+                && forwarder.dripRate() == i.forwarderDripRate && forwarder.dripPeriod() == i.forwarderDripPeriod
+                && forwarder.maxReserve() == i.forwarderMaxReserve,
+            "Deploy: forwarder readback"
         );
         if (i.distributorOperator != address(0)) {
             require(distributor.operators(i.distributorOperator), "Deploy: distributor operator");
@@ -740,9 +820,16 @@ contract Deploy is DeFiAdapterScriptBase {
         json = vm.serializeBytes32(obj, "adapterFamilyId", a.adapterFamilyId);
         json = vm.serializeBytes32(obj, "adapterStorageNamespace", a.adapterStorageNamespace);
         json = vm.serializeUint(obj, "adapterEpoch", a.adapterEpoch);
-        json = vm.serializeAddress(obj, "rewardDistributor", a.rewardDistributor);
-        json = vm.serializeBytes32(obj, "rewardDistributorCodehash", a.rewardDistributorCodehash);
+        json = vm.serializeAddress(obj, "metroDistributor", a.metroDistributor);
+        json = vm.serializeBytes32(obj, "metroDistributorCodehash", a.metroDistributorCodehash);
         json = vm.serializeAddress(obj, "distributorOperator", a.distributorOperator);
+        json = vm.serializeAddress(obj, "distributorTreasury", a.distributorTreasury);
+        json = vm.serializeAddress(obj, "polVault", a.polVault);
+        json = vm.serializeAddress(obj, "rateLimitedForwarder", a.rateLimitedForwarder);
+        json = vm.serializeBytes32(obj, "rateLimitedForwarderCodehash", a.rateLimitedForwarderCodehash);
+        json = vm.serializeUint(obj, "forwarderDripRate", a.forwarderDripRate);
+        json = vm.serializeUint(obj, "forwarderDripPeriod", a.forwarderDripPeriod);
+        json = vm.serializeUint(obj, "forwarderMaxReserve", a.forwarderMaxReserve);
         json = vm.serializeAddress(obj, "escrow", a.escrow);
         json = vm.serializeBytes32(obj, "escrowCodehash", a.escrowCodehash);
         json = vm.serializeAddress(obj, "autoCompoundOperator", a.autoCompoundOperator);
@@ -751,6 +838,8 @@ contract Deploy is DeFiAdapterScriptBase {
         json = vm.serializeAddress(obj, "metroPendingOwner", a.metroPendingOwner);
         json = vm.serializeAddress(obj, "distributorPendingOwner", a.distributorPendingOwner);
         json = vm.serializeAddress(obj, "distributorOwner", a.distributorOwner);
+        json = vm.serializeAddress(obj, "forwarderPendingOwner", a.forwarderPendingOwner);
+        json = vm.serializeAddress(obj, "forwarderOwner", a.forwarderOwner);
         json = vm.serializeAddress(obj, "escrowPendingOwner", a.escrowPendingOwner);
         json = vm.serializeAddress(obj, "escrowOwner", a.escrowOwner);
         json = vm.serializeAddress(obj, "corePendingOwner", a.corePendingOwner);
@@ -831,15 +920,18 @@ contract Deploy is DeFiAdapterScriptBase {
         console2.log("Escrow pending owner:", a.escrowPendingOwner);
         console2.log("Distributor owner:", a.distributorOwner);
         console2.log("Distributor pending owner:", a.distributorPendingOwner);
+        console2.log("Forwarder owner:", a.forwarderOwner);
+        console2.log("Forwarder pending owner:", a.forwarderPendingOwner);
         console2.log(
             a.metroOwner == a.owner && a.coreOwner == a.owner && a.escrowOwner == a.owner
-                && a.distributorOwner == a.owner && a.metroPendingOwner == address(0)
+                && a.distributorOwner == a.owner && a.forwarderOwner == a.owner && a.metroPendingOwner == address(0)
                 && a.corePendingOwner == address(0) && a.escrowPendingOwner == address(0)
-                && a.distributorPendingOwner == address(0)
+                && a.distributorPendingOwner == address(0) && a.forwarderPendingOwner == address(0)
                 ? "Ownership: Accepted"
                 : "Ownership: Pending acceptance"
         );
-        console2.log("RewardDistributor:", a.rewardDistributor);
+        console2.log("MetroDistributorV1:", a.metroDistributor);
+        console2.log("RateLimitedForwarder (paused until owner unpauses):", a.rateLimitedForwarder);
         console2.log("ThorMigrationEscrow:", a.escrow);
         console2.log("Addresses written to:", _addressesPath());
     }
