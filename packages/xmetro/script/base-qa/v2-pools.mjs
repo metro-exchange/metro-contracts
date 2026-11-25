@@ -1,10 +1,8 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
-import { ethers, runDir, chainId, readArtifact, openRun, sendStep } from './runner.mjs';
+import { ethers, runDir, chainId, readArtifact, openRun, sendStep, v2Factory as factoryAddress, v2Router as routerAddress } from './runner.mjs';
 
 const ctx = await openRun();
-const factoryAddress = '0x8909Dc15e40173Ff4699343b6eB8132c65e18eC6';
-const routerAddress = '0x4752ba5dbc23f44d87826276bf6fd6b1c372ad24';
 const factoryAbi = [
   'function getPair(address,address) view returns (address)',
   'function createPair(address,address) returns (address)',
@@ -57,7 +55,7 @@ for (const [asset] of pools) {
     throw new Error('An external actor created this QA token pair; inspect before continuing: ' + asset);
   }
   const pair = await pairAddress(asset);
-  if (pair === ethers.constants.AddressZero || (await ctx.provider.getCode(pair)) === '0x') throw new Error('Pair has no code: ' + asset);
+  if ((await ctx.provider.getCode(pair)) === '0x') throw new Error('Pair has no code: ' + asset);
   ctx.state.pairs[asset] = pair;
   await ctx.persist();
 }

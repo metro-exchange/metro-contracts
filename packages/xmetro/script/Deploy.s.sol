@@ -1,12 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.38;
 
-/**
- * @title Deploy
- * @notice Deploys the immutable xMETRO Core, the fixed-address UUPS DeFi Adapter Proxy, MetroDistributorV1 and its
- *         RateLimitedForwarder.
- */
-
 import {stdJson} from "forge-std/StdJson.sol";
 import {console2} from "forge-std/console2.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";

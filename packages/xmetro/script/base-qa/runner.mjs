@@ -26,15 +26,23 @@ export const artifactPaths = {
   CommissionVault: '../commission/out/CommissionVault.sol/CommissionVault.json',
   RateLimitedForwarder: '../commission/out/RateLimitedForwarder.sol/RateLimitedForwarder.json'
 };
+export const testTokens = [
+  ['TestUSDC', 'Test USDC', 6], ['TestTHOR', 'Test THOR', 18], ['TestYTHOR', 'Test yTHOR', 18],
+  ['TestUSDT', 'Test USDT', 6], ['TestWBTC', 'Test WBTC', 8], ['TestGHO', 'Test GHO', 18],
+  ['TestXAUT', 'Test XAUT', 6], ['TestExtraToken', 'Test Extra Token', 18]
+];
+export const v2Router = '0x4752ba5dbc23f44d87826276bf6fd6b1c372ad24';
+export const v2Factory = '0x8909Dc15e40173Ff4699343b6eB8132c65e18eC6';
+export const l1FeeOracle = '0x420000000000000000000000000000000000000F';
+export const l1FeeOracleInterface = new ethers.utils.Interface(['function getL1Fee(bytes) view returns (uint256)']);
+export const rpcUrl = process.env.BASE_RPC_URL || 'https://mainnet.base.org';
 const localRehearsal = process.env.BASE_QA_LOCAL_REHEARSAL === '1';
-const runId = process.env.BASE_QA_RUN_ID || 'base-qa-metro-distributor-v1';
+const runId = process.env.BASE_QA_RUN_ID || qaConfig.deploymentRunId;
 if (!/^[a-z0-9][a-z0-9-]{4,80}$/.test(runId)) throw new Error('Invalid BASE_QA_RUN_ID');
 export const runDir = path.join(root, 'integration/testing/base/evidence',
   localRehearsal ? `local-${runId}` : runId);
 export const preflightFile = path.join(runDir, 'preflight.json');
 const signerFile = process.env.BASE_QA_SIGNERS_FILE;
-const oracle = '0x420000000000000000000000000000000000000F';
-const oracleAbi = new ethers.utils.Interface(['function getL1Fee(bytes) view returns (uint256)']);
 const minReserve = ethers.utils.parseEther('0.00003');
 
 async function saveJson(file, value, mode = 0o644) {
@@ -43,34 +51,36 @@ async function saveJson(file, value, mode = 0o644) {
   await writeFile(temp, JSON.stringify(value, null, 2) + '\n', { mode });
   await rename(temp, file);
 }
+export function sha256(bytes) {
+  return createHash('sha256').update(bytes).digest('hex');
+}
+export async function readPublicWallets() {
+  return JSON.parse(await readFile(path.join(root, 'integration/testing/base/wallets.json')));
+}
 export async function readArtifact(name) {
   return JSON.parse(await readFile(path.join(root, artifactPaths[name])));
 }
 export async function verifyPreflight(preflight) {
   for (const [relative, expected] of Object.entries(preflight.sourceHashes)) {
-    const actual = createHash('sha256').update(await readFile(path.join(root, relative))).digest('hex');
+    const actual = sha256(await readFile(path.join(root, relative)));
     if (actual !== expected) throw new Error('Source changed after preflight: ' + relative);
   }
   for (const { path: relative, artifactSha256 } of Object.values(preflight.artifacts)) {
-    const actual = createHash('sha256').update(await readFile(path.join(root, relative))).digest('hex');
+    const actual = sha256(await readFile(path.join(root, relative)));
     if (actual !== artifactSha256) throw new Error('Artifact changed after preflight: ' + relative);
   }
 }
 export async function openRun() {
   if (!signerFile) throw new Error('Set BASE_QA_SIGNERS_FILE to a private local signer file');
-  const rpc = process.env.BASE_RPC_URL || 'https://mainnet.base.org';
-  if (localRehearsal && !/^http:\/\/(127\.0\.0\.1|localhost)(:|\/)/.test(rpc)) {
-    throw new Error('Local rehearsal requires a loopback RPC');
-  }
-  if (!localRehearsal && /^http:\/\/(127\.0\.0\.1|localhost)(:|\/)/.test(rpc)) {
-    throw new Error('On-chain mode cannot use a loopback RPC');
-  }
+  const loopback = /^http:\/\/(127\.0\.0\.1|localhost)(:|\/)/.test(rpcUrl);
+  if (localRehearsal && !loopback) throw new Error('Local rehearsal requires a loopback RPC');
+  if (!localRehearsal && loopback) throw new Error('On-chain mode cannot use a loopback RPC');
   if (!localRehearsal && process.env.BASE_QA_BROADCAST !== 'YES') {
     throw new Error('Set BASE_QA_BROADCAST=YES to broadcast');
   }
-  const provider = new ethers.providers.StaticJsonRpcProvider(rpc, chainId);
+  const provider = new ethers.providers.StaticJsonRpcProvider(rpcUrl, chainId);
   if (Number(await provider.send('eth_chainId', [])) !== chainId) throw new Error('RPC chain ID differs from base-qa.json');
-  const publicWallets = JSON.parse(await readFile(path.join(root, 'integration/testing/base/wallets.json')));
+  const publicWallets = await readPublicWallets();
   const privateWallets = JSON.parse(await readFile(signerFile));
   const publicByRole = Object.fromEntries(publicWallets.accounts.map(x => [x.role, x.address.toLowerCase()]));
   const wallets = {};
@@ -79,7 +89,7 @@ export async function openRun() {
     if (wallet.address.toLowerCase() !== publicByRole[account.role]) throw new Error('Signer does not match the public wallet list');
     wallets[account.role] = wallet;
   }
-  if (privateWallets.chainId !== chainId || wallets.deployer.address.toLowerCase() !== publicByRole.deployer) {
+  if (privateWallets.chainId !== chainId || !wallets.deployer) {
     throw new Error('Wallet or chain ID mismatch');
   }
   const preflight = JSON.parse(await readFile(preflightFile));
@@ -89,12 +99,11 @@ export async function openRun() {
   try { state = JSON.parse(await readFile(stateFile)); }
   catch (error) { if (error.code !== 'ENOENT') throw error; state = { runId: path.basename(runDir), chainId, steps: {}, contracts: {}, plan: null }; }
   async function persist() { await saveJson(stateFile, state, 0o600); }
-  return { provider, wallets, state, persist, stateFile, preflight };
+  return { provider, wallets, state, persist };
 }
-export async function sendStep(ctx, { id, role = 'deployer', buildTx, expectContract = false }) {
+export async function sendStep(ctx, { id, buildTx, expectContract = false }) {
   const { provider, wallets, state, persist } = ctx;
-  const wallet = wallets[role];
-  if (!wallet) throw new Error('Unknown wallet role: ' + role);
+  const wallet = wallets.deployer;
   const transactionsDir = path.join(runDir, 'transactions');
   const evidenceFile = path.join(transactionsDir, id + '.json');
   let step = state.steps[id];
@@ -107,7 +116,7 @@ export async function sendStep(ctx, { id, role = 'deployer', buildTx, expectCont
   if (!step) {
     const latest = await provider.getTransactionCount(wallet.address, 'latest');
     const pending = await provider.getTransactionCount(wallet.address, 'pending');
-    if (pending !== latest) throw new Error('Wallet has an unrecorded pending nonce: ' + role);
+    if (pending !== latest) throw new Error('Wallet has an unrecorded pending nonce: deployer');
     const tx = await buildTx();
     const estimate = await provider.estimateGas({ ...tx, from: wallet.address });
     const gasLimit = estimate.mul(120).div(100).add(10000);
@@ -125,17 +134,16 @@ export async function sendStep(ctx, { id, role = 'deployer', buildTx, expectCont
     };
     const raw = await wallet.signTransaction(unsigned);
     const hash = ethers.utils.keccak256(raw);
-    const l1Raw = await provider.call({ to: oracle, data: oracleAbi.encodeFunctionData('getL1Fee', [raw]) });
-    const l1Fee = oracleAbi.decodeFunctionResult('getL1Fee', l1Raw)[0];
+    const l1Raw = await provider.call({ to: l1FeeOracle, data: l1FeeOracleInterface.encodeFunctionData('getL1Fee', [raw]) });
+    const l1Fee = l1FeeOracleInterface.decodeFunctionResult('getL1Fee', l1Raw)[0];
     const balance = await provider.getBalance(wallet.address);
     const maxCost = gasLimit.mul(maxFee).add(l1Fee).add(unsigned.value);
-    const reserve = role === 'deployer' ? minReserve : ethers.utils.parseEther('0.000002');
-    if (balance.lt(maxCost.add(reserve))) {
-      throw new Error('BUDGET_STOP ' + id + ': balance=' + balance.toString() + ', requiredWithReserve=' + maxCost.add(reserve).toString());
+    if (balance.lt(maxCost.add(minReserve))) {
+      throw new Error('BUDGET_STOP ' + id + ': balance=' + balance.toString() + ', requiredWithReserve=' + maxCost.add(minReserve).toString());
     }
     const contractAddress = expectContract ? ethers.utils.getContractAddress({ from: wallet.address, nonce: latest }) : null;
     step = {
-      id, role, from: wallet.address, to: tx.to || null, nonce: latest,
+      id, role: 'deployer', from: wallet.address, to: tx.to || null, nonce: latest,
       hash, contractAddress, status: 'prepared',
       gasEstimate: estimate.toString(), gasLimit: gasLimit.toString(),
       maxFeePerGas: maxFee.toString(), maxPriorityFeePerGas: priority.toString(),

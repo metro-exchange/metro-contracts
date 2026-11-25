@@ -1,7 +1,9 @@
-import { createHash } from 'node:crypto';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { ethers, root, runDir, chainId, artifactPaths, preflightFile, readArtifact, verifyPreflight } from './runner.mjs';
+import {
+  ethers, root, runDir, chainId, artifactPaths, preflightFile, readArtifact, verifyPreflight, sha256, readPublicWallets,
+  testTokens, v2Router as router, v2Factory as factory, l1FeeOracle, l1FeeOracleInterface, rpcUrl
+} from './runner.mjs';
 
 const existing = await readFile(preflightFile).then(JSON.parse, error => {
   if (error.code === 'ENOENT') return null;
@@ -12,32 +14,17 @@ if (existing) {
   console.log('Reusing preflight of this run with unchanged sources and artifacts:', preflightFile);
   process.exit(0);
 }
-const rpc = process.env.BASE_RPC_URL || 'https://mainnet.base.org';
-const provider = new ethers.providers.StaticJsonRpcProvider(rpc, chainId);
-const publicWallets = JSON.parse(await readFile(path.join(root, 'integration/testing/base/wallets.json')));
+const provider = new ethers.providers.StaticJsonRpcProvider(rpcUrl, chainId);
+const publicWallets = await readPublicWallets();
 const deployer = publicWallets.accounts.find(x => x.role === 'deployer')?.address;
 if (!deployer) throw new Error('Missing deployer public address');
-const router = '0x4752ba5dbc23f44d87826276bf6fd6b1c372ad24';
-const factory = '0x8909Dc15e40173Ff4699343b6eB8132c65e18eC6';
-const gasPriceOracle = '0x420000000000000000000000000000000000000F';
 const placeholder = deployer;
-const gpoInterface = new ethers.utils.Interface(['function getL1Fee(bytes) view returns (uint256)']);
 const routerInterface = new ethers.utils.Interface(['function factory() view returns (address)']);
-const factoryInterface = new ethers.utils.Interface([
-  'function getPair(address,address) view returns (address)',
-  'function createPair(address,address) returns (address)'
-]);
+const factoryInterface = new ethers.utils.Interface(['function createPair(address,address) returns (address)']);
 const feeEstimateWallet = ethers.Wallet.createRandom();
 
 const specs = [
-  ['TestUSDC', 'ERC20Mintable', ['Test USDC', 'TestUSDC', 6]],
-  ['TestTHOR', 'ERC20Mintable', ['Test THOR', 'TestTHOR', 18]],
-  ['TestYTHOR', 'ERC20Mintable', ['Test yTHOR', 'TestYTHOR', 18]],
-  ['TestUSDT', 'ERC20Mintable', ['Test USDT', 'TestUSDT', 6]],
-  ['TestWBTC', 'ERC20Mintable', ['Test WBTC', 'TestWBTC', 8]],
-  ['TestGHO', 'ERC20Mintable', ['Test GHO', 'TestGHO', 18]],
-  ['TestXAUT', 'ERC20Mintable', ['Test XAUT', 'TestXAUT', 6]],
-  ['TestExtraToken', 'ERC20Mintable', ['Test Extra Token', 'TestExtraToken', 18]],
+  ...testTokens.map(([id, name, decimals]) => [id, 'ERC20Mintable', [name, id, decimals]]),
   ['TestSyrupUSDC', 'MockSyrupUSDC', [placeholder]],
   ['MockAaveV3Pool', 'MockAaveV3Pool', [placeholder, ethers.BigNumber.from(10).pow(27)]],
   ['MockAaveV4Spoke', 'MockAaveV4Spoke', [placeholder, 0]],
@@ -64,10 +51,10 @@ async function l1Fee(tx) {
       value: 0, ...tx
     });
     const result = await provider.call({
-      to: gasPriceOracle,
-      data: gpoInterface.encodeFunctionData('getL1Fee', [signed])
+      to: l1FeeOracle,
+      data: l1FeeOracleInterface.encodeFunctionData('getL1Fee', [signed])
     });
-    return gpoInterface.decodeFunctionResult('getL1Fee', result)[0].toString();
+    return l1FeeOracleInterface.decodeFunctionResult('getL1Fee', result)[0].toString();
   } catch (error) {
     return null;
   }
@@ -98,7 +85,7 @@ const [block, balanceHex, nonceHex, pendingNonceHex, gasPriceHex, routerCode, fa
     rpcCall('eth_gasPrice', []),
     rpcCall('eth_getCode', [router, 'latest']),
     rpcCall('eth_getCode', [factory, 'latest']),
-    rpcCall('eth_getCode', [gasPriceOracle, 'latest'])
+    rpcCall('eth_getCode', [l1FeeOracle, 'latest'])
   ]);
 const gasPrice = BigInt(gasPriceHex);
 const routerFactoryRaw = await provider.call({ to: router, data: routerInterface.encodeFunctionData('factory') });
@@ -112,7 +99,7 @@ for (const [name, relative] of Object.entries(artifactPaths)) {
   const artifact = JSON.parse(bytes);
   artifacts[name] = {
     path: relative,
-    artifactSha256: createHash('sha256').update(bytes).digest('hex'),
+    artifactSha256: sha256(bytes),
     initcodeKeccak256: ethers.utils.keccak256(artifact.bytecode.object),
     initcodeBytes: (artifact.bytecode.object.length - 2) / 2,
     runtimeBytes: (artifact.deployedBytecode.object.length - 2) / 2
@@ -127,7 +114,7 @@ for (const relative of [
   'test/mocks/MockAaveV4Giver.sol', 'test/mocks/MockSyrupUSDC.sol',
   '../commission/contracts/CommissionVault.sol', '../commission/contracts/RateLimitedForwarder.sol'
 ]) {
-  sourceHashes[relative] = createHash('sha256').update(await readFile(path.join(root, relative))).digest('hex');
+  sourceHashes[relative] = sha256(await readFile(path.join(root, relative)));
 }
 const quotes = [];
 for (const [label, name, args] of specs) {
@@ -138,9 +125,6 @@ for (const [label, name, args] of specs) {
 }
 const tokenA = ethers.Wallet.createRandom().address;
 const tokenB = ethers.Wallet.createRandom().address;
-const pairRaw = await provider.call({ to: factory, data: factoryInterface.encodeFunctionData('getPair', [tokenA, tokenB]) });
-const existingPair = factoryInterface.decodeFunctionResult('getPair', pairRaw)[0];
-if (existingPair !== ethers.constants.AddressZero) throw new Error('Random estimation pair already exists');
 const pairCreationQuote = await quote(factoryInterface.encodeFunctionData('createPair', [tokenA, tokenB]), factory, gasPrice);
 const report = {
   recordedAt: new Date().toISOString(),

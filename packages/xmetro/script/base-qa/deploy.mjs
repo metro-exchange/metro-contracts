@@ -1,21 +1,24 @@
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
-import { ethers, root, runDir, chainId, qaConfig, readArtifact, openRun, sendStep } from './runner.mjs';
+import {
+  ethers, runDir, chainId, qaConfig, readArtifact, openRun, sendStep, readPublicWallets, testTokens, v2Router as v2
+} from './runner.mjs';
 
-const v2 = '0x4752ba5dbc23f44d87826276bf6fd6b1c372ad24';
 const v3 = '0x2626664c2603336E57B271c5C0b26F421741e481';
 const oneInch = '0x111111125421ca6dc452d289314280a0f8842a65';
 const zero = ethers.constants.AddressZero;
 const qaConversionRatio = '0.3928569546';
 const qaMigrationWindowSeconds = 30 * 24 * 60 * 60;
 const qaMigrationStartDelaySeconds = 300;
+const parsedRatio = ethers.utils.parseEther(qaConversionRatio);
+const same = (a, b) => a.toLowerCase() === b.toLowerCase();
 const c = (id) => {
   const address = ctx.state.contracts[id];
   if (!address) throw new Error('Missing prerequisite deployment: ' + id);
   return address;
 };
 const ctx = await openRun();
-const publicWallets = JSON.parse(await readFile(path.join(root, 'integration/testing/base/wallets.json')));
+const publicWallets = await readPublicWallets();
 const addr = Object.fromEntries(publicWallets.accounts.map(x => [x.role, x.address]));
 const phase = process.argv[2] || 'all';
 const phases = ['tokens', 'mocks', 'core', 'config', 'seed', 'ownership'];
@@ -32,10 +35,10 @@ async function deployTx(name, args) {
 async function deploy(id, name, args) {
   return (await sendStep(ctx, { id, expectContract: true, buildTx: () => deployTx(name, args) })).contractAddress;
 }
-async function call(id, name, contractId, fn, args, role = 'deployer') {
+async function call(id, name, contractId, fn, args) {
   const target = await contract(name, c(contractId));
   return sendStep(ctx, {
-    id, role, buildTx: () => ({ to: target.address, data: target.interface.encodeFunctionData(fn, args) })
+    id, buildTx: () => ({ to: target.address, data: target.interface.encodeFunctionData(fn, args) })
   });
 }
 async function recordReadbacks(label, values) {
@@ -47,27 +50,17 @@ async function recordReadbacks(label, values) {
   }, (_, v) => ethers.BigNumber.isBigNumber(v) ? v.toString() : v, 2) + '\n');
 }
 async function tokenStage() {
-  const tokens = [
-    ['TestUSDC', 'Test USDC', 'TestUSDC', 6],
-    ['TestTHOR', 'Test THOR', 'TestTHOR', 18],
-    ['TestYTHOR', 'Test yTHOR', 'TestYTHOR', 18],
-    ['TestUSDT', 'Test USDT', 'TestUSDT', 6],
-    ['TestWBTC', 'Test WBTC', 'TestWBTC', 8],
-    ['TestGHO', 'Test GHO', 'TestGHO', 18],
-    ['TestXAUT', 'Test XAUT', 'TestXAUT', 6],
-    ['TestExtraToken', 'Test Extra Token', 'TestExtraToken', 18]
-  ];
-  for (const [id, name, symbol, decimals] of tokens) await deploy(id, 'ERC20Mintable', [name, symbol, decimals]);
+  for (const [id, name, decimals] of testTokens) await deploy(id, 'ERC20Mintable', [name, id, decimals]);
   await deploy('TestSyrupUSDC', 'MockSyrupUSDC', [c('TestUSDC')]);
   const readbacks = {};
-  for (const [id, name, symbol, decimals] of tokens) {
+  for (const [id, name, decimals] of testTokens) {
     const token = await contract('ERC20Mintable', c(id));
     const actual = [await token.name(), await token.symbol(), Number(await token.decimals())];
-    if (JSON.stringify(actual) !== JSON.stringify([name, symbol, decimals])) throw new Error('Token metadata mismatch: ' + id);
+    if (JSON.stringify(actual) !== JSON.stringify([name, id, decimals])) throw new Error('Token metadata mismatch: ' + id);
     readbacks[id] = { address: c(id), name: actual[0], symbol: actual[1], decimals: actual[2], totalSupply: (await token.totalSupply()).toString() };
   }
   const syrup = await contract('MockSyrupUSDC', c('TestSyrupUSDC'));
-  if ((await syrup.asset()).toLowerCase() !== c('TestUSDC').toLowerCase()) throw new Error('Syrup asset mismatch');
+  if (!same(await syrup.asset(), c('TestUSDC'))) throw new Error('Syrup asset mismatch');
   readbacks.TestSyrupUSDC = { address: c('TestSyrupUSDC'), asset: await syrup.asset(), decimals: Number(await syrup.decimals()) };
   await recordReadbacks('tokens', readbacks);
 }
@@ -93,8 +86,8 @@ async function mockStage() {
   const syrup = await contract('MockSyrupUSDC', c('TestSyrupUSDC'));
   const maple = await contract('MockSyrupRouter', c('MockSyrupRouter'));
   const giver = await contract('MockAaveV4Giver', c('MockAaveV4Giver'));
-  if ((await maple.pool()).toLowerCase() !== c('TestSyrupUSDC').toLowerCase()) throw new Error('Maple Pool binding mismatch');
-  if ((await syrup.manager()).toLowerCase() !== c('MockSyrupRouter').toLowerCase()) throw new Error('Syrup manager mismatch');
+  if (!same(await maple.pool(), c('TestSyrupUSDC'))) throw new Error('Maple Pool binding mismatch');
+  if (!same(await syrup.manager(), c('MockSyrupRouter'))) throw new Error('Syrup manager mismatch');
   if (!(await giver.isSpokeRegistered(c('MockAaveV4Spoke')))) throw new Error('Giver Spoke is not registered');
   await recordReadbacks('mocks', {
     aUsdc: c('MockScaledAToken'), v3Pool: c('MockAaveV3Pool'),
@@ -115,7 +108,7 @@ async function preparePlan() {
     throw new Error('The testbed migration starts 5 minutes after Escrow deployment; both deadlines are +30 days and both ratios are 0.3928569546');
   }
   const forfeitureRecipient = requireAddress('BASE_QA_FORFEITURE_RECIPIENT');
-  if (ctx.state.plan && ctx.state.plan.forfeitureRecipient.toLowerCase() !== forfeitureRecipient.toLowerCase()) {
+  if (ctx.state.plan && !same(ctx.state.plan.forfeitureRecipient, forfeitureRecipient)) {
     throw new Error('Recorded plan differs from the selected treasury; do not reuse an old deployment plan');
   }
   if (!ctx.state.plan) {
@@ -123,7 +116,6 @@ async function preparePlan() {
     if (!Number.isSafeInteger(initialYThorRewardWeightBps) || initialYThorRewardWeightBps < 0) {
       throw new Error('A valid initial reward weight is required');
     }
-    const parsedRatio = ethers.utils.parseEther(qaConversionRatio);
     ctx.state.plan = {
       migrationStartTime: null,
       migrationStartMode: 'near_future',
@@ -151,7 +143,7 @@ async function preparePlan() {
     await ctx.persist();
   }
   const plan = ctx.state.plan;
-  const expectedRatio = ethers.utils.parseEther(qaConversionRatio).toString();
+  const expectedRatio = parsedRatio.toString();
   if (plan.migrationStartMode !== 'near_future' || plan.migrationWindowSeconds !== qaMigrationWindowSeconds ||
       plan.ratioThor !== expectedRatio || plan.ratioYThor !== expectedRatio ||
       (plan.deadlineThor !== null && plan.deadlineThor !== plan.migrationStartTime + qaMigrationWindowSeconds) ||
@@ -229,7 +221,6 @@ async function coreStage() {
   const distributor = await contract('MetroDistributorV1', c('Distributor'));
   const forwarder = await contract('RateLimitedForwarder', c('Forwarder'));
   const vault = await contract('CommissionVault', c('Vault'));
-  const same = (a, b) => a.toLowerCase() === b.toLowerCase();
   if (await core.paused()) throw new Error('Core must deploy unpaused');
   if (!same(await core.rewardToken(), c('TestUSDC'))) throw new Error('Core rewardToken mismatch');
   if (!same(await core.forfeitureRecipient(), plan.forfeitureRecipient)) throw new Error('Core forfeiture recipient mismatch');
@@ -310,22 +301,22 @@ async function configStage() {
   const forwarder = await contract('RateLimitedForwarder', c('Forwarder'));
   const escrow = await contract('ThorMigrationEscrow', c('Escrow'));
   if (await core.paused()) throw new Error('Core unexpectedly paused during configuration');
-  if ((await core.deFiAdapter()).toLowerCase() !== c('AdapterProxy').toLowerCase()) throw new Error('Core Adapter binding mismatch');
-  if ((await core.rewardDistributor()).toLowerCase() !== c('Distributor').toLowerCase()) throw new Error('Core Distributor binding mismatch');
-  if ((await distributor.commissionVault()).toLowerCase() !== c('Vault').toLowerCase() ||
+  if (!same(await core.deFiAdapter(), c('AdapterProxy'))) throw new Error('Core Adapter binding mismatch');
+  if (!same(await core.rewardDistributor(), c('Distributor'))) throw new Error('Core Distributor binding mismatch');
+  if (!same(await distributor.commissionVault(), c('Vault')) ||
       Number(await distributor.maxCommissionSplitBps()) !== 0) throw new Error('Initial commission routing mismatch');
-  if ((await distributor.forwarder()).toLowerCase() !== c('Forwarder').toLowerCase() ||
-      (await forwarder.recipient()).toLowerCase() !== c('Distributor').toLowerCase() || await forwarder.paused()) {
+  if (!same(await distributor.forwarder(), c('Forwarder')) ||
+      !same(await forwarder.recipient(), c('Distributor')) || await forwarder.paused()) {
     throw new Error('Forwarder binding mismatch or forwarder still paused');
   }
-  if ((await core.migrationEscrow()).toLowerCase() !== c('Escrow').toLowerCase()) throw new Error('Core Escrow binding mismatch');
+  if (!same(await core.migrationEscrow(), c('Escrow'))) throw new Error('Core Escrow binding mismatch');
   if (!(await escrow.ratioThor()).eq(ctx.state.plan.ratioThor) ||
       !(await escrow.ratioYThor()).eq(ctx.state.plan.ratioYThor) ||
       Number(await escrow.deadlineThor()) !== ctx.state.plan.deadlineThor ||
       Number(await escrow.deadlineYThor()) !== ctx.state.plan.deadlineYThor) {
     throw new Error('On-chain migration ratios or deadlines differ from the approved Base QA plan');
   }
-  if ((await adapter.aaveV4Giver()).toLowerCase() !== c('MockAaveV4Giver').toLowerCase()) throw new Error('V4 Giver configuration mismatch');
+  if (!same(await adapter.aaveV4Giver(), c('MockAaveV4Giver'))) throw new Error('V4 Giver configuration mismatch');
   if (!(await (await contract('MockAaveV4Spoke', c('MockAaveV4Spoke'))).activeManagers(c('MockAaveV4Giver')))) {
     throw new Error('Mock Giver is not active');
   }
@@ -344,12 +335,8 @@ async function configStage() {
   });
 }
 async function seedStage() {
-  const tokenMints = [
-    ['TestUSDC', '100000', 6], ['TestTHOR', '10000', 18], ['TestYTHOR', '10000', 18],
-    ['TestUSDT', '10000', 6], ['TestWBTC', '10000', 8], ['TestGHO', '10000', 18],
-    ['TestXAUT', '10000', 6], ['TestExtraToken', '10000', 18]
-  ];
-  for (const [id, amount, decimals] of tokenMints) {
+  for (const [id, , decimals] of testTokens) {
+    const amount = id === 'TestUSDC' ? '100000' : '10000';
     await call('mint-' + id, 'ERC20Mintable', id, 'mint', [addr.deployer, ethers.utils.parseUnits(amount, decimals)]);
   }
   await call('mint-TestSyrupUSDC', 'MockSyrupUSDC', 'TestSyrupUSDC', 'mint',
@@ -372,8 +359,7 @@ async function ownershipStage() {
     ['MockAaveV3Pool', 'MockAaveV3Pool'], ['MockAaveV4Spoke', 'MockAaveV4Spoke'],
     ['MockAaveV4Giver', 'MockAaveV4Giver'],
     ['MockPoolPermissionManager', 'MockPoolPermissionManager'], ['MockSyrupRouter', 'MockSyrupRouter'],
-    ...['TestUSDC', 'TestTHOR', 'TestYTHOR', 'TestUSDT', 'TestWBTC', 'TestGHO', 'TestXAUT', 'TestExtraToken']
-      .map(id => [id, 'ERC20Mintable'])
+    ...testTokens.map(([id]) => [id, 'ERC20Mintable'])
   ];
   const pendingOwners = {};
   for (const [id, artifact] of ownedContracts) {
@@ -382,12 +368,12 @@ async function ownershipStage() {
       if (pendingOwners[id] !== ethers.constants.AddressZero) throw new Error('Unexpected pending owner: ' + id);
     }
     const owner = await (await contract(artifact, c(id))).owner();
-    if (owner.toLowerCase() !== addr.deployer.toLowerCase()) throw new Error('Unexpected owner: ' + id);
+    if (!same(owner, addr.deployer)) throw new Error('Unexpected owner: ' + id);
   }
   const vault = await contract('CommissionVault', c('Vault'));
-  if ((await vault.owner()).toLowerCase() !== addr.deployer.toLowerCase()) throw new Error('Unexpected Vault owner');
-  if ((await vault.operator()).toLowerCase() !== addr.rewardOperator.toLowerCase()) throw new Error('Unexpected Vault operator');
-  if ((await vault.guardian()).toLowerCase() !== addr.owner.toLowerCase()) throw new Error('Unexpected Vault guardian');
+  if (!same(await vault.owner(), addr.deployer)) throw new Error('Unexpected Vault owner');
+  if (!same(await vault.operator(), addr.rewardOperator)) throw new Error('Unexpected Vault operator');
+  if (!same(await vault.guardian(), addr.owner)) throw new Error('Unexpected Vault guardian');
   if (await core.paused()) throw new Error('Core unexpectedly paused');
   await recordReadbacks('ownership', {
     corePendingOwner: pendingOwners.Core, escrowPendingOwner: pendingOwners.Escrow,
