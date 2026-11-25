@@ -6,7 +6,9 @@ import {console2} from "forge-std/console2.sol";
 
 import {MetroToken} from "../src/metro.sol";
 import {xMETRO} from "../src/xMETRO.sol";
-import {RewardDistributor, ICommissionVault} from "../src/RewardDistributor.sol";
+import {ICommissionVault} from "../src/MetroDistributorBase.sol";
+import {MetroDistributorV1} from "../src/MetroDistributorV1.sol";
+import {IRateLimitedForwarderAdmin} from "./Deploy.s.sol";
 import {ThorMigrationEscrow} from "../src/ThorMigrationEscrow.sol";
 import {IXMetroDeFiAdapter} from "../src/interfaces/IXMetroDeFiAdapter.sol";
 import {DeFiAdapterScriptBase, IXMetroDeFiAdapterAdmin} from "./DeFiAdapterScriptBase.sol";
@@ -31,7 +33,8 @@ contract VerifyDeployment is DeFiAdapterScriptBase {
         address coreAddress = record.readAddress(".xMETRO");
         address implementation = record.readAddress(".deFiAdapterImplementation");
         address proxy = record.readAddress(".deFiAdapterProxy");
-        address distributorAddress = record.readAddress(".rewardDistributor");
+        address distributorAddress = record.readAddress(".metroDistributor");
+        address forwarderAddress = record.readAddress(".rateLimitedForwarder");
         address escrowAddress = record.readAddress(".escrow");
         require(
             metroAddress == vm.computeCreateAddress(deployer, nonce)
@@ -39,20 +42,22 @@ contract VerifyDeployment is DeFiAdapterScriptBase {
                 && implementation == vm.computeCreateAddress(deployer, nonce + 2)
                 && proxy == vm.computeCreateAddress(deployer, nonce + 3)
                 && distributorAddress == vm.computeCreateAddress(deployer, nonce + 4)
-                && escrowAddress == vm.computeCreateAddress(deployer, nonce + 5),
+                && forwarderAddress == vm.computeCreateAddress(deployer, nonce + 5)
+                && escrowAddress == vm.computeCreateAddress(deployer, nonce + 6),
             "VerifyDeploy: CREATE addresses"
         );
         _requireCodehash(metroAddress, record.readBytes32(".metroCodehash"));
         _requireCodehash(coreAddress, record.readBytes32(".xMetroCodehash"));
         _requireCodehash(implementation, record.readBytes32(".deFiAdapterImplementationCodehash"));
         _requireCodehash(proxy, record.readBytes32(".deFiAdapterProxyCodehash"));
-        _requireCodehash(distributorAddress, record.readBytes32(".rewardDistributorCodehash"));
+        _requireCodehash(distributorAddress, record.readBytes32(".metroDistributorCodehash"));
+        _requireCodehash(forwarderAddress, record.readBytes32(".rateLimitedForwarderCodehash"));
         _requireCodehash(escrowAddress, record.readBytes32(".escrowCodehash"));
 
         MetroToken metro = MetroToken(metroAddress);
         xMETRO core = xMETRO(coreAddress);
         IXMetroDeFiAdapterAdmin adapter = IXMetroDeFiAdapterAdmin(proxy);
-        RewardDistributor distributor = RewardDistributor(distributorAddress);
+        MetroDistributorV1 distributor = MetroDistributorV1(distributorAddress);
         ThorMigrationEscrow escrow = ThorMigrationEscrow(escrowAddress);
         address owner = record.readAddress(".owner");
         address usdc = record.readAddress(".rewardToken");
@@ -104,12 +109,16 @@ contract VerifyDeployment is DeFiAdapterScriptBase {
         );
         require(
             address(distributor.xMETRO()) == coreAddress && address(distributor.rewardToken()) == usdc
+                && distributor.treasury() == record.readAddress(".distributorTreasury")
+                && distributor.polVault() == record.readAddress(".polVault")
+                && address(distributor.forwarder()) == forwarderAddress
                 && distributor.commissionVault() == record.readAddress(".commissionVault")
                 && distributor.maxCommissionSplitBps() == record.readUint(".maxCommissionSplitBps"),
             "VerifyDeploy: Distributor config"
         );
         address operator = record.readAddress(".distributorOperator");
         if (operator != address(0)) require(distributor.operators(operator), "VerifyDeploy: Distributor operator");
+        _verifyForwarder(record, IRateLimitedForwarderAdmin(forwarderAddress), distributorAddress, usdc, owner);
         _verifyCommissionVault(record, distributorAddress, usdc);
 
         require(
@@ -217,6 +226,23 @@ contract VerifyDeployment is DeFiAdapterScriptBase {
         require(
             info.kind == kind && info.outputToken == token && info.enabled == enabled && info.autoEnabled == enabled,
             "VerifyDeploy: strategy state"
+        );
+    }
+
+    function _verifyForwarder(
+        string memory record,
+        IRateLimitedForwarderAdmin forwarder,
+        address distributor,
+        address usdc,
+        address owner
+    ) internal view {
+        require(forwarder.owner() == owner && forwarder.pendingOwner() == address(0), "VerifyDeploy: Forwarder owner");
+        require(
+            forwarder.token() == usdc && forwarder.recipient() == distributor
+                && forwarder.dripRate() == record.readUint(".forwarderDripRate")
+                && forwarder.dripPeriod() == record.readUint(".forwarderDripPeriod")
+                && forwarder.maxReserve() == record.readUint(".forwarderMaxReserve"),
+            "VerifyDeploy: Forwarder config"
         );
     }
 

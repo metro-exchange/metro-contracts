@@ -114,8 +114,18 @@ jobs:
       - name: Run Adapter tests
         run: FOUNDRY_PROFILE=adapter forge test -vv
 
+      - name: Build commission artifacts for the stack deploy
+        working-directory: packages/commission
+        run: |
+          forge install foundry-rs/forge-std@v1.16.2
+          forge install OpenZeppelin/openzeppelin-contracts@v5.6.1
+          forge build
+
       - name: Run deployment-script tests
         run: FOUNDRY_PROFILE=deployment-test forge test -vv
+
+      - name: Build short-timer testbed artifacts
+        run: node script/base-qa/build-qa-core.mjs
 
       - name: Check MetroDistributor ABI exports
         run: |
@@ -129,6 +139,12 @@ jobs:
           node --check integration/examples/user-actions.mjs
           node --check integration/examples/backend-actions.mjs
           node --check script/run-mainnet-fork-gas.mjs
+          for script in script/base-qa/*.mjs; do node --check "$script"; done
+
+      - name: Test testbed transaction runner
+        run: |
+          npm ci --prefix integration/examples
+          node --test script/base-qa/runner.test.mjs
 
   commission:
     name: Commission contracts

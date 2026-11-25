@@ -3,12 +3,12 @@
   "chainId": 8453,
   "environment": "base-project-qa",
   "status": "pending_fresh_deployment",
-  "deploymentRunId": "base-qa-project-20260930",
+  "deploymentRunId": "base-qa-metro-distributor-v1",
   "contracts": {
     "METRO": null,
     "xMETRO": null,
-    "RewardDistributor": null,
     "MetroDistributor": null,
+    "RateLimitedForwarder": null,
     "ThorMigrationEscrow": null,
     "XMetroDeFiAdapterImplementation": null,
     "XMetroDeFiAdapterProxy": null,
@@ -54,7 +54,9 @@
     "mockMapleSigner": null,
     "vaultOwner": null,
     "vaultOperator": null,
-    "vaultGuardian": null
+    "vaultGuardian": null,
+    "distributorTreasury": null,
+    "polVault": null
   },
   "migration": {
     "startTime": null,
@@ -69,6 +71,7 @@
   },
   "deploymentTransactions": {},
   "commission": { "vaultBound": null, "maxCommissionSplitBps": null },
+  "forwarder": { "dripRate": null, "dripPeriod": null, "maxReserve": null, "fundedAmount": null },
   "timeConstantsSeconds": {
     "unstakeDelay": 1800,
     "thorExitDelay": 3600,

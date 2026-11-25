@@ -89,7 +89,7 @@ abstract contract DeFiAdapterScriptBase is Script {
         address aaveV4Giver;
     }
 
-    function _adapterCreationCode(string memory artifactPath) internal view returns (bytes memory) {
+    function _artifactCreationCode(string memory artifactPath) internal view returns (bytes memory) {
         string memory artifact = vm.readFile(artifactPath);
         bytes memory creationCode = vm.parseJsonBytes(artifact, ".bytecode.object");
         require(creationCode.length != 0, "AdapterScript: empty artifact");

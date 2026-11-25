@@ -5,7 +5,7 @@
 These items require a newly deployed matching METRO/Core revision. Historical QA addresses and prior checkmarks do not demonstrate these changes; no deployment is performed by this source update.
 
 - [ ] METRO nomination, replacement/cancellation and acceptance: only the nominee accepts; old owner remains active until then, and mint roles/Permit remain independent.
-- [ ] Read all four owner/pendingOwner pairs (METRO, Core, Escrow, Distributor); each owner must be the intended owner and each pendingOwner zero.
+- [ ] Read all five owner/pendingOwner pairs (METRO, Core, Escrow, Distributor, Forwarder); each owner must be the intended owner and each pendingOwner zero.
 - [ ] Only the current Core owner can revoke; pending/former owner, creator, beneficiary, Contributor and backend roles are rejected. Paused calls fail.
 - [ ] Revoke before cliff, partially vested, after prior stake/liquid claims and after full vesting: only unvested METRO is recovered, vested-but-unclaimed principal becomes free xMETRO.
 - [ ] Rotate `forfeitureRecipient` before revoking an existing plan; verify the event, balances, historical USDC rewards, old queues and stable schedule/cursor/other plans.
@@ -80,7 +80,7 @@ The new environment uses one owner-mintable TestUSDC throughout, owner-mintable 
 
 TestUSDC is not accepted by production Aave or Maple USDC markets. Base therefore tests our **real project contracts** against interface-compatible Aave V3 Pool/aToken, Aave V4 Spoke/GiverPositionManager, and Maple Router/PermissionManager/Syrup mocks. Each mock must perform the relevant permission check, token debit, accounting, and protocol event emission; a success-only stub is insufficient. The Mock protocol events must decode with the corresponding protocol ABI for the tested path. Actual Ethereum protocol compatibility is tested separately on an Ethereum mainnet fork. Swaps on Base use the real Uniswap V2 Router and funded TestUSDC pairs. Test-token routes need not be supported by 1inch, so 1inch and Affiliate validation belong to the Ethereum fork, not this Base run.
 
-The QA build shortens seven time constants. Both builds allow the Core owner to update the forfeiture recipient. QA interprets a zero Escrow constructor start time as the deployment block; production requires an explicit start time. Their bytecode differs. Other business ratios and permissions remain aligned. The Vault is deployed from the supplied source and tested only at the RewardDistributor integration boundary.
+The QA build shortens seven time constants. Both builds allow the Core owner to update the forfeiture recipient. The testbed Escrow starts 5 minutes after its deployment. Their bytecode differs. Other business ratios and permissions remain aligned. The Vault and the RateLimitedForwarder are deployed from `packages/commission` and tested at the MetroDistributorV1 integration boundary.
 
 | Constant | Production | New Base QA |
 | --- | ---: | ---: |
@@ -99,7 +99,7 @@ The yTHOR ramp starts after its exit delay; the maximum yTHOR exit scenario take
 | ID | New deployment | Check | New Base evidence |
 | --- | --- | --- | --- |
 | P-01 | [ ] | Deploy all test tokens and METRO; verify decimals, cap, owners, mint rights, and a single TestUSDC. | — |
-| P-02 | [ ] | Deploy Core, Escrow, Distributor, Adapter implementation and ERC1967 Proxy; verify code, two-step business Owner acceptance, initial pause state, and bindings. | — |
+| P-02 | [ ] | Deploy Core, Escrow, MetroDistributorV1, RateLimitedForwarder, Adapter implementation and ERC1967 Proxy; verify code, two-step business Owner acceptance, initial pause state, bindings (forwarder recipient is the distributor, distributor forwarder is the forwarder), and the short timers in `readbacks/timers.json`. | - |
 | P-03 | [ ] | Deploy/configure Mock V3 Pool/aUSDC, V4 Spoke/Giver, Maple Router/PermissionManager/Syrup; verify owners, interfaces, permissions, and tested events. | — |
 | P-04 | [ ] | Deploy a fresh Commission Vault for the new TestUSDC and Distributor, bind it in the Distributor, and verify the initial split is zero until the project configures it. | — |
 | P-05 | [ ] | Create and fund real V2 pairs for METRO, five initial output assets, and ExtraToken against TestUSDC; verify Router/Factory and reserves. | — |
@@ -114,7 +114,7 @@ The yTHOR ramp starts after its exit delay; the maximum yTHOR exit scenario take
 | O-01 | [ ] | METRO cap/minter, ERC-20 transfer/allowance, metadata, permit expiry/replay, and xMETRO token readbacks. | — |
 | O-02 | [ ] | `stake` and `stakeAndEnableAutocompound`; approve METRO to xMETRO and verify principal and minted shares. | — |
 | O-03 | [ ] | `requestUnstake` and `withdrawFree`; early rejection, maturity, multiple requests, queue cursor, and no double withdrawal. | — |
-| O-04 | [ ] | Distributor Operator authorization, both distribution funding paths, reward deposit, plain claim, and balance/event reconciliation. | — |
+| O-04 | [ ] | Distributor Operator authorization; `distribute(maxAmount)` pulls the accrued slice from the funded forwarder (drip rate and cap), splits to Vault, treasury, POL vault and xMETRO; plain claim and balance/event reconciliation. | - |
 | O-05 | [ ] | `claimable`, `claimableMany`, share readbacks, xMETRO transfer/allowance, and preservation of sender's historical pending. | — |
 | O-06 | [ ] | Single-user legacy Auto-Compound through the funded real V2 pair, including opt-in/out, output minimum, deadline, and allowance cleanup. | — |
 | O-07 | [ ] | Keeper-only `autocompoundBatch`: one swap, proportional user allocation, skipped candidates, rounding, and revoked Keeper. | — |
@@ -131,7 +131,7 @@ The yTHOR ramp starts after its exit delay; the maximum yTHOR exit scenario take
 | N-04 | [ ] | yTHOR position preview and early/mid/full exit, liquid vs stake, payout, forfeiture, pending rewards, and queue; specifically check the historical one-micro-USDC discrepancy. | — |
 | N-05 | [ ] | Adjustable yTHOR reward weight: accrued rewards remain unchanged; future weight applies only to eligible active yTHOR principal, excluding the fixed treasury's migration positions; accounting stays conserved. | — |
 | N-06 | [ ] | `previewWithdrawableNow` includes the intended matured sources and excludes unrelated or queued amounts. | — |
-| N-07 | [ ] | Distributor commission split to the new Vault and net reward to xMETRO; test zero/partial/full shortfall and both funding paths. | — |
+| N-07 | [ ] | Distributor commission split to the new Vault and net reward to xMETRO; test zero/partial/full shortfall, distributor balance and forwarder pulls. | - |
 | N-08 | [ ] | Adapter Proxy binding, initialization guard, router and strategy configuration, enable/disable, revisions, and adding ExtraToken. | — |
 | N-09 | [ ] | Manual claim-and-swap to each of TestUSDT, TestWBTC, TestGHO, TestXAUT, and TestSyrupUSDC through real V2. | — |
 | N-10 | [ ] | Auto-Swap batch for each initial output asset: one V2 swap and proportional delivery to opted-in users. | — |
