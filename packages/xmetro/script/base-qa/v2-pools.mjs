@@ -1,5 +1,3 @@
-// Create and fund seven QA pairs using the official Base Uniswap V2 Factory and Router.
-// Existing pairs are only read back; transaction steps resume from the runner state.
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { ethers, runDir, chainId, readArtifact, openRun, sendStep } from './runner.mjs';
@@ -45,7 +43,7 @@ function token(id) {
   return new ethers.Contract(ctx.state.contracts[id], abi, ctx.provider);
 }
 const ppm = new ethers.Contract(ctx.state.contracts.MockPoolPermissionManager, ppmArtifact.abi, ctx.provider);
-async function send(id, to, data) { return sendStep(ctx, { id, tx: { to, data } }); }
+async function send(id, to, data) { return sendStep(ctx, { id, buildTx: () => ({ to, data }) }); }
 async function pairAddress(asset) {
   return factory.getPair(usdc, ctx.state.contracts[asset]);
 }
@@ -63,7 +61,6 @@ for (const [asset] of pools) {
   ctx.state.pairs[asset] = pair;
   await ctx.persist();
 }
-// Maple test shares have protocol permissions; enable only the V2 LP/pair operations needed here.
 const syrupPair = ctx.state.pairs.TestSyrupUSDC;
 for (const [label, lender] of [['deployer', deployer], ['pair', syrupPair]]) {
   await send('v2-syrup-permission-' + label, ppm.address,
@@ -78,7 +75,6 @@ for (const [asset, decimals] of pools) {
   const outputAmount = ethers.utils.parseUnits('1000', decimals);
   await send('v2-approve-' + asset, output.address,
     output.interface.encodeFunctionData('approve', [routerAddress, outputAmount]));
-  // Seed each pair with 1000:1000 test units; minimums are 99% and deadline uses the pre-broadcast block.
   const deadline = (await ctx.provider.getBlock('latest')).timestamp + 3600;
   await send('v2-liquidity-' + asset, routerAddress, router.interface.encodeFunctionData('addLiquidity', [
     usdc, output.address, perPoolUsdc, outputAmount,

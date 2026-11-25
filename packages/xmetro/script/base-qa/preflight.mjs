@@ -1,4 +1,3 @@
-// Read-only Base QA preflight: no signer material is loaded and no transaction is broadcast.
 import { createHash } from 'node:crypto';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -28,7 +27,7 @@ const factoryInterface = new ethers.utils.Interface([
   'function getPair(address,address) view returns (address)',
   'function createPair(address,address) returns (address)'
 ]);
-const ephemeral = ethers.Wallet.createRandom(); // Used only to serialize fee estimates, never on-chain.
+const feeEstimateWallet = ethers.Wallet.createRandom();
 
 const specs = [
   ['TestUSDC', 'ERC20Mintable', ['Test USDC', 'TestUSDC', 6]],
@@ -59,7 +58,7 @@ function hexBig(value) { return BigInt(value).toString(); }
 function feeEth(value) { return ethers.utils.formatEther(value.toString()); }
 async function l1Fee(tx) {
   try {
-    const signed = await ephemeral.signTransaction({
+    const signed = await feeEstimateWallet.signTransaction({
       chainId, nonce: 0, type: 2, gasLimit: 12000000,
       maxPriorityFeePerGas: 1000000, maxFeePerGas: 12000000,
       value: 0, ...tx

@@ -3,11 +3,8 @@ pragma solidity 0.8.38;
 
 /**
  * @title Deploy
- * @notice Deploys the immutable xMETRO Core and the fixed-address UUPS DeFi Adapter Proxy.
- * @dev Build the Adapter artifact with FOUNDRY_PROFILE=adapter and the RateLimitedForwarder artifact with
- *      `forge build` in packages/commission before running this script with FOUNDRY_PROFILE=deploy.
- *      xMETRO deploys unpaused and the RateLimitedForwarder deploys paused; business-contract ownership
- *      requires acceptance by the target owner.
+ * @notice Deploys the immutable xMETRO Core, the fixed-address UUPS DeFi Adapter Proxy, MetroDistributorV1 and its
+ *         RateLimitedForwarder.
  */
 
 import {stdJson} from "forge-std/StdJson.sol";

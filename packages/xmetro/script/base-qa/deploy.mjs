@@ -1,5 +1,3 @@
-// Deploy and configure the testbed in resumable, receipt-backed stages.
-// Business contracts come from the short-timer build in out-testbed (script/base-qa/build-qa-core.mjs).
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { ethers, root, runDir, chainId, qaConfig, readArtifact, openRun, sendStep } from './runner.mjs';
@@ -27,16 +25,17 @@ async function contract(name, address) {
   const a = await readArtifact(name);
   return new ethers.Contract(address, a.abi, ctx.provider);
 }
-async function deploy(id, name, args) {
+async function deployTx(name, args) {
   const a = await readArtifact(name);
-  const factory = new ethers.ContractFactory(a.abi, a.bytecode.object);
-  const tx = factory.getDeployTransaction(...args);
-  return (await sendStep(ctx, { id, tx, expectContract: true })).contractAddress;
+  return new ethers.ContractFactory(a.abi, a.bytecode.object).getDeployTransaction(...args);
+}
+async function deploy(id, name, args) {
+  return (await sendStep(ctx, { id, expectContract: true, buildTx: () => deployTx(name, args) })).contractAddress;
 }
 async function call(id, name, contractId, fn, args, role = 'deployer') {
   const target = await contract(name, c(contractId));
   return sendStep(ctx, {
-    id, role, tx: { to: target.address, data: target.interface.encodeFunctionData(fn, args) }
+    id, role, buildTx: () => ({ to: target.address, data: target.interface.encodeFunctionData(fn, args) })
   });
 }
 async function recordReadbacks(label, values) {
@@ -190,6 +189,14 @@ async function readBackTimers() {
     throw new Error('Core runtime code differs from the short-timer build; library timers are not verified');
   }
 }
+async function scheduleMigrationStart() {
+  const plan = ctx.state.plan;
+  plan.migrationStartTime = (await ctx.provider.getBlock('latest')).timestamp + plan.migrationStartDelaySeconds;
+  plan.deadlineThor = plan.migrationStartTime + plan.migrationWindowSeconds;
+  plan.deadlineYThor = plan.deadlineThor;
+  await ctx.persist();
+  return plan.migrationStartTime;
+}
 async function coreStage() {
   const plan = ctx.state.plan;
   await deploy('METRO', 'MetroToken', ['METRO', 'METRO', addr.deployer]);
@@ -206,15 +213,12 @@ async function coreStage() {
     c('TestUSDC'), c('Distributor'), addr.deployer,
     plan.forwarderDripRate, plan.forwarderDripPeriod, plan.forwarderMaxReserve
   ]);
-  if (!ctx.state.steps.Escrow) {
-    plan.migrationStartTime = (await ctx.provider.getBlock('latest')).timestamp + plan.migrationStartDelaySeconds;
-    plan.deadlineThor = plan.migrationStartTime + plan.migrationWindowSeconds;
-    plan.deadlineYThor = plan.deadlineThor;
-    await ctx.persist();
-  }
-  await deploy('Escrow', 'ThorMigrationEscrow', [
-    addr.deployer, c('Core'), c('TestTHOR'), c('TestYTHOR'), plan.migrationStartTime
-  ]);
+  await sendStep(ctx, {
+    id: 'Escrow', expectContract: true,
+    buildTx: async () => deployTx('ThorMigrationEscrow', [
+      addr.deployer, c('Core'), c('TestTHOR'), c('TestYTHOR'), await scheduleMigrationStart()
+    ])
+  });
   const escrow = await contract('ThorMigrationEscrow', c('Escrow'));
   if (Number(await escrow.migrationStartTime()) !== plan.migrationStartTime) throw new Error('Escrow migration start mismatch');
   await deploy('Vault', 'CommissionVault', [
@@ -399,7 +403,6 @@ async function ownershipStage() {
   });
 }
 
-// Validate immutable and one-time configuration before the first transaction of a full run.
 if (phase === 'all' || phase === 'core') await preparePlan();
 for (const name of phases) {
   if (phase !== 'all' && phase !== name) continue;

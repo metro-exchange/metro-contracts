@@ -1,4 +1,3 @@
-// Base QA transaction recorder: read signer data locally, persist each step, and resume the same nonce if needed.
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
@@ -92,16 +91,16 @@ export async function openRun() {
   async function persist() { await saveJson(stateFile, state, 0o600); }
   return { provider, wallets, state, persist, stateFile, preflight };
 }
-export async function sendStep(ctx, { id, role = 'deployer', tx, expectContract = false, reserveWei, explicitGasLimit, expectFailure = false }) {
+export async function sendStep(ctx, { id, role = 'deployer', buildTx, expectContract = false }) {
   const { provider, wallets, state, persist } = ctx;
   const wallet = wallets[role];
   if (!wallet) throw new Error('Unknown wallet role: ' + role);
-  const reserve = reserveWei ?? (role === 'deployer' ? minReserve : ethers.utils.parseEther('0.000002'));
-  const evidenceFile = path.join(runDir, 'transactions', id + '.json');
+  const transactionsDir = path.join(runDir, 'transactions');
+  const evidenceFile = path.join(transactionsDir, id + '.json');
   let step = state.steps[id];
-  if (step?.status === 'confirmed' || step?.status === 'expected_revert') {
+  if (step?.status === 'confirmed') {
     const receipt = await provider.send('eth_getTransactionReceipt', [step.hash]);
-    if (!receipt || Number(receipt.status) !== (expectFailure ? 0 : 1)) throw new Error('Recorded step receipt changed: ' + id);
+    if (!receipt || Number(receipt.status) !== 1) throw new Error('Recorded step receipt changed: ' + id);
     if (expectContract && (await provider.getCode(step.contractAddress)) === '0x') throw new Error('Recorded deployment has no code: ' + id);
     return step;
   }
@@ -109,9 +108,9 @@ export async function sendStep(ctx, { id, role = 'deployer', tx, expectContract 
     const latest = await provider.getTransactionCount(wallet.address, 'latest');
     const pending = await provider.getTransactionCount(wallet.address, 'pending');
     if (pending !== latest) throw new Error('Wallet has an unrecorded pending nonce: ' + role);
-    const estimate = explicitGasLimit ? ethers.BigNumber.from(explicitGasLimit) :
-      await provider.estimateGas({ ...tx, from: wallet.address });
-    const gasLimit = explicitGasLimit ? estimate : estimate.mul(120).div(100).add(10000);
+    const tx = await buildTx();
+    const estimate = await provider.estimateGas({ ...tx, from: wallet.address });
+    const gasLimit = estimate.mul(120).div(100).add(10000);
     const gasPrice = await provider.getGasPrice();
     // Base QA uses the 1,000,000 wei priority fee verified against the Base RPC;
     // some public RPCs leave eth_maxPriorityFeePerGas unanswered for minutes.
@@ -130,6 +129,7 @@ export async function sendStep(ctx, { id, role = 'deployer', tx, expectContract 
     const l1Fee = oracleAbi.decodeFunctionResult('getL1Fee', l1Raw)[0];
     const balance = await provider.getBalance(wallet.address);
     const maxCost = gasLimit.mul(maxFee).add(l1Fee).add(unsigned.value);
+    const reserve = role === 'deployer' ? minReserve : ethers.utils.parseEther('0.000002');
     if (balance.lt(maxCost.add(reserve))) {
       throw new Error('BUDGET_STOP ' + id + ': balance=' + balance.toString() + ', requiredWithReserve=' + maxCost.add(reserve).toString());
     }
@@ -173,26 +173,32 @@ export async function sendStep(ctx, { id, role = 'deployer', tx, expectContract 
   if (!block) throw new Error('Receipt exists but its block is not indexed yet; resume later: ' + id + ' ' + step.hash);
   const chainTx = await provider.send('eth_getTransactionByHash', [step.hash]);
   const fee = BigInt(receipt.gasUsed) * BigInt(receipt.effectiveGasPrice) + BigInt(receipt.l1Fee || 0);
-  step.status = Number(receipt.status) === 1 ? 'confirmed' : (expectFailure ? 'expected_revert' : 'failed');
+  step.status = Number(receipt.status) === 1 ? 'confirmed' : 'reverted';
   step.confirmedAt = new Date().toISOString();
   step.blockNumber = Number(receipt.blockNumber);
   step.blockHash = receipt.blockHash;
   step.blockTimestamp = Number(block.timestamp);
   step.gasUsed = BigInt(receipt.gasUsed).toString();
   step.actualFeeWei = fee.toString();
+  step.balanceAfterWei = (await provider.getBalance(wallet.address)).toString();
+  const evidence = { step, rawSignedTransaction: saved.rawSignedTransaction, transaction: chainTx, receipt, block };
+  if (step.status === 'reverted') {
+    const archiveFile = path.join(transactionsDir, `${id}.reverted-${step.nonce}.json`);
+    await saveJson(archiveFile, evidence, 0o600);
+    delete state.steps[id];
+    await persist();
+    throw new Error('On-chain transaction reverted; archived to ' + archiveFile + ', rerun to prepare a fresh one: ' + id);
+  }
   if (expectContract) {
     if (receipt.contractAddress?.toLowerCase() !== step.contractAddress.toLowerCase()) throw new Error('Deployment address differs from nonce prediction: ' + id);
     const code = await provider.getCode(step.contractAddress, receipt.blockNumber);
+    if (code === '0x') throw new Error('Deployment succeeded but no runtime code exists: ' + id);
     step.runtimeCodeHash = ethers.utils.keccak256(code);
     step.runtimeCodeBytes = (code.length - 2) / 2;
     state.contracts[id] = step.contractAddress;
   }
-  step.balanceAfterWei = (await provider.getBalance(wallet.address)).toString();
-  await saveJson(evidenceFile, { step, rawSignedTransaction: saved.rawSignedTransaction, transaction: chainTx, receipt, block }, 0o600);
+  await saveJson(evidenceFile, evidence, 0o600);
   await persist();
-  if (expectFailure && step.status !== 'expected_revert') throw new Error('Expected revert succeeded; inspect manually: ' + id + ' ' + step.hash);
-  if (!expectFailure && step.status !== 'confirmed') throw new Error('On-chain transaction reverted; receipt retained: ' + id + ' ' + step.hash);
-  if (expectContract && step.runtimeCodeBytes === 0) throw new Error('Deployment succeeded but no runtime code exists: ' + id);
   console.log(id, step.hash, step.contractAddress || '', 'feeWei=' + step.actualFeeWei);
   return step;
 }

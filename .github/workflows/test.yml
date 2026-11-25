@@ -141,6 +141,11 @@ jobs:
           node --check script/run-mainnet-fork-gas.mjs
           for script in script/base-qa/*.mjs; do node --check "$script"; done
 
+      - name: Test testbed transaction runner
+        run: |
+          npm ci --prefix integration/examples
+          node --test script/base-qa/runner.test.mjs
+
   commission:
     name: Commission contracts
     runs-on: ubuntu-latest
