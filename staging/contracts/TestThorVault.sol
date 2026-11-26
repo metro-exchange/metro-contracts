@@ -6,10 +6,10 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-/// @notice Test copy of a THORSwap staking vault (vTHOR, uTHOR) for the QA contract set.
-/// An ERC-4626 vault over the test THOR. With a reward token it also pays that token
-/// pro rata to share holders, the way uTHOR pays USDC; without one it behaves like vTHOR.
-contract TestThorVault is ERC4626 {
+/// @notice Shared base of the staging uTHOR and vTHOR vaults: an ERC-4626 vault over the test THOR.
+/// With a reward token it also pays that token pro rata to share holders, the way uTHOR pays USDC;
+/// without one it behaves like vTHOR.
+abstract contract TestThorVault is ERC4626 {
     using SafeERC20 for IERC20;
 
     uint256 private constant PRECISION = 1e30;

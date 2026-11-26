@@ -13,7 +13,16 @@ import {
     MockPoolPermissionManager,
     MockSyrupRouter
 } from "xmetro-mocks/MockDepositProtocols.sol";
-import {TestThorVault} from "../contracts/TestThorVault.sol";
+import {TestUSDC} from "../contracts/TestUSDC.sol";
+import {TestTHOR} from "../contracts/TestTHOR.sol";
+import {TestYTHOR} from "../contracts/TestYTHOR.sol";
+import {TestUSDT} from "../contracts/TestUSDT.sol";
+import {TestWBTC} from "../contracts/TestWBTC.sol";
+import {TestGHO} from "../contracts/TestGHO.sol";
+import {TestXAUT} from "../contracts/TestXAUT.sol";
+import {TestExtraToken} from "../contracts/TestExtraToken.sol";
+import {TestUTHOR} from "../contracts/TestUTHOR.sol";
+import {TestVTHOR} from "../contracts/TestVTHOR.sol";
 import {TestTokenFaucet} from "../contracts/TestTokenFaucet.sol";
 
 interface IUniswapV2Factory {
@@ -63,8 +72,8 @@ contract DeployFixtures is Script {
         MockAaveV4Giver aaveV4Giver;
         MockPoolPermissionManager permissionManager;
         MockSyrupRouter syrupRouter;
-        TestThorVault uThor;
-        TestThorVault vThor;
+        TestUTHOR uThor;
+        TestVTHOR vThor;
         TestTokenFaucet faucet;
     }
 
@@ -86,14 +95,14 @@ contract DeployFixtures is Script {
     }
 
     function _deployTokens() internal returns (Fixtures memory f) {
-        f.usdc = new ERC20Mintable("Test USDC", "TestUSDC", 6);
-        f.thor = new ERC20Mintable("Test THOR", "TestTHOR", 18);
-        f.yThor = new ERC20Mintable("Test yTHOR", "TestYTHOR", 18);
-        f.usdt = new ERC20Mintable("Test USDT", "TestUSDT", 6);
-        f.wbtc = new ERC20Mintable("Test WBTC", "TestWBTC", 8);
-        f.gho = new ERC20Mintable("Test GHO", "TestGHO", 18);
-        f.xaut = new ERC20Mintable("Test XAUT", "TestXAUT", 6);
-        f.extra = new ERC20Mintable("Test Extra Token", "TestExtraToken", 18);
+        f.usdc = new TestUSDC();
+        f.thor = new TestTHOR();
+        f.yThor = new TestYTHOR();
+        f.usdt = new TestUSDT();
+        f.wbtc = new TestWBTC();
+        f.gho = new TestGHO();
+        f.xaut = new TestXAUT();
+        f.extra = new TestExtraToken();
         f.syrup = new MockSyrupUSDC(address(f.usdc));
     }
 
@@ -118,8 +127,8 @@ contract DeployFixtures is Script {
     }
 
     function _deployThorVaultsAndFaucet(Fixtures memory f, address owner) internal {
-        f.uThor = new TestThorVault(IERC20(address(f.thor)), IERC20(address(f.usdc)), "USDC-yield THOR", "uTHOR");
-        f.vThor = new TestThorVault(IERC20(address(f.thor)), IERC20(address(0)), "Staked THOR", "vTHOR");
+        f.uThor = new TestUTHOR(IERC20(address(f.thor)), IERC20(address(f.usdc)));
+        f.vThor = new TestVTHOR(IERC20(address(f.thor)));
         f.faucet = new TestTokenFaucet(
             owner,
             IERC20(address(f.thor)),

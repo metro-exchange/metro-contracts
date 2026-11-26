@@ -27,10 +27,26 @@ Timer values in staging:
 
 ## Two layers
 
-- **Fixtures**: test tokens, protocol mocks, uTHOR/vTHOR, the faucet and the USDC pools for the swap outputs. Testers hold balances in them, so they are rarely redeployed. Source: [`script/DeployFixtures.s.sol`](script/DeployFixtures.s.sol) and [`contracts/`](contracts).
+- **Fixtures**: test tokens, protocol mocks, uTHOR/vTHOR, the faucet and the USDC pools for the swap outputs. Testers hold balances in them, so they are rarely redeployed. Deployed by [`script/DeployFixtures.s.sol`](script/DeployFixtures.s.sol).
 - **System**: METRO, xMETRO, ThorMigrationEscrow, the DeFi adapter, MetroDistributorV1, CommissionVault, RateLimitedForwarder and the METRO/USDC pool. Redeploy it when the contracts change. It reuses the fixtures recorded in `deployments/staging.json`.
 
 `deployments/staging.json` records each layer, the source commit of the system, deploy blocks for indexers, and older addresses under `retired`.
+
+## Test contracts
+
+Each staging-only contract has its own file in [`contracts/`](contracts):
+
+| Contract | Stands in for |
+|---|---|
+| `TestUSDC`, `TestTHOR`, `TestYTHOR` | USDC, THOR, yTHOR |
+| `TestUSDT`, `TestWBTC`, `TestGHO`, `TestXAUT` | Reward swap outputs |
+| `TestExtraToken` | A token outside the swap allowlist |
+| `TestUTHOR` | uTHOR: staked THOR paying USDC (`addRewards`) |
+| `TestVTHOR` | vTHOR: staked THOR |
+| `TestTokenFaucet` | Hands out THOR, yTHOR, USDC, uTHOR and vTHOR to testers |
+
+The tokens extend `ERC20Mintable` (owner-only mint) and the vaults extend `TestThorVault` (ERC-4626 over TestTHOR). The Aave, Maple and syrupUSDC mocks are the ones the xmetro tests use, imported from `packages/xmetro/test/mocks`. The contracts on Base today were deployed before this split, from the same code without the per-token wrappers.
+
 
 ## Deploying
 
