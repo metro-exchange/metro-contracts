@@ -9,6 +9,13 @@ Smart contracts for Metro Exchange. Each system lives in its own Foundry project
 
 `RewardDistributor` and its replacements `MetroDistributorV1` / `MetroDistributorV2` (xmetro) send a capped commission share of each reward distribution to `CommissionVault` (commission). The two packages only meet at that interface; neither compiles the other's sources.
 
+## Environments
+
+| Environment | Chain | Addresses | Notes |
+|---|---|---|---|
+| Production | Ethereum (1) | [`deployments/ethereum.json`](deployments/ethereum.json) | Audited source in `packages/`, unchanged |
+| Staging | Base (8453) | [`deployments/staging.json`](deployments/staging.json) | Short timers, test tokens and protocol mocks; see [`staging/`](staging) |
+
 ## Working with a package
 
 ```bash

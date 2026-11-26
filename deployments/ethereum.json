@@ -1,0 +1,26 @@
+{
+  "chainId": 1,
+  "network": "ethereum",
+  "environment": "production",
+  "contracts": {
+    "CommissionVault": {
+      "address": "0x415f2927F93D6C9e98aeb61b487902aB720Ce7FC"
+    }
+  },
+  "tokens": {
+    "USDC": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    "THOR": "0xa5f2211B9b8170F694421f2046281775E8468044",
+    "vTHOR": "0x815C23eCA83261b6Ec689b60Cc4a58b54BC24D8D",
+    "uTHOR": "0x34deff97889f3a6a483e3b9255cafcb9a6e03588",
+    "yTHOR": "0x8793CD69895C45b2d2474236b3Cb28FC5C764775"
+  },
+  "notDeployed": [
+    "METRO",
+    "xMETRO",
+    "ThorMigrationEscrow",
+    "XMetroDeFiAdapterProxy",
+    "XMetroDeFiAdapterImplementation",
+    "MetroDistributor",
+    "RateLimitedForwarder"
+  ]
+}

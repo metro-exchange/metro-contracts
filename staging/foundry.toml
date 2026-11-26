@@ -1,0 +1,19 @@
+[profile.default]
+src = "contracts"
+script = "script"
+test = "test"
+out = "out"
+cache_path = "cache"
+libs = ["../packages/xmetro/lib"]
+allow_paths = ["../packages/xmetro"]
+solc_version = "0.8.38"
+evm_version = "osaka"
+optimizer = true
+optimizer_runs = 200
+via_ir = true
+ignored_warnings_from = ["../packages/xmetro/lib"]
+ignored_error_codes = [6335]
+fs_permissions = [{ access = "read-write", path = "./output" }]
+
+[lint]
+lint_on_build = false
