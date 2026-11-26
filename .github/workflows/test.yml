@@ -82,7 +82,19 @@ jobs:
             test/invariant/RewardDistributor.invariant.t.sol \
             test/mocks/MaliciousERC20.sol \
             test/unit/MetroToken.t.sol \
-            test/unit/RewardDistributor.t.sol
+            test/unit/RewardDistributor.t.sol \
+            src/MetroDistributorBase.sol \
+            src/MetroDistributorV1.sol \
+            src/MetroDistributorV2.sol \
+            script/DeployMetroDistributor.s.sol \
+            test/mocks/MockRateLimitedForwarder.sol \
+            test/mocks/MetroDistributorV2Harness.sol \
+            test/mocks/MetroDistributorFixture.sol \
+            test/unit/MetroDistributorV1.t.sol \
+            test/unit/MetroDistributorV2.t.sol \
+            test/fuzz/MetroDistributor.fuzz.t.sol \
+            test/invariant/MetroDistributor.invariant.t.sol \
+            test/deployment/DeployMetroDistributor.t.sol
 
       - name: Build production xMETRO artifact
         run: FOUNDRY_PROFILE=core forge build --sizes
@@ -104,6 +116,13 @@ jobs:
 
       - name: Run deployment-script tests
         run: FOUNDRY_PROFILE=deployment-test forge test -vv
+
+      - name: Check MetroDistributor ABI exports
+        run: |
+          for contract in MetroDistributorV1 MetroDistributorV2; do
+            diff <(FOUNDRY_PROFILE=regression forge inspect "$contract" abi --json | jq -S .) \
+              <(jq -S . "integration/abi/$contract.json")
+          done
 
       - name: Check integration example syntax
         run: |

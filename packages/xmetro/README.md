@@ -42,6 +42,7 @@ This Foundry project implements THOR/yTHOR migration, METRO staking, USDC reward
 - `src/XMetroDeFiAdapter.sol`: UUPS implementation behind an ERC1967 proxy for swaps and DeFi deposits. It does not write xMETRO storage.
 - `src/ThorMigrationEscrow.sol`: THOR/yTHOR migration, ratios, caps, deadlines, and repeated migrations within cumulative caps.
 - `src/RewardDistributor.sol`: operator-triggered USDC reward distribution and optional commission routing.
+- `src/MetroDistributorBase.sol`, `src/MetroDistributorV1.sol`, `src/MetroDistributorV2.sol`: replacement distributors. `distribute(maxAmount)` pulls USDC from the RateLimitedForwarder, tops up the CommissionVault, then splits the rest between stakers, treasury and market support (V1: POL vault; V2: METRO buyback and burn, swap not implemented yet). See `integration/docs/contract-api.md`.
 
 “Two-contract reward architecture” refers to xMETRO and its DeFi Adapter, not to the total number of deployed addresses. METRO, Escrow, Distributor, the Adapter implementation, and its proxy have separate addresses. Users and Keepers call xMETRO; only the currently bound xMETRO may invoke the Adapter execution functions.
 
@@ -133,6 +134,12 @@ FOUNDRY_PROFILE=deploy forge script script/Deploy.s.sol:Deploy --rpc-url "$ETH_R
 
 # Base
 FOUNDRY_PROFILE=deploy forge script script/Deploy.s.sol:Deploy --rpc-url "$BASE_RPC_URL" --broadcast
+```
+
+`script/DeployMetroDistributor.s.sol` deploys MetroDistributorV1 or V2 against an existing xMETRO and CommissionVault (env block `DeployMetroDistributor` in `.env.example`) and logs the owner batch that rebinds xMETRO, the CommissionVault and the forwarder:
+
+```bash
+FOUNDRY_PROFILE=deploy forge script script/DeployMetroDistributor.s.sol:DeployMetroDistributor --rpc-url "$ETH_RPC_URL" --broadcast
 ```
 
 ## Reward accounting precision

@@ -11,7 +11,7 @@ The existing Base QA deployment and its address/configuration records remain unc
 These runnable Node.js modules use `ethers` 5.8.0 and the ABI files from this delivery. Install dependencies in this directory with `npm install`, then run `npm run check`. They export functions for a frontend/backend to call with its own signer; they do **not** load a private key or broadcast anything on import.
 
 - [`user-actions.mjs`](user-actions.mjs): approve and stake METRO, migrate THOR/yTHOR, claim, choose automatic actions, submit manual actions, request/withdraw, and authorize an Aave V4 Giver.
-- [`backend-actions.mjs`](backend-actions.mjs): Operator reward funding, Keeper batch execution with unique candidates and an optional gas/reward check, and event queries.
+- [`backend-actions.mjs`](backend-actions.mjs): Operator reward funding (RewardDistributor `distributeFromOperator` / `distributeExistingBalance`, MetroDistributor `distributeRevenue` / `readRevenueDistributions`), Keeper batch execution with unique candidates and an optional gas/reward check, and event queries.
 
 Set `CONFIG_FILE` explicitly to a verified environment file for the same contract revision as these ABIs; the example environment has no default configuration path. `loadConfig()` accepts `deployed_pending_handover` and `deployed`; existing deployment JSON remains unchanged. The QA record uses the legacy status `deployed_pending_project_handover`, and belongs to the previous contract revision. Continue testing that deployment with its matching baseline examples. This update does not add status compatibility that would allow new ABIs to be used against old contracts. The Ethereum template remains `not_deployed`.
 

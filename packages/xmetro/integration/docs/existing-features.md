@@ -15,6 +15,7 @@ The new system uses an immutable xMETRO user entrypoint and an upgradeable DeFi 
 | Request an exit, withdraw after cooldown, or exit to stake | xMETRO | No additional METRO approval |
 | `distribute(amount)` | RewardDistributor | Operator approves its USDC to Distributor |
 | `distributeFromBalance(amount)` | RewardDistributor | Uses USDC already held by Distributor |
+| `distribute(maxAmount)` | MetroDistributor V1/V2 | No approval; pulls from the forwarder and uses USDC already held by the distributor (`0` = no cap) |
 
 Users do not approve the Adapter or Commission Vault for reward USDC. Keeper and reward operator are independent permissions even if one wallet holds both. Use integer smallest units: METRO/xMETRO have 18 decimals, USDC has 6, and output tokens use their on-chain `decimals()`. Time arguments are Unix seconds.
 

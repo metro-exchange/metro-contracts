@@ -145,6 +145,12 @@ netReward  = grossAmount - commission
 
 The Distributor transfers commission USDC directly to the Vault, then deposits `netReward` into xMETRO. It does not approve the Vault, invoke a Vault deposit callback, or maintain a cross-batch commission debt ledger.
 
+## MetroDistributorV1 / MetroDistributorV2
+
+Replacement distributors for RewardDistributor. The owner configures `setOperator(address,bool)`, `setCommissionVault(address)`, `setMaxCommissionSplitBps(uint16)`, `setForwarder(address)`, `setTreasury(address)` and `rescueTokens(address,address,uint256)`; V1 adds `setPolVault(address)`, V2 adds `setBucketBps(uint16,uint16,uint16)`.
+
+An approved operator calls `distribute(uint256 maxAmount)`. It calls `forwarder.tryForward()` when a forwarder is set, routes the contract's USDC balance capped at `maxAmount` (`0` = no cap), tops up the CommissionVault with the RewardDistributor formula above, then splits the remainder: V1 `5,000` stakers / `2,500` treasury / `2,500` POL vault; V2 default `5,500` stakers / `2,500` treasury / `2,000` METRO buyback and burn. A misconfigured or paused Vault is skipped with `CommissionSkipped(vault,reason)` instead of reverting. V2 reverts with `BuybackNotImplemented` while `buybackBps > 0`. Full behaviour, events and deployment steps: `integration/docs/contract-api.md`.
+
 ## Position queries and events
 
 Read `thorPositionCount(user)` / `yThorPositionCount(user)` before querying `thorPositions(user, positionId)` / `yThorPositions(user, positionId)`. Each returns `(principal, migratedAt, exitedAt, exited)`. IDs start at zero independently for each user and asset, are never reused, and counts include exited positions. Out-of-range queries and exits revert with array `Panic(0x32)`. A valid premature or exited position has an ineligible preview; attempting its exit reverts with `InvalidConfiguration`.
