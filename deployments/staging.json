@@ -1,0 +1,194 @@
+{
+  "chainId": 8453,
+  "network": "base",
+  "environment": "staging",
+  "owner": "0x0D5b2b90dc75D4c084590a24385EB2bAe714Dc4a",
+  "roles": {
+    "owner": "0x0D5b2b90dc75D4c084590a24385EB2bAe714Dc4a",
+    "commissionVaultOperator": "0x19b293d784331f33a8043724862E6c78CE5800ce",
+    "commissionVaultGuardian": "0x0D5b2b90dc75D4c084590a24385EB2bAe714Dc4a",
+    "mapleMockPermissionAdmin": "0x19b293d784331f33a8043724862E6c78CE5800ce",
+    "forfeitureRecipient": "0x7D8911eB1C72F0Ba29302bE30301B75Cec81F622"
+  },
+  "system": {
+    "sourceCommit": "c8fdbce",
+    "distributor": "RewardDistributor",
+    "timersSeconds": {
+      "unstakeDelay": 1800,
+      "thorExitDelay": 3600,
+      "thorExitFullTime": 10800,
+      "yThorExitDelay": 14400,
+      "yThorExitRamp": 43200,
+      "contributorCliff": 21600,
+      "contributorDuration": 21600
+    },
+    "contracts": {
+      "METRO": {
+        "address": "0x4fFA8023f39D67D93DAf664f7bf7C443B614F763",
+        "deployBlock": 53109599
+      },
+      "xMETRO": {
+        "address": "0xE489a06a9B848C5BCDc330D65D719501b29730Fc",
+        "deployBlock": 53109688
+      },
+      "ThorMigrationEscrow": {
+        "address": "0xf4B51869914c0cA2657830db4908d01be4F714C5",
+        "deployBlock": 53109692
+      },
+      "RewardDistributor": {
+        "address": "0xBeA46296C688A30e6d39FfD2B42c450111c922A8",
+        "deployBlock": 53109695
+      },
+      "XMetroDeFiAdapterProxy": {
+        "address": "0xb72EA3B04afE8E3647BcF58d4ab6a58A1cD18E2c",
+        "deployBlock": 53109698
+      },
+      "XMetroDeFiAdapterImplementation": {
+        "address": "0xD095d0f479b6077E3949866B1611ac76e7D69793"
+      },
+      "CommissionVault": {
+        "address": "0x37C975F328C4CEda04DA2Be89590912868CeED8F",
+        "deployBlock": 53109702
+      }
+    },
+    "migration": {
+      "startTime": 1793008731,
+      "deadlineThor": 1798761599,
+      "deadlineYThor": 1798761599,
+      "ratioThor": "392856954600000000",
+      "ratioYThor": "392856954600000000",
+      "capThor": "1000000000000000000000000",
+      "capYThor": "1000000000000000000000000",
+      "yThorRewardWeightBps": 20000
+    },
+    "commissionVault": {
+      "settlementTimelock": 3600,
+      "payoutTimelock": 3600,
+      "maxCodeDelta": "1000000000",
+      "maxBatchDelta": "1000000000"
+    },
+    "pools": {
+      "METRO/USDC": {
+        "address": "0xDb11F4DAD588b1Ec53C064E1aE8709cB2285Ea0c",
+        "deployBlock": 53109713
+      }
+    }
+  },
+  "fixtures": {
+    "tokens": {
+      "TestUSDC": {
+        "address": "0x0414c22A72E76fc45adBC5b5Dd1Afd19153F533D"
+      },
+      "TestTHOR": {
+        "address": "0x4ED977c519dBaef5ae162faA4551bdf62FDbFCC9"
+      },
+      "TestYTHOR": {
+        "address": "0x4bdAB974637Db9e68F6BF8352a09C41946dB7d05"
+      },
+      "TestUSDT": {
+        "address": "0x79C75d53c50153a980568f47ba48a43f09802Bff"
+      },
+      "TestWBTC": {
+        "address": "0xa77D7d48B2995efe350810f979Ba1b1868037879"
+      },
+      "TestGHO": {
+        "address": "0xd211ED5b4aC495F3889b31ffbCBEc946d5AEFb40"
+      },
+      "TestXAUT": {
+        "address": "0x0C20c37CCE8EF6De2d1d9ECC68D4e6783A56dc98"
+      },
+      "TestExtraToken": {
+        "address": "0x0e5184c5f6495028E45bacd818f89b6F258e9220"
+      },
+      "TestSyrupUSDC": {
+        "address": "0x6F85B5a8F41E208Eb6A017Be39864f10586F8444",
+        "deployBlock": 53109708
+      }
+    },
+    "thorVaults": {
+      "uTHOR": {
+        "address": "0x25124E4Cb8b475711C63289671536754a3B39298",
+        "deployBlock": 61402213
+      },
+      "vTHOR": {
+        "address": "0x6D05F09CBE437F6Fd008657B88d7f0CB9E520858",
+        "deployBlock": 61402222
+      }
+    },
+    "TestTokenFaucet": {
+      "address": "0x1c874429Ec3c14f906c464933Cf4A502eb6E2827",
+      "deployBlock": 61608000,
+      "spreadBps": 2000,
+      "cooldownSeconds": 300
+    },
+    "protocolMocks": {
+      "MockAaveV3Pool": {
+        "address": "0xBdcb0AD7716443B46866372AAfC0F6C69e6b9aB5"
+      },
+      "MockScaledAToken": {
+        "address": "0xd1B51074EBf1063085490A5d082361d77066E74f"
+      },
+      "MockAaveV4Spoke": {
+        "address": "0xd2a1be8EdFF755bA5554aD59c8C6B318441a294D"
+      },
+      "MockAaveV4Giver": {
+        "address": "0x51994D8f10c375416F2791074F5F30d92A466EF2"
+      },
+      "MockSyrupRouter": {
+        "address": "0xaDFf77Abf42134157bbC403882131D60D0f216A7",
+        "deployBlock": 53109711
+      },
+      "MockPoolPermissionManager": {
+        "address": "0x45D99AB44a14385FADA38C6C88Db4F96885FB03C",
+        "deployBlock": 53109705
+      }
+    },
+    "protocolConfig": {
+      "aaveV3ReferralCode": 17,
+      "aaveV4UsdcReserveId": 7,
+      "mapleDepositData": "0x303a784d4554524f000000000000000000000000000000000000000000000000"
+    },
+    "pools": {
+      "TestUSDT/USDC": {
+        "address": "0xA4e4eCD1133C930D7F347EC22FedBaECE47f6062"
+      },
+      "TestWBTC/USDC": {
+        "address": "0x86e3476178f3A389FD4a1aBE6D6337a1aF4Ed1FF"
+      },
+      "TestGHO/USDC": {
+        "address": "0x3d4DCc50d22204CAc4AE4FC926EEf6828ACDea30"
+      },
+      "TestXAUT/USDC": {
+        "address": "0x83030F2b1278cDD57353Ac384D13A8f2F81542Fa"
+      },
+      "TestSyrupUSDC/USDC": {
+        "address": "0xE10dAf326be3D61e97a0aab02Eb6370Da60F4A2B"
+      },
+      "TestExtraToken/USDC": {
+        "address": "0xE59885d653D65C12C72f21A024F88303B56Ef3Ed"
+      }
+    }
+  },
+  "external": {
+    "uniswapV2Router": "0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24",
+    "uniswapV2Factory": "0x8909Dc15e40173Ff4699343b6eB8132c65e18eC6",
+    "uniswapV3SwapRouter02": "0x2626664c2603336E57B271c5C0b26F421741e481",
+    "oneInchRouter": "0x111111125421cA6dc452d289314280a0f8842A65"
+  },
+  "retired": {
+    "base-qa-2026-09-30": {
+      "sourceBranch": "xmetro-v2-base-qa",
+      "METRO": "0x431ED737Fb01747fE354b4dbE10efbc96cb7248a",
+      "xMETRO": "0x7641bC61EE8060154fff26DECbe5303f56B80517",
+      "RewardDistributor": "0x3BB762d85070bf7192A1426AbE77A8d3e8431478",
+      "ThorMigrationEscrow": "0x2D786c9EE71FDb6C7354Bc09A07290F56AAfb493",
+      "XMetroDeFiAdapterProxy": "0x82dE5557a14F261B7EF2952ceDBCD443C03ad236",
+      "CommissionVault": "0x470f9a9D64f2a20A11500aB3C19A179385af269E",
+      "TestSyrupUSDC": "0xc875A3E3D94eDCd42ccF7c6b85F95933360Fbe80",
+      "MockSyrupRouter": "0x55c22FFD50112C4d16df03D0e76A0A6cF0886a75",
+      "MockPoolPermissionManager": "0xDFed4500313EfAAA53d1FEEc96dBC0E6f18722CA",
+      "METRO/USDC": "0xEC68713102439f0B2a54f15380cc9a2bf466dc73",
+      "TestSyrupUSDC/USDC": "0xC6F34522Abf535aF482a41EE70C42489709CA747"
+    }
+  }
+}

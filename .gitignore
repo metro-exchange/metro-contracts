@@ -1,3 +1,9 @@
 .DS_Store
 .env
 node_modules/
+
+# Staging build and rehearsal outputs
+/staging/out/
+/staging/cache/
+/staging/broadcast/
+/staging/output/
