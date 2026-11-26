@@ -45,8 +45,7 @@ Each staging-only contract has its own file in [`contracts/`](contracts):
 | `TestVTHOR` | vTHOR: staked THOR |
 | `TestTokenFaucet` | Hands out THOR, yTHOR, USDC, uTHOR and vTHOR to testers |
 
-The tokens extend `ERC20Mintable` (owner-only mint) and the vaults extend `TestThorVault` (ERC-4626 over TestTHOR). The Aave, Maple and syrupUSDC mocks are the ones the xmetro tests use, imported from `packages/xmetro/test/mocks`. The contracts on Base today were deployed before this split, from the same code without the per-token wrappers.
-
+The tokens extend `ERC20Mintable` (owner-only mint) and the vaults extend `TestThorVault` (ERC-4626 over TestTHOR). The Aave, Maple and syrupUSDC mocks are the ones the xmetro tests use, imported from `packages/xmetro/test/mocks`.
 
 ## Deploying
 

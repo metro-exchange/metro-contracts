@@ -11,8 +11,8 @@
     "forfeitureRecipient": "0x7D8911eB1C72F0Ba29302bE30301B75Cec81F622"
   },
   "system": {
-    "sourceCommit": "c8fdbce",
-    "distributor": "RewardDistributor",
+    "sourceCommit": "7055aa0",
+    "distributor": "MetroDistributorV1",
     "timersSeconds": {
       "unstakeDelay": 1800,
       "thorExitDelay": 3600,
@@ -24,37 +24,42 @@
     },
     "contracts": {
       "METRO": {
-        "address": "0x4fFA8023f39D67D93DAf664f7bf7C443B614F763",
-        "deployBlock": 53109599
+        "address": "0x6EA18F31b51DE0d98A71015a5FA4452AAe513143",
+        "deployBlock": 62570766
       },
       "xMETRO": {
-        "address": "0xE489a06a9B848C5BCDc330D65D719501b29730Fc",
-        "deployBlock": 53109688
+        "address": "0x2e7fBe8F5a81830d5d8a82B8496ecb80FBd338AC",
+        "deployBlock": 62570769
       },
       "ThorMigrationEscrow": {
-        "address": "0xf4B51869914c0cA2657830db4908d01be4F714C5",
-        "deployBlock": 53109692
+        "address": "0xBd0Ec757B792EecB6f418f34c090F04df1E3106B",
+        "deployBlock": 62570799
       },
-      "RewardDistributor": {
-        "address": "0xBeA46296C688A30e6d39FfD2B42c450111c922A8",
-        "deployBlock": 53109695
+      "MetroDistributorV1": {
+        "address": "0x500193B44de0C22b6215106da05F932FC6113Ffd",
+        "deployBlock": 62570981
       },
       "XMetroDeFiAdapterProxy": {
-        "address": "0xb72EA3B04afE8E3647BcF58d4ab6a58A1cD18E2c",
-        "deployBlock": 53109698
+        "address": "0x6a13312a633e1D0c58bC9A22329c627a9b1496E0",
+        "deployBlock": 62570792
       },
       "XMetroDeFiAdapterImplementation": {
-        "address": "0xD095d0f479b6077E3949866B1611ac76e7D69793"
+        "address": "0x8F28CCa244eA8928b80ed134483aFC9cFc98Ef54",
+        "deployBlock": 62570781
       },
       "CommissionVault": {
-        "address": "0x37C975F328C4CEda04DA2Be89590912868CeED8F",
-        "deployBlock": 53109702
+        "address": "0xf8f6cf326519Bc798c1F6f62fbBa255120f2F610",
+        "deployBlock": 62570944
+      },
+      "RateLimitedForwarder": {
+        "address": "0x72622138fe7A143131b499506849BD28B4Ea8934",
+        "deployBlock": 62570998
       }
     },
     "migration": {
-      "startTime": 1793008731,
-      "deadlineThor": 1798761599,
-      "deadlineYThor": 1798761599,
+      "startTime": 1795704764,
+      "deadlineThor": 1803480764,
+      "deadlineYThor": 1803480764,
       "ratioThor": "392856954600000000",
       "ratioYThor": "392856954600000000",
       "capThor": "1000000000000000000000000",
@@ -67,10 +72,15 @@
       "maxCodeDelta": "1000000000",
       "maxBatchDelta": "1000000000"
     },
+    "forwarder": {
+      "dripRate": "1000000000",
+      "dripPeriod": 60,
+      "maxReserve": "10000000000"
+    },
     "pools": {
       "METRO/USDC": {
-        "address": "0xDb11F4DAD588b1Ec53C064E1aE8709cB2285Ea0c",
-        "deployBlock": 53109713
+        "address": "0x0F4B729be4bff21786864adda68C887df3cc1CBD",
+        "deployBlock": 62571106
       }
     }
   },
@@ -227,6 +237,17 @@
       "pools.TestSyrupUSDC/USDC": "0xE10dAf326be3D61e97a0aab02Eb6370Da60F4A2B",
       "pools.TestExtraToken/USDC": "0xE59885d653D65C12C72f21A024F88303B56Ef3Ed",
       "sourceCommit": null
+    },
+    "system-2026-11-26": {
+      "contracts.METRO": "0x4fFA8023f39D67D93DAf664f7bf7C443B614F763",
+      "contracts.xMETRO": "0xE489a06a9B848C5BCDc330D65D719501b29730Fc",
+      "contracts.ThorMigrationEscrow": "0xf4B51869914c0cA2657830db4908d01be4F714C5",
+      "contracts.RewardDistributor": "0xBeA46296C688A30e6d39FfD2B42c450111c922A8",
+      "contracts.XMetroDeFiAdapterProxy": "0xb72EA3B04afE8E3647BcF58d4ab6a58A1cD18E2c",
+      "contracts.XMetroDeFiAdapterImplementation": "0xD095d0f479b6077E3949866B1611ac76e7D69793",
+      "contracts.CommissionVault": "0x37C975F328C4CEda04DA2Be89590912868CeED8F",
+      "pools.METRO/USDC": "0xDb11F4DAD588b1Ec53C064E1aE8709cB2285Ea0c",
+      "sourceCommit": "c8fdbce"
     }
   }
 }

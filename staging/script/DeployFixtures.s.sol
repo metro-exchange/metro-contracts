@@ -45,7 +45,7 @@ interface IUniswapV2Router02 {
 
 /// @notice Deploys the long-lived staging fixtures on Base: test tokens, protocol mocks, the
 /// uTHOR/vTHOR test vaults, the test-token faucet and USDC liquidity for every swap output.
-/// Run it only to rebuild the fixtures from scratch; deploy-system.sh reuses the recorded ones.
+/// Run it only to rebuild the fixtures from scratch; `deploy.sh system` reuses the recorded ones.
 contract DeployFixtures is Script {
     uint256 internal constant BASE_CHAIN_ID = 8453;
     uint256 internal constant AAVE_V3_INDEX = 1e27;
